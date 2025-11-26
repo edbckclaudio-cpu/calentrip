@@ -28,7 +28,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border)] bg-white/95 backdrop-blur">
+    <nav className="hidden">
       <ul className="grid grid-cols-4">
         {items.map((it) => {
           const active = pathname.startsWith(it.href);

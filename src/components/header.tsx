@@ -41,7 +41,7 @@ export default function Header() {
           <TripsMenu t={t} />
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <ProfileMenu t={t} />
+          <MainMenu t={t} />
         </div>
       </div>
     </header>
@@ -103,52 +103,34 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
   );
 }
 
-function ProfileMenu({ t }: { t: (k: string) => string }) {
+function MainMenu({ t }: { t: (k: string) => string }) {
   const [open, setOpen] = useState(false);
-  const { status } = useSession();
-  const { lang, setLang } = useI18n();
-  const { show } = useToast();
-
-  function onLangChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const v = e.target.value as "pt" | "en" | "es";
-    setLang(v);
-    try {
-      localStorage.setItem("calentrip:lang", v);
-    } catch {}
-    show("Idioma alterado");
-  }
+  const pathname = "/";
 
   return (
     <>
-      <button
-        type="button"
-        aria-label="Perfil"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
-        onClick={() => setOpen(true)}
-      >
-        <span className="text-xs">PF</span>
+      <button type="button" aria-label="Menu" className="inline-flex h-8 w-8 items-center justify-center" onClick={() => setOpen(true)}>
+        <span className="material-symbols-outlined text-[24px]">menu</span>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogHeader>{t("profile")}</DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm">{t("language")}</label>
-            <Select aria-label="Idioma" value={lang} onChange={onLangChange} className="bg-white text-black">
-              <option value="pt">Português</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-            </Select>
-          </div>
-          <div className="flex items-center justify-between">
-            <Link href="/profile" className="underline text-sm">{t("viewProfile")}</Link>
-            {status === "authenticated" ? (
-              <Button type="button" onClick={() => { show("Saindo..."); signOut(); }}>{t("signOut")}</Button>
-            ) : (
-              <Button type="button" onClick={() => { show("Iniciando login..."); signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" }); }}>
-                {t("signInCredentials")}
-              </Button>
-            )}
-          </div>
+        <DialogHeader>{t("menu")}</DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/flights/search" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
+            <span className="material-symbols-outlined">travel_explore</span>
+            <span>{t("navExplore")}</span>
+          </Link>
+          <Link href="/flights/results" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
+            <span className="material-symbols-outlined">flight</span>
+            <span>{t("navTrips")}</span>
+          </Link>
+          <Link href="/accommodation/search" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
+            <span className="material-symbols-outlined">hotel</span>
+            <span>{t("navStays")}</span>
+          </Link>
+          <Link href="/profile" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
+            <span className="material-symbols-outlined">account_circle</span>
+            <span>{t("navProfile")}</span>
+          </Link>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("close")}</Button>
