@@ -279,6 +279,7 @@ export default function FinalCalendarPage() {
     });
     try {
       const pos = await getPos();
+      if (!pos) { setArrivalInfo({ city: m.city, address: m.address }); return; }
       const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
       const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${dest.lon},${dest.lat}?overview=false`;
       const resD = await fetch(osrmDrive);
@@ -401,7 +402,7 @@ export default function FinalCalendarPage() {
         const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
         return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
       };
-      const o = await geocode(last.address);
+      const o = await geocode(last.address || "");
       const d = await geocode(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`);
       let walkingMin: number | undefined;
       let drivingMin: number | undefined;
@@ -470,7 +471,7 @@ export default function FinalCalendarPage() {
         const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
         return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
       };
-      const o = await geocode(last.address);
+      const o = await geocode(last.address || "");
       const d = await geocode(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`);
       if (!(o && d)) return;
       let drivingMin: number | undefined;

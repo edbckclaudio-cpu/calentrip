@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "./providers";
 import Header from "@/components/header";
 import BottomNav from "@/components/bottom-nav";
+import SWRegister from "@/components/sw-register";
 
 const geistSans = Inter({
   variable: "--font-geist-sans",
@@ -18,6 +19,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CalenTrip",
   description: "Aplicativo de gerenciamento de viagens",
+  themeColor: "#007AFF",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -37,6 +40,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <SWRegister />
           <Header />
           {children}
           <BottomNav />

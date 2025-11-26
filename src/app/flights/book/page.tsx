@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useTrip } from "@/lib/trip-context";
+import type { TripSearchSame, TripSearchDifferent } from "@/lib/trip-context";
 import { getCountryByIata } from "@/lib/airports";
 import { useRouter } from "next/navigation";
 import { useMemo, useEffect, useState } from "react";
@@ -218,7 +219,7 @@ export default function BookFlightsPage() {
   }, [tripSearch]);
 
   const airlinesSame = useMemo(() => {
-    if (!tripSearch) return [] as { name: string; href: string }[];
+    if (!tripSearch || tripSearch.mode !== "same") return [] as { name: string; href: string }[];
     let list = airlinesForCountries(countries.origin, countries.destination);
     if (!list.length && countries.userRegion === "BR") list = airlinesForCountries("Brazil", undefined);
     const depart = tripSearch.departDate;
@@ -244,6 +245,29 @@ export default function BookFlightsPage() {
     const pax = totalPassengers(tripSearch.passengers);
     return list.map((a) => ({ name: a.name, href: addQuery(a.base, tripSearch.inbound.origin, tripSearch.inbound.destination, depart, depart, pax) }));
   }, [countries, tripSearch]);
+
+  if (!tripSearch) {
+    return (
+      <div className="min-h-screen px-4 py-6">
+        <div className="container-page">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">flight</span>
+                <span>{t("bookFlightsTitle")}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-zinc-600">{t("noTrips")}</div>
+                <Button type="button" onClick={() => router.push("/flights/search")}>{t("searchFlights")}</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
@@ -390,7 +414,7 @@ export default function BookFlightsPage() {
             )}
           </CardHeader>
           <CardContent>
-            {tripSearch.mode === "same" && data ? (
+            {tripSearch && tripSearch.mode === "same" && data ? (
               <ul className="space-y-2">
                 {data.links.map((item) => (
                   <li key={item.name}>
@@ -400,12 +424,14 @@ export default function BookFlightsPage() {
                   </li>
                 ))}
               </ul>
-            ) : tripSearch.mode === "different" ? (
+            ) : tripSearch && tripSearch.mode === "different" ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <div className="mb-2 text-sm font-semibold">{tripSearch.outbound.origin}/{tripSearch.outbound.destination}</div>
+                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
+                    <div className="mb-2 text-sm font-semibold">{ts.outbound.origin}/{ts.outbound.destination}</div>
+                  ); })()}
                   <ul className="space-y-2">
-                    {buildLinksOne(tripSearch.outbound.origin, tripSearch.outbound.destination, tripSearch.outbound.date, tripSearch.passengers).map((item) => (
+                    {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
                       <li key={`out-${item.name}`}>
                         <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${item.name}`)}>
                           {item.name}
@@ -415,9 +441,11 @@ export default function BookFlightsPage() {
                   </ul>
                 </div>
                 <div>
-                  <div className="mb-2 text-sm font-semibold">{tripSearch.inbound.origin}/{tripSearch.inbound.destination}</div>
+                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
+                    <div className="mb-2 text-sm font-semibold">{ts.inbound.origin}/{ts.inbound.destination}</div>
+                  ); })()}
                   <ul className="space-y-2">
-                    {buildLinksOne(tripSearch.inbound.origin, tripSearch.inbound.destination, tripSearch.inbound.date, tripSearch.passengers).map((item) => (
+                    {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
                       <li key={`in-${item.name}`}>
                         <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${item.name}`)}>
                           {item.name}
@@ -441,7 +469,7 @@ export default function BookFlightsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {tripSearch.mode === "same" ? (
+            {tripSearch && tripSearch.mode === "same" ? (
               <ul className="space-y-2">
                 {airlinesSame.map((a) => (
                   <li key={`same-${a.name}`}>
@@ -454,7 +482,9 @@ export default function BookFlightsPage() {
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <div className="mb-2 text-sm font-semibold">{tripSearch.outbound.origin}/{tripSearch.outbound.destination}</div>
+                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
+                    <div className="mb-2 text-sm font-semibold">{ts.outbound.origin}/{ts.outbound.destination}</div>
+                  ); })()}
                   <ul className="space-y-2">
                     {airlinesOut.map((a) => (
                       <li key={`out-${a.name}`}>
@@ -466,7 +496,9 @@ export default function BookFlightsPage() {
                   </ul>
                 </div>
                 <div>
-                  <div className="mb-2 text-sm font-semibold">{tripSearch.inbound.origin}/{tripSearch.inbound.destination}</div>
+                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
+                    <div className="mb-2 text-sm font-semibold">{ts.inbound.origin}/{ts.inbound.destination}</div>
+                  ); })()}
                   <ul className="space-y-2">
                     {airlinesIn.map((a) => (
                       <li key={`in-${a.name}`}>
@@ -553,7 +585,7 @@ function FlightNotesForm() {
     const title = `${first.origin} → ${first.destination}`;
     const date = first.date;
     const flightNotes = legs.map((l, i) => ({
-      leg: i === 0 ? "outbound" : "inbound",
+      leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound",
       origin: l.origin,
       destination: l.destination,
       date: l.date,
@@ -561,7 +593,7 @@ function FlightNotesForm() {
       arrivalTime: notes[i]?.arr || undefined,
       flightNumber: notes[i]?.code || undefined,
     }));
-    const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: i === 0 ? "outbound" : "inbound", name: f.name, type: f.type, size: f.size, dataUrl: f.dataUrl })));
+    const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, dataUrl: f.dataUrl })));
     addTrip({ id, title, date, passengers, flightNotes, attachments });
     show("Notas salvas, redirecionando…", { variant: "success" });
     router.push("/accommodation/search");

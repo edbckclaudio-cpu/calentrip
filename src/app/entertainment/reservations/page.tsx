@@ -336,8 +336,8 @@ export default function EntertainmentReservationsPage() {
                       {r.date} {r.time || ""} • {r.cityName} • {r.kind === "activity" ? "Atividade" : "Restaurante"}: {r.title}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => openGoDrawer(r)}>Como ir</Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => {
+                      <Button type="button" variant="outline" onClick={() => openGoDrawer(r)}>Como ir</Button>
+                      <Button type="button" variant="outline" onClick={() => {
                         const j = records.indexOf(r);
                         if (j >= 0) {
                           setEditIdx(j);
@@ -346,7 +346,7 @@ export default function EntertainmentReservationsPage() {
                           setEditTime(r.time || "");
                         }
                       }}>Editar</Button>
-                      <Button type="button" size="sm" variant="secondary" onClick={() => {
+                      <Button type="button" variant="secondary" onClick={() => {
                         const j = records.indexOf(r);
                         if (j >= 0) {
                           setRecords((prev) => prev.filter((_, i) => i !== j));
@@ -495,7 +495,7 @@ export default function EntertainmentReservationsPage() {
                           <div>Data: {new Date(ev.date).toLocaleDateString(undefined, { timeZone: "UTC" })}</div>
                           {ev.url && (<div><a className="underline" href={ev.url} target="_blank" rel="noopener noreferrer">Site oficial</a></div>)}
                           <div className="mt-2">
-                            <Button type="button" size="sm" onClick={() => {
+                            <Button type="button" onClick={() => {
                               const cityName = cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`;
                               const d = new Date(ev.date).toISOString().slice(0, 10);
                               setRecords((prev) => [...prev, { kind: "activity", cityIdx: aiOpenIdx!, cityName, date: d, time: "", title: ev.name }]);
@@ -540,7 +540,7 @@ export default function EntertainmentReservationsPage() {
                               reader.readAsDataURL(f);
                             }))).then((arr) => setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: [...(prev[`ai-${idx}`] || []), ...arr] })));
                           }} />
-                          <Button type="button" size="sm" className="rounded-md font-semibold" onClick={() => { const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                          <Button type="button" className="rounded-md font-semibold" onClick={() => { const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
                           <Input id={`ai-file-${idx}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                             const files = Array.from(e.target.files || []);
                             if (!files.length) { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: prev[`ai-${idx}`] || [] })); return; }
@@ -557,7 +557,7 @@ export default function EntertainmentReservationsPage() {
                         )}
                       </div>
                       <div className="mt-2">
-                        <Button type="button" size="sm" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
+                        <Button type="button" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
                           const cityName = cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`;
                           const d = aiDateMap[`ai-${idx}`] || cities[aiOpenIdx!]?.checkin || "";
                           const t = aiTimeMap[`ai-${idx}`] || "";
@@ -621,7 +621,7 @@ export default function EntertainmentReservationsPage() {
                             reader.readAsDataURL(f);
                           }))).then((arr) => setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: [...(prev[`rest-${idx}`] || []), ...arr] })));
                         }} />
-                        <Button type="button" size="sm" variant="secondary" className="rounded-md font-semibold" onClick={() => { const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                        <Button type="button" variant="secondary" className="rounded-md font-semibold" onClick={() => { const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
                         <Input id={`rest-file-${idx}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                           const files = Array.from(e.target.files || []);
                           if (!files.length) { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: prev[`rest-${idx}`] || [] })); return; }
@@ -638,7 +638,7 @@ export default function EntertainmentReservationsPage() {
                       )}
                     </div>
                     <div className="mt-2">
-                      <Button type="button" variant="secondary" size="sm" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
+                        <Button type="button" variant="secondary" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
                         const cityName = cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`;
                         const d = restDateMap[`rest-${idx}`] || cities[aiRestOpenIdx!]?.checkin || "";
                         const t = restTimeMap[`rest-${idx}`] || "";

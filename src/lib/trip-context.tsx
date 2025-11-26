@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type Leg = {
+export type Leg = {
   origin: string;
   destination: string;
   date: string;
@@ -9,9 +9,9 @@ type Leg = {
   flightNumber?: string;
 };
 
-type Passengers = { adults: number; children: number; infants: number };
+export type Passengers = { adults: number; children: number; infants: number };
 
-type TripSearchSame = {
+export type TripSearchSame = {
   mode: "same";
   origin: string;
   destination: string;
@@ -24,7 +24,7 @@ type TripSearchSame = {
   returnFlightNumber?: string;
 };
 
-type TripSearchDifferent = {
+export type TripSearchDifferent = {
   mode: "different";
   outbound: Leg;
   inbound: Leg;

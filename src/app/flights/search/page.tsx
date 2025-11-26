@@ -58,10 +58,10 @@ export default function FlightsSearchPage() {
         <p className="mb-4 text-sm text-zinc-600">{t("welcomeSearch")}</p>
       </div>
       <div className="container-page">
-        <Tabs defaultValue="same">
+        <Tabs defaultValue="same" onValueChange={(v) => setMode(v as "same" | "different")}>
           <TabsList>
-          <TabsTrigger value="same" onClick={() => setMode("same")}>{t("searchTabSame")}</TabsTrigger>
-          <TabsTrigger value="different" onClick={() => setMode("different")}>{t("searchTabDifferent")}</TabsTrigger>
+          <TabsTrigger value="same">{t("searchTabSame")}</TabsTrigger>
+          <TabsTrigger value="different">{t("searchTabDifferent")}</TabsTrigger>
           </TabsList>
 
         <TabsContent value="same">

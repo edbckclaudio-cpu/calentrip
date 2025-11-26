@@ -7,7 +7,7 @@ import { getTrips, removeTrip } from "@/lib/trips-store";
 import { Button } from "@/components/ui/button";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
-import { LogoClock } from "@/components/icons";
+import Image from "next/image";
 import { useToast } from "@/components/ui/toast";
 
 export default function Header() {
@@ -15,7 +15,7 @@ export default function Header() {
   const { show } = useToast();
 
   function onLangChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const v = e.target.value;
+    const v = e.target.value as "pt" | "en" | "es";
     setLang(v);
     try {
       localStorage.setItem("calentrip:lang", v);
@@ -27,7 +27,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur border-b border-[var(--border)] shadow-sm">
       <div className="container-page flex h-14 items-center gap-3">
         <Link href="/flights/search" className="flex items-center gap-2">
-          <LogoClock className="h-6 w-6" />
+          <Image src="/icon-192.png" alt="CalenTrip" width={24} height={24} className="h-6 w-6" />
           <span className="text-sm font-semibold text-[var(--brand)]">{t("appName")}</span>
         </Link>
         <div className="ml-2 w-36">
@@ -71,13 +71,13 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
         {session.status === "authenticated" ? (
           <ul className="space-y-2">
             {list.length === 0 && <li className="text-sm text-zinc-600 dark:text-zinc-300">{t("noTrips")}</li>}
-            {list.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3">
+            {list.map((trip) => (
+              <li key={trip.id} className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-medium">{t.title}</div>
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400">{t.date} • {t.passengers} pax</div>
+                  <div className="text-sm font-medium">{trip.title}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400">{trip.date} • {trip.passengers} pax</div>
                 </div>
-                <Button type="button" variant="outline" onClick={() => { removeTrip(t.id); refresh(); }}>
+                <Button type="button" variant="outline" onClick={() => { removeTrip(trip.id); refresh(); }}>
                   {t("remove")}
                 </Button>
               </li>
@@ -110,7 +110,7 @@ function ProfileMenu({ t }: { t: (k: string) => string }) {
   const { show } = useToast();
 
   function onLangChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const v = e.target.value;
+    const v = e.target.value as "pt" | "en" | "es";
     setLang(v);
     try {
       localStorage.setItem("calentrip:lang", v);
