@@ -57,9 +57,7 @@ export default function Header() {
         <div className="flex-1 flex justify-center">
           <div className="text-sm text-blue-600 sm:text-zinc-700 dark:text-zinc-300">{now}</div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          <MainMenu t={t} />
-        </div>
+        
       </div>
     </header>
   );
@@ -120,39 +118,4 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
   );
 }
 
-function MainMenu({ t }: { t: (k: string) => string }) {
-  const [open, setOpen] = useState(false);
-  const pathname = "/";
-
-  return (
-    <>
-      <button type="button" aria-label="Menu" className="inline-flex h-8 w-8 items-center justify-center" onClick={() => setOpen(true)}>
-        <span className="material-symbols-outlined text-[24px]">menu</span>
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogHeader>{t("menu")}</DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/flights/search" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
-            <span className="material-symbols-outlined">travel_explore</span>
-            <span>{t("navExplore")}</span>
-          </Link>
-          <Link href="/flights/results" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
-            <span className="material-symbols-outlined">flight</span>
-            <span>{t("navTrips")}</span>
-          </Link>
-          <Link href="/accommodation/search" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
-            <span className="material-symbols-outlined">hotel</span>
-            <span>{t("navStays")}</span>
-          </Link>
-          <Link href="/profile" className="flex items-center gap-2 rounded-md border border-[var(--border)] p-2">
-            <span className="material-symbols-outlined">account_circle</span>
-            <span>{t("navProfile")}</span>
-          </Link>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("close")}</Button>
-        </DialogFooter>
-      </Dialog>
-    </>
-  );
-}
+ 

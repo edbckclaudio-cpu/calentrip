@@ -156,7 +156,7 @@ export default function FlightsSearchPage() {
         </TabsContent>
           </Tabs>
       </div>
-      <Dialog open={exampleOpen} onOpenChange={setExampleOpen}>
+      <Dialog open={exampleOpen} onOpenChange={setExampleOpen} placement="bottom">
         <DialogHeader>Exemplo de viagem — aeroportos diferentes</DialogHeader>
         <div className="p-4 md:p-6 space-y-4 text-sm">
           <div className="rounded-lg border p-3 dark:border-zinc-800">
