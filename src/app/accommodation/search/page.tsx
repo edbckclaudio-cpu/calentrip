@@ -51,6 +51,8 @@ export default function AccommodationSearchPage() {
   const [sameCityHighlight, setSameCityHighlight] = useState(() => !((initialCity || "").trim()));
   const [sameSearchHighlight, setSameSearchHighlight] = useState(() => Boolean((initialCity || "").trim()));
   const [proceedHighlight, setProceedHighlight] = useState(false);
+  const [diffCityCountHighlight, setDiffCityCountHighlight] = useState(false);
+  const [diffCheckHighlight, setDiffCheckHighlight] = useState(false);
 
   function totalPassengers(p: { adults?: number; children?: number; infants?: number } | number | undefined) {
     if (typeof p === "number") return p;
@@ -409,11 +411,16 @@ export default function AccommodationSearchPage() {
       const filled = ((city || initialCity) || "").trim().length > 0;
       setSameCityHighlight(!filled);
       setSameSearchHighlight(filled);
+      setDiffCityCountHighlight(false);
+      setDiffCheckHighlight(false);
     } else {
       setSameCityHighlight(false);
       setSameSearchHighlight(false);
+      const emptyCount = !cityCount;
+      setDiffCityCountHighlight(emptyCount);
+      setDiffCheckHighlight(!emptyCount);
     }
-  }, [tripSearch, city, initialCity]);
+  }, [tripSearch, city, initialCity, cityCount]);
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
@@ -474,8 +481,22 @@ export default function AccommodationSearchPage() {
                 </div>
                 <label className="mb-1 block text-sm">Quantidade de cidades</label>
                 <div className="flex items-center gap-2">
-                  <Input type="number" min={1} max={8} value={cityCount || ""} onChange={(e) => setCityCount(Number(e.target.value))} />
-                  <Button type="button" onClick={onConfirmCityCount}>Check</Button>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={8}
+                    value={cityCount || ""}
+                    className={diffCityCountHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined}
+                    onChange={(e) => {
+                      const v = Number(e.target.value) || 0;
+                      setCityCount(v);
+                      if (tripSearch?.mode === "different") {
+                        if (v > 0) { setDiffCityCountHighlight(false); setDiffCheckHighlight(true); }
+                        else { setDiffCityCountHighlight(true); setDiffCheckHighlight(false); }
+                      }
+                    }}
+                  />
+                  <Button type="button" className={diffCheckHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}>Check</Button>
                 </div>
                 {cities.length > 0 && (
                   <div className="space-y-3">
