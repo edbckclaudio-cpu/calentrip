@@ -30,6 +30,7 @@ export default function FlightsSearchPage() {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [rangeStart, setRangeStart] = useState<string>("");
   const [rangeEnd, setRangeEnd] = useState<string>("");
+  const [rangeBase, setRangeBase] = useState<Date>(new Date());
   const [exampleOpen, setExampleOpen] = useState(false);
 
   function confirm() {
@@ -209,6 +210,19 @@ export default function FlightsSearchPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setRangeOpen(false)} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
             <div className="mb-3 text-lg font-semibold">Selecione Ida e Volta</div>
+            <div className="mb-3 flex items-center justify-between">
+              <button type="button" className="inline-flex h-8 px-2 items-center justify-center rounded-md border border-zinc-300 text-sm hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() - 1, 1))}>
+                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                <span>Anterior</span>
+              </button>
+              <div className="text-sm font-medium">
+                {rangeBase.toLocaleDateString(undefined, { month: "long", year: "numeric" })} • {new Date(rangeBase.getFullYear(), rangeBase.getMonth() + 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+              </div>
+              <button type="button" className="inline-flex h-8 px-2 items-center justify-center rounded-md border border-zinc-300 text-sm hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() + 1, 1))}>
+                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                <span>Próximo</span>
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(() => {
                 function buildMonth(base: Date) {
@@ -226,7 +240,7 @@ export default function FlightsSearchPage() {
                   const pre = Array.from({ length: pad }, () => ({ date: "", label: "" }));
                   return [...pre, ...days];
                 }
-                const base = new Date();
+                const base = rangeBase;
                 const months = [base, new Date(base.getFullYear(), base.getMonth()+1, 1)];
                 return months.map((mo, mi) => (
                   <div key={`m-${mi}`}>
