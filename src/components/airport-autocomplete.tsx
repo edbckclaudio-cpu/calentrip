@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { searchAirportsAsync, Airport } from "@/lib/airports";
 import { useI18n } from "@/lib/i18n";
 
-export default function AirportAutocomplete({ value, onSelect, placeholder, invalid }: { value: string; onSelect: (iata: string) => void; placeholder?: string; invalid?: boolean }) {
+export default function AirportAutocomplete({ value, onSelect, placeholder, invalid, onFocus }: { value: string; onSelect: (iata: string) => void; placeholder?: string; invalid?: boolean; onFocus?: () => void }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Airport[]>([]);
@@ -51,6 +51,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
         className={invalid ? "border-red-500 focus:ring-red-400" : ""}
         value={q.length ? q : value}
         onChange={(e) => onChangeInput(e.target.value)}
+        onFocus={onFocus}
         placeholder={placeholder ?? t("typeCityAirport")} />
       {open && (
         <Card className="absolute left-0 right-0 top-full mt-1 z-50 p-0">

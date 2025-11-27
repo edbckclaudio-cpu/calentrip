@@ -48,6 +48,9 @@ export default function AccommodationSearchPage() {
   const [transportNotice, setTransportNotice] = useState<string | null>(null);
   const [transportHighlight, setTransportHighlight] = useState(false);
   const [summaryHighlight, setSummaryHighlight] = useState(false);
+  const [sameCityHighlight, setSameCityHighlight] = useState(() => !((initialCity || "").trim()));
+  const [sameSearchHighlight, setSameSearchHighlight] = useState(() => Boolean((initialCity || "").trim()));
+  const [proceedHighlight, setProceedHighlight] = useState(false);
 
   function totalPassengers(p: { adults?: number; children?: number; infants?: number } | number | undefined) {
     if (typeof p === "number") return p;
@@ -195,6 +198,9 @@ export default function AccommodationSearchPage() {
       }
     }
     const allChecked = cities.every((c, i) => (i === idx ? true : c.checked));
+    if (tripSearch?.mode === "same" && allChecked) {
+      setProceedHighlight(true);
+    }
     if (allChecked && cities.length > 1) {
       setTransportOpenIdx(0);
       show("Agora escolha transporte entre a cidade 1 e a cidade 2");
@@ -398,6 +404,17 @@ export default function AccommodationSearchPage() {
 
   
 
+  useEffect(() => {
+    if (tripSearch?.mode === "same") {
+      const filled = ((city || initialCity) || "").trim().length > 0;
+      setSameCityHighlight(!filled);
+      setSameSearchHighlight(filled);
+    } else {
+      setSameCityHighlight(false);
+      setSameSearchHighlight(false);
+    }
+  }, [tripSearch, city, initialCity]);
+
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -417,15 +434,33 @@ export default function AccommodationSearchPage() {
                   <div><span className="font-semibold">Check-out</span>: {dates.checkout || "—"}</div>
                 </div>
                 <label className="mb-1 block text-sm">Cidade para a hospedagem</label>
-                <Input placeholder="Roma" value={city} onChange={(e) => setCity(e.target.value)} />
+                <Input
+                  placeholder="Roma"
+                  value={city}
+                  className={sameCityHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCity(v);
+                    if (tripSearch?.mode === "same") {
+                      if ((v || "").trim()) {
+                        setSameCityHighlight(false);
+                        setSameSearchHighlight(true);
+                      } else {
+                        setSameCityHighlight(true);
+                        setSameSearchHighlight(false);
+                      }
+                    }
+                  }}
+                />
                 <div>
-                  <Button type="button" className="w-full sm:w-auto" onClick={() => {
+                  <Button type="button" className={(sameSearchHighlight ? "ring-4 ring-amber-500 animate-pulse " : "") + "w-full sm:w-auto"} onClick={() => {
                     const chosen = city || initialCity;
                     if (!chosen) { show("Defina a cidade"); return; }
                     setCities([{ name: chosen, checkin: dates.checkin || "", checkout: dates.checkout || "" }]);
                     setCityDetailIdx(0);
                     setGuideIdx(0);
                     setGuideStep("address");
+                    setSameSearchHighlight(false);
                     show("Escolha a acomodação");
                   }}>Buscar acomodação</Button>
                 </div>
@@ -818,7 +853,7 @@ export default function AccommodationSearchPage() {
                 ))}
               </ul>
               <div className="mt-3 flex justify-end p-3 pt-0">
-                <Button type="button" onClick={() => {
+                <Button type="button" className={proceedHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => {
                   try {
                     const data = { cities: cities };
                     if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));

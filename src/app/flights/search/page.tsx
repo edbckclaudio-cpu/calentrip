@@ -34,7 +34,18 @@ export default function FlightsSearchPage() {
   const [exampleOpen, setExampleOpen] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [hintRangeDiff, setHintRangeDiff] = useState(false);
-  const [guideStep, setGuideStep] = useState<null | "out_origin" | "out_dest" | "in_origin" | "in_dest" | "confirm">(null);
+  const [guideStep, setGuideStep] = useState<
+    | null
+    | "out_origin"
+    | "out_dest"
+    | "in_origin"
+    | "in_dest"
+    | "confirm"
+    | "same_origin"
+    | "same_dest"
+    | "same_period"
+    | "same_confirm"
+  >(null);
 
   function confirm() {
     const filledSame = Boolean(same.origin && same.destination && same.departDate && same.returnDate);
@@ -79,24 +90,24 @@ export default function FlightsSearchPage() {
               <label className="mb-1 block text-sm">{t("passengers")}</label>
               <PassengerSelector value={same.passengers} onChange={(v) => setSame({ ...same, passengers: v })} />
             </div>
-            <div>
+            <div className={guideStep === "same_origin" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
               <label className="mb-1 block text-sm">{t("origin")}</label>
-              <AirportAutocomplete invalid={attempted && mode === "same" && !same.origin} value={same.origin} onSelect={(iata) => setSame({ ...same, origin: iata })} />
+              <AirportAutocomplete invalid={attempted && mode === "same" && !same.origin} value={same.origin} onFocus={() => { if (mode === "same") setGuideStep("same_origin"); }} onSelect={(iata) => { setSame({ ...same, origin: iata }); if (mode === "same") setGuideStep("same_dest"); }} />
               {attempted && mode === "same" && !same.origin && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
             </div>
-            <div>
+            <div className={guideStep === "same_dest" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
               <label className="mb-1 block text-sm">{t("destination")}</label>
-              <AirportAutocomplete invalid={attempted && mode === "same" && !same.destination} value={same.destination} onSelect={(iata) => setSame({ ...same, destination: iata })} />
+              <AirportAutocomplete invalid={attempted && mode === "same" && !same.destination} value={same.destination} onFocus={() => { if (mode === "same") setGuideStep("same_dest"); }} onSelect={(iata) => { setSame({ ...same, destination: iata }); if (mode === "same") setGuideStep("same_period"); }} />
               {attempted && mode === "same" && !same.destination && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
             </div>
               <div>
                 <label className="mb-1 block text-sm">Data de Ida/Volta</label>
-                <Button type="button" variant="outline" className={attempted && mode === "same" && !(same.departDate && same.returnDate) ? "ring-2 ring-red-400" : ""} onClick={() => setRangeOpen(true)}>
+                <Button type="button" variant="outline" className={(attempted && mode === "same" && !(same.departDate && same.returnDate) ? "ring-2 ring-red-400 " : "") + (guideStep === "same_period" ? " ring-4 ring-amber-500 animate-pulse " : "")} onClick={() => setRangeOpen(true)}>
                   {same.departDate && same.returnDate ? `${same.departDate} → ${same.returnDate}` : "Selecionar período"}
                 </Button>
                 {attempted && mode === "same" && !(same.departDate && same.returnDate) && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
               </div>
-            <Button type="button" onClick={confirm}>{t("confirmInfo")}</Button>
+            <Button type="button" className={guideStep === "same_confirm" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { setGuideStep(null); confirm(); }}>{t("confirmInfo")}</Button>
           </div>
         </TabsContent>
 
@@ -297,6 +308,7 @@ export default function FlightsSearchPage() {
                   if (rangeStart && rangeEnd) {
                     if (mode === "same") {
                       setSame({ ...same, departDate: rangeStart, returnDate: rangeEnd });
+                      setGuideStep("same_confirm");
                     } else {
                       setOutbound({ ...outbound, date: rangeStart });
                       setInbound({ ...inbound, date: rangeEnd });

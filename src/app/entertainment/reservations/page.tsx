@@ -9,7 +9,7 @@ import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 
 type CityStay = { name?: string; checkin?: string; checkout?: string; address?: string };
-type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
+type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
 type AISuggestion = { name: string; category: "museum" | "park" | "theatre" | "attraction" | "tour"; free?: boolean | null; price?: string | null; prebook?: boolean | null; lead?: string | null; url?: string | null };
 type CityEvent = { name: string; date: string; url?: string | null };
 type RestaurantSuggestion = { name: string; cuisine?: string[]; price?: string | null; reservation?: boolean | null; url?: string | null };
@@ -32,6 +32,7 @@ export default function EntertainmentReservationsPage() {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [address, setAddress] = useState("");
   const [records, setRecords] = useState<RecordItem[]>(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
@@ -64,6 +65,7 @@ export default function EntertainmentReservationsPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
+  const [editAddress, setEditAddress] = useState("");
   const [goDrawerOpen, setGoDrawerOpen] = useState(false);
   const [goLoading, setGoLoading] = useState(false);
   const [goInfo, setGoInfo] = useState<{ destination?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
@@ -167,7 +169,7 @@ export default function EntertainmentReservationsPage() {
         const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
         return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
       };
-      const query = `${r.title} ${r.cityName}`.trim();
+      const query = `${r.address || (r.title ? `${r.title} ${r.cityName}` : r.cityName)}`.trim();
       const dest = await geocode(query);
       const pos = await getPos();
       let walkingMin: number | undefined;
@@ -335,17 +337,18 @@ export default function EntertainmentReservationsPage() {
                 {sorted.map((r, idx) => (
                   <li key={`rec-${idx}`} className="flex items-center justify-between gap-2">
                     <div>
-                      {r.date} {r.time || ""} • {r.cityName} • {r.kind === "activity" ? "Atividade" : "Restaurante"}: {r.title}
+                      {r.date} {r.time || ""} • {r.cityName} • {r.kind === "activity" ? "Atividade" : "Restaurante"}: {r.title}{r.address ? ` • ${r.address}` : ""}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button type="button" variant="outline" onClick={() => openGoDrawer(r)}>Como ir</Button>
-                      <Button type="button" variant="outline" onClick={() => {
+                    <Button type="button" variant="outline" onClick={() => {
                         const j = records.indexOf(r);
                         if (j >= 0) {
                           setEditIdx(j);
                           setEditTitle(r.title);
                           setEditDate(r.date);
                           setEditTime(r.time || "");
+                          setEditAddress(r.address || "");
                         }
                       }}>Editar</Button>
                       <Button type="button" variant="secondary" onClick={() => {
@@ -381,6 +384,11 @@ export default function EntertainmentReservationsPage() {
               <label className="mb-1 block text-sm">Título</label>
               <Input placeholder={openKind === "restaurant" ? "Nome do restaurante" : "Nome da atividade"} value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
+            <div>
+              <label className="mb-1 block text-sm">Endereço</label>
+              <Input placeholder="Rua, número, bairro" value={address} onChange={(e) => setAddress(e.target.value)} />
+              <div className="mt-1 text-xs text-zinc-600">Este será o endereço para a geolocalização calcular o deslocamento.</div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm">Data</label>
@@ -391,15 +399,25 @@ export default function EntertainmentReservationsPage() {
                         <Input placeholder="19:30" value={time} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTime(formatTimeInput(e.target.value))} />
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide" disabled={!title || !date} onClick={() => {
-                const cityName = cities[openIdx!]?.name || `Cidade ${openIdx! + 1}`;
-                setRecords((prev) => [...prev, { kind: openKind!, cityIdx: openIdx!, cityName, date, time, title }]);
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" className="h-11 rounded-lg font-semibold tracking-wide" onClick={() => {
                 setOpenIdx(null);
                 setOpenKind(null);
+                setTitle("");
+                setDate("");
+                setTime("");
+                setAddress("");
+              }}>Cancelar</Button>
+              <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide" disabled={!title || !date} onClick={() => {
+                const cityName = cities[openIdx!]?.name || `Cidade ${openIdx! + 1}`;
+                setRecords((prev) => [...prev, { kind: openKind!, cityIdx: openIdx!, cityName, date, time, title, address: address.trim() || undefined }]);
+                setOpenIdx(null);
+                setOpenKind(null);
+                setAddress("");
                 show(openKind === "restaurant" ? "Restaurante adicionado" : "Atividade adicionada", { variant: "success" });
               }}>Salvar</Button>
             </div>
+            <div className="text-xs text-zinc-600">Para encontrar mais opções, use o botão &quot;Sugestões por IA&quot;.</div>
           </div>
         )}
       </Dialog>
@@ -677,6 +695,11 @@ export default function EntertainmentReservationsPage() {
               <label className="mb-1 block text-sm">Título</label>
               <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
             </div>
+            <div>
+              <label className="mb-1 block text-sm">Endereço</label>
+              <Input placeholder="Rua, número, bairro" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+              <div className="mt-1 text-xs text-zinc-600">Este será o endereço para a geolocalização calcular o deslocamento.</div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm">Data</label>
@@ -689,11 +712,13 @@ export default function EntertainmentReservationsPage() {
             </div>
             <div className="flex justify-end">
               <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide" disabled={!editTitle || !editDate} onClick={() => {
-                setRecords((prev) => prev.map((it, i) => i === editIdx ? { ...it, title: editTitle, date: editDate, time: editTime } : it));
+                setRecords((prev) => prev.map((it, i) => i === editIdx ? { ...it, title: editTitle, date: editDate, time: editTime, address: editAddress.trim() || it.address } : it));
                 setEditIdx(null);
+                setEditAddress("");
                 show("Item atualizado", { variant: "success" });
               }}>Salvar</Button>
             </div>
+            <div className="text-xs text-zinc-600">Para encontrar mais opções, use o botão &quot;Sugestões por IA&quot;.</div>
           </div>
         )}
       </Dialog>
