@@ -552,6 +552,94 @@ export default function AccommodationSearchPage() {
             )}
           </CardContent>
         </Card>
+        {cityDetailIdx !== null && (
+          <Dialog open onOpenChange={() => setCityDetailIdx(null)}>
+            <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md rounded-l-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800">
+              <DialogHeader>Hospedagem</DialogHeader>
+              <div className="p-1 space-y-2 text-sm">
+                <div className="font-semibold">{cities[cityDetailIdx!]?.name || `Cidade ${(cityDetailIdx ?? 0) + 1}`}</div>
+                <div>Check-in: {cities[cityDetailIdx!]?.checkin || "—"}</div>
+                <div>Check-out: {cities[cityDetailIdx!]?.checkout || "—"}</div>
+                <div className="mt-2 font-semibold">Links de acomodação</div>
+                <ul className="space-y-1">
+                  {(() => {
+                    const c = encodeURIComponent(cities[cityDetailIdx!]?.name || "");
+                    const ci = cities[cityDetailIdx!]?.checkin || "";
+                    const co = cities[cityDetailIdx!]?.checkout || "";
+                    return [
+                      { name: "Booking", href: `https://www.booking.com/searchresults.html?ss=${c}&checkin=${ci}&checkout=${co}` },
+                      { name: "Airbnb", href: `https://www.airbnb.com/s/${c}/homes?checkin=${ci}&checkout=${co}` },
+                      { name: "Trivago", href: `https://www.trivago.com/?s=${c}&checkIn=${ci}&checkOut=${co}` },
+                    ];
+                  })().map((l) => (
+                    <li key={l.name}><a className="underline" href={l.href} target="_blank" rel="noopener noreferrer">{l.name}</a></li>
+                  ))}
+                </ul>
+                <div className="mt-3">
+                  <label className="mb-1 block text-sm">Endereço da hospedagem</label>
+                  <Input
+                    placeholder="Rua, número, bairro"
+                    value={cities[cityDetailIdx!]?.address || ""}
+                    className={guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse" : undefined}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
+                      if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
+                    }}
+                  />
+                  <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-300 dark:bg-amber-900/20 dark:text-amber-200">
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-amber-100">
+                        <span className="material-symbols-outlined text-[14px] text-amber-800">info</span>
+                      </span>
+                      <span>
+                        Informe o endereço completo da hospedagem. Este endereço ficará no calendário e, no dia da atividade, enviaremos uma notificação com distância, tempo de deslocamento, opções de transporte e links para aplicativos de carro já com o destino preenchido.
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="mb-1 font-semibold">Documentos da hospedagem</div>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor={`stay-cam-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm cursor-pointer">Usar câmera</label>
+                      <input id={`stay-cam-${cityDetailIdx ?? 0}`} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
+                          const reader = new FileReader();
+                          reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
+                          reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
+                          reader.readAsDataURL(f);
+                        }))).then((list) => {
+                          setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, stayFiles: [...(x.stayFiles || []), ...list] } : x)));
+                        });
+                      }} />
+                      <Input id={`stay-file-${cityDetailIdx ?? 0}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
+                          const reader = new FileReader();
+                          reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
+                          reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
+                          reader.readAsDataURL(f);
+                        }))).then((list) => {
+                          setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, stayFiles: [...(x.stayFiles || []), ...list] } : x)));
+                        });
+                      }} />
+                    </div>
+                    {cities[cityDetailIdx!]?.stayFiles && cities[cityDetailIdx!]!.stayFiles!.length ? (
+                      <ul className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
+                        {cities[cityDetailIdx!]!.stayFiles!.map((f, idx) => (
+                          <li key={`sf-${idx}`}>{f.name} • {Math.round(f.size / 1024)} KB</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <Button type="button" className={guideIdx === cityDetailIdx && guideStep === "check" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { onCityCheck(cityDetailIdx!); setCityDetailIdx(null); }}>Check</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Dialog>
+        )}
         
         <Dialog open={transportOpenIdx !== null} onOpenChange={(o) => { if (!o) { setTransportOpenIdx(null); setTransportNotice(null); setTransportHighlight(false); } }}>
           <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md rounded-l-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800">

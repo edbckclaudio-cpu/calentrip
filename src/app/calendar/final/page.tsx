@@ -43,17 +43,37 @@ export default function FinalCalendarPage() {
   const [returnDrawerOpen, setReturnDrawerOpen] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
+  const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
   const [sideOpen, setSideOpen] = useState(false);
+  const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
+  const [savedCalendar, setSavedCalendar] = useState<{ events?: EventItem[] } | null>(null);
+  const [savedTripsList, setSavedTripsList] = useState<TripItem[]>([]);
   const { data: session, status } = useSession();
   const { lang } = useI18n();
 
   const sorted = useMemo(() => {
     const parse = (d: string, t?: string) => {
-      const s = `${d || ""} ${t || "00:00"}`.trim();
-      return new Date(s.replace(/\//g, "-"));
+      const dd = (d || "").replace(/\//g, "-");
+      const tt = (t || "00:00").padStart(5, "0");
+      const iso = `${dd}T${tt}:00`;
+      const dt = new Date(iso);
+      return isNaN(dt.getTime()) ? new Date(0) : dt;
     };
     return [...events].sort((a, b) => parse(a.date, a.time).getTime() - parse(b.date, b.time).getTime());
+  }, [events]);
+
+  const lastInboundSignature = useMemo(() => {
+    let sig = "";
+    let best = -Infinity;
+    events.forEach((e) => {
+      const n = e.meta as FlightNote | undefined;
+      if (e.type === "flight" && n?.leg === "inbound" && e.date && e.time) {
+        const ts = new Date(`${e.date}T${(e.time || "00:00").padStart(5, "0")}:00`).getTime();
+        if (ts > best) { best = ts; sig = `${n.origin}|${n.destination}|${e.date}|${e.time || ""}`; }
+      }
+    });
+    return sig;
   }, [events]);
 
   useEffect(() => {
@@ -90,14 +110,22 @@ export default function FinalCalendarPage() {
         const seg = c.transportToNext;
         if (seg) {
           const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
-          const date = c.checkout || seg.depTime ? (c.checkout || "") : "";
-          list.push({ type: "transport", label, date, time: seg.depTime || undefined, meta: { ...seg, originAddress: c.address, originCity: c.name } });
+          const date = c.checkout || n?.checkin || "";
+          const time = seg.depTime || "10:00";
+          list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
         }
       }
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
       const recs: RecordItem[] = raw ? JSON.parse(raw) : [];
       (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
-      setEvents(list);
+      const seen = new Set<string>();
+      const unique = list.filter((e) => {
+        const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setEvents(unique);
     } catch {}
   }, []);
 
@@ -395,6 +423,8 @@ export default function FinalCalendarPage() {
       if (!notes.length) { setReturnInfo({ city: last.name, address: last.address }); return; }
       const sortedNotes = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime());
       const fn = sortedNotes[sortedNotes.length - 1];
+      const trip = trips.find((t) => (t.flightNotes || []).some((n) => n.leg === "inbound" && n.origin === fn.origin && n.destination === fn.destination && n.date === fn.date && n.departureTime === fn.departureTime));
+      setReturnFiles((trip?.attachments || []).filter((a) => a.leg === "inbound").map((a) => ({ name: a.name, type: a.type, size: a.size, dataUrl: a.dataUrl })));
       const airport = await findAirportByIata(fn.origin);
       const geocode = async (q: string) => {
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
@@ -475,12 +505,13 @@ export default function FinalCalendarPage() {
       const d = await geocode(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`);
       if (!(o && d)) return;
       let drivingMin: number | undefined;
+      let distanceKm: number | undefined;
       try {
         const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
         const resD = await fetch(osrmDrive);
         const jsD = await resD.json();
         const rD = jsD?.routes?.[0];
-        if (rD) drivingMin = Math.round((rD.duration ?? 0) / 60);
+        if (rD) { drivingMin = Math.round((rD.duration ?? 0) / 60); distanceKm = Math.round((rD.distance ?? 0) / 1000); }
       } catch {}
       const trafficFactor = 1.3;
       const driveWithTraffic = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
@@ -498,6 +529,8 @@ export default function FinalCalendarPage() {
               const lines = [
                 `Destino: ${airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`}`,
                 `Partida: ${fn.date} ${fn.departureTime}`,
+                distanceKm !== undefined ? `Distância: ${distanceKm} km` : `Distância: —`,
+                driveWithTraffic !== undefined ? `Tempo estimado: ${driveWithTraffic} min` : (drivingMin !== undefined ? `Tempo estimado: ${drivingMin} min` : `Tempo estimado: —`),
               ];
               new Notification("Transporte até o aeroporto de volta", { body: lines.join("\n") });
             } catch {}
@@ -609,7 +642,7 @@ export default function FinalCalendarPage() {
   }, [events, show]);
 
   return (
-    <div className="min-h-screen px-4 py-6 space-y-6">
+    <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
       <div className={sideOpen ? "fixed left-0 top-0 bottom-0 z-40 w-56 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all" : "fixed left-0 top-0 bottom-0 z-40 w-14 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all"}>
         <div className="h-14 flex items-center justify-center border-b border-zinc-200 dark:border-zinc-800">
           <button type="button" className="rounded-md p-2" onClick={() => setSideOpen((v) => !v)}>
@@ -655,25 +688,59 @@ export default function FinalCalendarPage() {
               </div>
             )}
           </div>
-          <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[20px]">account_circle</span>
+          
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+            try {
+              const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+              const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
+              setSavedCalendar(sc);
+            } catch { setSavedCalendar(null); }
+            try {
+              const trips = getTrips();
+              setSavedTripsList(trips);
+            } catch { setSavedTripsList([]); }
+            setSavedDrawerOpen(true);
+          }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">lists</span>
             </span>
-            {sideOpen ? <span className="text-sm">Perfil do usuário</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Pesquisas salvas</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+            onClick={() => {
+              try {
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("calentrip:trips");
+                  localStorage.removeItem("calentrip_trip_summary");
+                  localStorage.removeItem("calentrip:entertainment:records");
+                  localStorage.removeItem("calentrip:saved_calendar");
+                  localStorage.removeItem("calentrip:tripSearch");
+                }
+                setEvents([]);
+              } catch {}
+              try { window.location.href = "/flights/search"; } catch {}
+            }}
+          >
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">travel_explore</span>
+            </span>
+            {sideOpen ? <span className="text-sm font-medium">Iniciar nova pesquisa</span> : null}
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             try {
               const payload = { events };
               if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
               show("Salvo em suas viagens", { variant: "success" });
             } catch { show("Erro ao salvar", { variant: "error" }); }
           }}>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">bookmark_add</span>
             </span>
-            {sideOpen ? <span className="text-sm">Salvar em suas viagens</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Salvar calendário</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             const subject = encodeURIComponent("Calendário da viagem");
             const body = encodeURIComponent(events.map((e) => `${e.date} ${e.time || ""} • ${e.label}`).join("\n"));
             const a = document.createElement("a");
@@ -684,12 +751,12 @@ export default function FinalCalendarPage() {
             a.remove();
             show("Abrindo e-mail", { variant: "info" });
           }}>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[20px]">mail</span>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">mail</span>
             </span>
-            {sideOpen ? <span className="text-sm">Enviar calendário por e-mail</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Enviar por e-mail</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             const text = events.map((e) => `${e.date} ${e.time || ""} • ${e.label}`).join("\n");
             try {
               if (navigator.share) { await navigator.share({ title: "Calendário", text }); show("Compartilhado", { variant: "success" }); return; }
@@ -697,12 +764,12 @@ export default function FinalCalendarPage() {
               show("Calendário copiado", { variant: "success" });
             } catch { show("Erro ao compartilhar", { variant: "error" }); }
           }}>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[20px]">share</span>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">share</span>
             </span>
-            {sideOpen ? <span className="text-sm">Compartilhar calendário</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Compartilhar calendário</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             function fmt(d: Date) {
               const y = String(d.getFullYear());
               const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -840,13 +907,22 @@ export default function FinalCalendarPage() {
             URL.revokeObjectURL(url);
             show("Arquivo de calendário gerado", { variant: "success" });
             }}>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[20px]">calendar_month</span>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </span>
-            {sideOpen ? <span className="text-sm">Salvar no calendário do celular</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Salvar no calendário do dispositivo</span> : null}
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">account_circle</span>
+            </span>
+            {sideOpen ? <span className="text-sm font-medium">Perfil</span> : null}
           </button>
         </div>
       </div>
+      {sideOpen ? (
+        <div className="fixed top-0 right-0 bottom-0 left-56 z-30 bg-black/10" onClick={() => setSideOpen(false)} />
+      ) : null}
       <div className="container-page">
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário final</h1>
         <p className="text-sm text-zinc-600">Veja todas as atividades em ordem cronológica. Configure o transporte para o aeroporto.</p>
@@ -868,6 +944,9 @@ export default function FinalCalendarPage() {
                     <div className="flex items-center gap-2">
                       {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" && (ev.meta as FlightNote)?.departureTime ? (
                         <Button type="button" variant="outline" onClick={() => openTransportDrawer(ev)}>Transporte até o aeroporto</Button>
+                      ) : null}
+                      {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
+                        <Button type="button" variant="outline" onClick={() => openReturnAirportDrawer()}>Transporte até o aeroporto</Button>
                       ) : null}
                       {ev.type === "transport" ? (
                         <Button type="button" variant="outline" onClick={() => openDepartureDrawer(ev)}>Como chegar da hospedagem de checkout até o transporte para a próxima cidade</Button>
@@ -900,7 +979,7 @@ export default function FinalCalendarPage() {
         </Card>
       </div>
 
-      {drawerOpen && (
+  {drawerOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
@@ -931,6 +1010,55 @@ export default function FinalCalendarPage() {
                 </>
               )}
             </div>
+      </div>
+    </div>
+  )}
+  {savedDrawerOpen && (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={() => setSavedDrawerOpen(false)} />
+      <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+        <DialogHeader>Pesquisas e calendários salvos</DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div className="rounded border p-3">
+            <div className="font-semibold mb-1">Calendário salvo</div>
+            {savedCalendar?.events && savedCalendar.events.length ? (
+              <div className="space-y-2">
+                <div>{savedCalendar.events.length} eventos</div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => { setEvents(savedCalendar!.events!); setSavedDrawerOpen(false); }}>Carregar calendário</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-zinc-600">Nenhum calendário salvo.</div>
+            )}
+          </div>
+          <div className="rounded border p-3">
+            <div className="font-semibold mb-1">Pesquisas salvas</div>
+            {savedTripsList.length ? (
+              <ul className="space-y-2">
+                {savedTripsList.map((t) => (
+                  <li key={t.id} className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-medium">{t.title}</div>
+                      <div className="text-xs text-zinc-600">{t.date} • {t.passengers} pax</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" onClick={() => {
+                        const legs = (t.flightNotes || []).map((n) => `${n.leg === "outbound" ? "Ida" : "Volta"}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
+                        alert(legs.join("\n"));
+                      }}>Ver</Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-zinc-600">Nenhuma pesquisa salva.</div>
+            )}
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setSavedDrawerOpen(false)}>Fechar</Button>
+          </div>
+        </div>
       </div>
     </div>
   )}
@@ -1039,6 +1167,11 @@ export default function FinalCalendarPage() {
               </div>
               <div className="mt-2">Chamar Uber às: {returnInfo?.callTime || "—"}</div>
               <div>Notificação programada: {returnInfo?.notifyAt ? `às ${returnInfo.notifyAt}` : "—"}</div>
+              {returnFiles.length ? (
+                <div>
+                  <Button type="button" variant="outline" onClick={() => { setDocTitle(returnInfo?.airportName || "Voo de volta"); setDocFiles(returnFiles); setDocOpen(true); }}>Visualizar documentos</Button>
+                </div>
+              ) : null}
               <div className="mt-3 flex justify-end">
                 <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setReturnDrawerOpen(false); setReturnInfo(null); }}>Fechar</Button>
               </div>

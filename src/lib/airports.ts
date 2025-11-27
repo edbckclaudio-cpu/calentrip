@@ -120,5 +120,5 @@ export async function findAirportByIata(iata: string): Promise<Airport | null> {
 
 export async function getCountryByIata(iata: string): Promise<string | null> {
   const a = await findAirportByIata(iata);
-  return a ? a.country ?? null : null;
+  return a ? (a.country ?? null) : null;
 }

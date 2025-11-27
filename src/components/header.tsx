@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { getTrips, removeTrip } from "@/lib/trips-store";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 export default function Header() {
   const { lang, setLang, t } = useI18n();
   const { show } = useToast();
+  const [now, setNow] = useState("");
 
   function onLangChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const v = e.target.value as "pt" | "en" | "es";
@@ -22,6 +23,19 @@ export default function Header() {
     } catch {}
     show("Idioma alterado");
   }
+
+  useEffect(() => {
+    function update() {
+      const d = new Date();
+      const loc = lang === "pt" ? "pt-BR" : lang === "es" ? "es-ES" : "en-US";
+      const date = new Intl.DateTimeFormat(loc, { day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
+      const time = new Intl.DateTimeFormat(loc, { hour: "2-digit", minute: "2-digit" }).format(d);
+      setNow(`${date} ${time}`);
+    }
+    update();
+    const id = window.setInterval(update, 1000);
+    return () => window.clearInterval(id);
+  }, [lang]);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur border-b border-[var(--border)] shadow-sm">
@@ -40,6 +54,9 @@ export default function Header() {
         <nav className="ml-4 hidden items-center gap-4 sm:flex">
           <TripsMenu t={t} />
         </nav>
+        <div className="flex-1 flex justify-center">
+          <div className="text-sm text-zinc-700 dark:text-zinc-300">{now}</div>
+        </div>
         <div className="ml-auto flex items-center gap-3">
           <MainMenu t={t} />
         </div>
