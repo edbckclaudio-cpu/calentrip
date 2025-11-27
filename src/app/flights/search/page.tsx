@@ -32,6 +32,7 @@ export default function FlightsSearchPage() {
   const [rangeEnd, setRangeEnd] = useState<string>("");
   const [rangeBase, setRangeBase] = useState<Date>(new Date());
   const [exampleOpen, setExampleOpen] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   function confirm() {
     const filledSame = Boolean(same.origin && same.destination && same.departDate && same.returnDate);
@@ -208,9 +209,21 @@ export default function FlightsSearchPage() {
       {rangeOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setRangeOpen(false)} />
-          <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+          <div
+            className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black"
+            onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+            onTouchEnd={(e) => {
+              if (touchStartX !== null) {
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                if (Math.abs(dx) > 50) {
+                  setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() + (dx < 0 ? 1 : -1), 1));
+                }
+                setTouchStartX(null);
+              }
+            }}
+          >
             <div className="mb-3 text-lg font-semibold">Selecione Ida e Volta</div>
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between hidden sm:flex">
               <button type="button" className="inline-flex h-8 px-2 items-center justify-center rounded-md border border-zinc-300 text-sm hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() - 1, 1))}>
                 <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                 <span>Anterior</span>
@@ -260,6 +273,16 @@ export default function FlightsSearchPage() {
                         );
                       })}
                     </div>
+                    {mi === 0 && (
+                      <div className="my-2 flex items-center justify-center gap-3 sm:hidden">
+                        <button type="button" aria-label="Mês anterior" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() - 1, 1))}>
+                          <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </button>
+                        <button type="button" aria-label="Próximo mês" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() + 1, 1))}>
+                          <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ));
               })()}
