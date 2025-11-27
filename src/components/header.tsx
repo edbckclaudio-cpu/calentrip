@@ -42,7 +42,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur border-b border-[var(--border)] shadow-sm">
       <div className="container-page flex h-14 items-center gap-3">
         <button type="button" aria-label="Menu" className="inline-flex h-8 w-8 items-center justify-center" onClick={() => setOpenNav(true)}>
-          <span className="material-symbols-outlined text-[24px]">menu</span>
+          <span className="material-symbols-outlined text-[24px] text-[var(--brand)]">menu</span>
         </button>
         <Link href="/flights/search" className="flex items-center gap-2">
           <Image src="/icon-192.png" alt="CalenTrip" width={24} height={24} className="h-6 w-6" />
@@ -59,7 +59,7 @@ export default function Header() {
           <TripsMenu t={t} />
         </nav>
         <div className="flex-1 flex justify-center">
-          <div className="text-sm text-blue-600 sm:text-zinc-700 dark:text-zinc-300">{now}</div>
+          <div className="text-sm font-medium text-[var(--brand)]">{now}</div>
         </div>
         
       </div>

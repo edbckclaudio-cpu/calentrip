@@ -69,6 +69,17 @@ export default function MonthCalendarPage() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   }, [events]);
 
+  const travelDates = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((e) => { if (e.type === "flight" && e.date) set.add(e.date); });
+    return set;
+  }, [events]);
+
+  const monthLabel = useMemo(() => {
+    const loc = lang === "pt" ? "pt-BR" : lang === "es" ? "es-ES" : "en-US";
+    return new Intl.DateTimeFormat(loc, { month: "long", year: "numeric" }).format(tripMonth);
+  }, [tripMonth, lang]);
+
   const monthDays = useMemo(() => {
     const y = tripMonth.getFullYear();
     const m = tripMonth.getMonth();
@@ -136,8 +147,14 @@ export default function MonthCalendarPage() {
       {sideOpen ? (<div className="fixed top-0 right-0 bottom-0 left-56 z-30 bg-black/10" onClick={() => setSideOpen(false)} />) : null}
 
       <div className="container-page">
-        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário mensal</h1>
-        <p className="text-sm text-zinc-600">Veja o mês da viagem. Somente as datas com eventos estão habilitadas.</p>
+        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário da viagem</h1>
+        <div className="text-sm text-zinc-700 dark:text-zinc-300">{monthLabel}</div>
+        <div className="mt-2 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <span className="material-symbols-outlined text-[18px] text-[#febb02]">sticky_note_2</span>
+          <span>
+            Toque em uma data para ver atividades e detalhes. Datas com eventos têm anel amarelo; dias de voo aparecem destacados.
+          </span>
+        </div>
       </div>
 
       <div className="container-page">
@@ -147,11 +164,19 @@ export default function MonthCalendarPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-7 gap-2 text-sm">
-              {monthDays.map((d, i) => (
-                <button key={`d-${i}`} type="button" disabled={!d.date || !d.enabled} className={!d.date ? "h-10 rounded border border-transparent" : d.enabled ? "h-10 rounded border border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800" : "h-10 rounded border border-zinc-200 text-zinc-400 dark:border-zinc-800"} onClick={() => setDayOpen(d.date)}>
-                  {d.label}
-                </button>
-              ))}
+              {monthDays.map((d, i) => {
+                const isTravel = !!(d.date && travelDates.has(d.date));
+                const hasEvent = !!d.enabled && !!d.date;
+                const base = "h-10 rounded relative";
+                const ring = hasEvent ? " border-2 border-[#febb02]" : " border border-zinc-200 dark:border-zinc-800";
+                const bg = isTravel ? " bg-[var(--brand)] text-white" : hasEvent ? " hover:bg-zinc-50 dark:hover:bg-zinc-900" : " text-zinc-400";
+                const cls = !d.date ? "h-10 rounded border border-transparent" : `${base}${ring}${bg}`;
+                return (
+                  <button key={`d-${i}`} type="button" disabled={!d.date || !hasEvent} className={cls} onClick={() => setDayOpen(d.date)}>
+                    {d.label}
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
