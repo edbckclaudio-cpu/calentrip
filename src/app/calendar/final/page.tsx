@@ -11,11 +11,12 @@ import { useToast } from "@/components/ui/toast";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 import { findAirportByIata } from "@/lib/airports";
 
-type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }> };
+type SavedFile = { name: string; type: string; size: number; id?: string; dataUrl?: string };
+type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: SavedFile[] };
 
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
-type CityPersist = { name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta };
+type CityPersist = { name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] };
 
 export default function FinalCalendarPage() {
   
@@ -34,12 +35,12 @@ export default function FinalCalendarPage() {
   const { show } = useToast();
   const [docOpen, setDocOpen] = useState(false);
   const [docTitle, setDocTitle] = useState("");
-  const [docFiles, setDocFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
+  const [docFiles, setDocFiles] = useState<SavedFile[]>([]);
   const [goDrawerOpen, setGoDrawerOpen] = useState(false);
   const [goLoading, setGoLoading] = useState(false);
   const [goInfo, setGoInfo] = useState<{ destination?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
   const [goRecord, setGoRecord] = useState<RecordItem | null>(null);
-  const [summaryCities, setSummaryCities] = useState<Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: Array<{ name: string; type: string; size: number; dataUrl?: string }> }>>([]);
+  const [summaryCities, setSummaryCities] = useState<Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>>([]);
   const [returnDrawerOpen, setReturnDrawerOpen] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
@@ -91,9 +92,9 @@ export default function FinalCalendarPage() {
         }
       });
       const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-      const summary = rawSummary ? JSON.parse(rawSummary) as { cities?: CityPersist[] } : null;
+      const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
       const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
-      setSummaryCities(cities as Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: Array<{ name: string; type: string; size: number; dataUrl?: string }> }>);
+      setSummaryCities(cities as Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>);
       cities.forEach((c, i) => {
         const cityName = c.name || `Cidade ${i + 1}`;
         const addr = c.address || "(endereço não informado)";
@@ -1107,8 +1108,8 @@ export default function FinalCalendarPage() {
                   setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem");
                   const mod = await import("@/lib/attachments-store");
                   const resolved = await Promise.all(files.map(async (f) => {
-                    if (!f.dataUrl && (f as any).id) {
-                      const url = await mod.getObjectUrl((f as any).id);
+                    if (!f.dataUrl && f.id) {
+                      const url = await mod.getObjectUrl(f.id);
                       return { ...f, dataUrl: url || undefined };
                     }
                     return f;
@@ -1286,7 +1287,9 @@ export default function FinalCalendarPage() {
                       {f.dataUrl && (
                         <div className="mt-2 space-y-2">
                           {f.type.startsWith("image/") ? (
-                            <img src={f.dataUrl} alt={f.name} className="max-h-48 rounded border" />
+                            <div className="relative h-48 w-full">
+                              <Image src={f.dataUrl || ""} alt={f.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain rounded border" />
+                            </div>
                           ) : f.type === "application/pdf" ? (
                             <iframe src={f.dataUrl} title={f.name} className="w-full h-48 rounded border" />
                           ) : (

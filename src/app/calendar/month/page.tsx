@@ -33,7 +33,7 @@ export default function MonthCalendarPage() {
         }
       });
       const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-      const summary = rawSummary ? JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string }> } : null;
+      const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string }> }) : null;
       const cities = Array.isArray(summary?.cities) ? summary!.cities! : [];
       cities.forEach((c, i) => {
         const cityName = c.name || `Cidade ${i + 1}`;
@@ -42,7 +42,7 @@ export default function MonthCalendarPage() {
         if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "09:00", meta: { city: cityName, address: addr, kind: "checkout" } });
       });
       const rawRecs = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
-      const recs: RecordItem[] = rawRecs ? JSON.parse(rawRecs) : [];
+      const recs: RecordItem[] = rawRecs ? (JSON.parse(rawRecs) as RecordItem[]) : [];
       (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
       const seen = new Set<string>();
       const unique = list.filter((e) => {
@@ -185,4 +185,3 @@ export default function MonthCalendarPage() {
     </div>
   );
 }
-

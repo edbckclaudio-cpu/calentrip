@@ -128,6 +128,8 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
   const { lang } = useI18n();
   const [savedOpen, setSavedOpen] = useState(false);
   const [savedTrips, setSavedTrips] = useState<ReturnType<typeof getTrips>>([]);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [policyType, setPolicyType] = useState<null | "privacy" | "terms" | "cookies" | "eula" | "data" | "support" | "licenses">(null);
 
   function openSaved() {
     try { setSavedTrips(getTrips()); } catch { setSavedTrips([] as any); }
@@ -196,12 +198,45 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             </span>
             <span className="text-sm font-medium">Iniciar nova pesquisa</span>
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setProfileOpen(true)}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">account_circle</span>
             </span>
             <span className="text-sm font-medium">Perfil</span>
           </button>
+          <div className="mt-2 rounded-md border border-zinc-200 dark:border-zinc-800">
+            <div className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300">Termos e Políticas</div>
+            <div className="px-2 pb-2 space-y-1">
+              <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("privacy")}> 
+                <span className="material-symbols-outlined text-[20px]">privacy_tip</span>
+                <span className="text-sm">Política de Privacidade</span>
+              </button>
+              <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("terms")}> 
+                <span className="material-symbols-outlined text-[20px]">gavel</span>
+                <span className="text-sm">Termos de Serviço</span>
+              </button>
+              <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("cookies")}> 
+                <span className="material-symbols-outlined text-[20px]">cookie</span>
+                <span className="text-sm">Política de Cookies</span>
+              </button>
+              <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("eula")}> 
+                <span className="material-symbols-outlined text-[20px]">description</span>
+                <span className="text-sm">EULA / Licença de Uso</span>
+              </button>
+              <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("data")}> 
+                <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                <span className="text-sm">Exclusão de Conta e Dados</span>
+              </button>
+              <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("support")}> 
+                <span className="material-symbols-outlined text-[20px]">support_agent</span>
+                <span className="text-sm">Suporte</span>
+              </button>
+              <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("licenses")}> 
+                <span className="material-symbols-outlined text-[20px]">developer_board</span>
+                <span className="text-sm">Licenças de Terceiros</span>
+              </button>
+            </div>
+          </div>
         </div>
       </Dialog>
 
@@ -225,6 +260,104 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
           )}
           <DialogFooter>
             <Button type="button" onClick={() => setSavedOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
+
+      <Dialog open={profileOpen} onOpenChange={setProfileOpen} placement="bottom">
+        <DialogHeader>Perfil</DialogHeader>
+        <div className="p-4 space-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined">account_circle</span>
+            <span>Acesse sua página de perfil</span>
+          </div>
+          <div>
+            <button type="button" className="underline text-sm" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Abrir perfil</button>
+          </div>
+          <div className="mt-2 rounded-md border border-zinc-200 dark:border-zinc-800">
+            <div className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300">Termos e Políticas</div>
+            <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+              <Button type="button" variant="outline" onClick={() => setPolicyType("privacy")}>Privacidade</Button>
+              <Button type="button" variant="outline" onClick={() => setPolicyType("terms")}>Termos</Button>
+              <Button type="button" variant="outline" onClick={() => setPolicyType("cookies")}>Cookies</Button>
+              <Button type="button" variant="outline" onClick={() => setPolicyType("eula")}>EULA</Button>
+              <Button type="button" variant="outline" onClick={() => setPolicyType("data")}>Exclusão de dados</Button>
+              <Button type="button" variant="outline" onClick={() => setPolicyType("support")}>Suporte</Button>
+              <Button type="button" variant="outline" onClick={() => setPolicyType("licenses")}>Licenças</Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => setProfileOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
+
+      <Dialog open={policyType !== null} onOpenChange={(o) => { if (!o) setPolicyType(null); }} placement="center">
+        <DialogHeader>
+          {policyType === "privacy" && "Política de Privacidade"}
+          {policyType === "terms" && "Termos de Serviço"}
+          {policyType === "cookies" && "Política de Cookies"}
+          {policyType === "eula" && "EULA / Licença de Uso"}
+          {policyType === "data" && "Exclusão de Conta e Dados"}
+          {policyType === "support" && "Suporte"}
+          {policyType === "licenses" && "Licenças de Terceiros"}
+        </DialogHeader>
+        <div className="text-sm max-h-[70vh] overflow-y-auto">
+          {policyType === "privacy" && (
+            <div className="space-y-2">
+              <p>Coletamos dados necessários para funcionamento do serviço, como informações de conta, preferências de pesquisa e dados técnicos do dispositivo.</p>
+              <p>Usamos os dados para oferecer e melhorar recursos, cumprir obrigações legais e prevenir abuso.</p>
+              <p>Compartilhamos dados apenas com provedores estritamente necessários (autenticação, hospedagem, analytics) sob contratos e medidas de segurança.</p>
+              <p>Você pode solicitar acesso, correção ou exclusão de dados. Guardamos dados pelo tempo necessário para operar o serviço e conforme a lei.</p>
+              <p>Contato do controlador: suporte@calentrip.com. Caso necessário, você pode exercer direitos conforme LGPD, GDPR e demais legislações aplicáveis.</p>
+              <p>Seus dados podem ser transferidos internacionalmente mediante salvaguardas adequadas.</p>
+            </div>
+          )}
+          {policyType === "terms" && (
+            <div className="space-y-2">
+              <p>Ao usar o aplicativo, você concorda com estes termos. O serviço é fornecido "como está" e pode ser atualizado a qualquer momento.</p>
+              <p>Você deve usar o app conforme a lei e não pode abusar, explorar vulnerabilidades, nem infringir direitos de terceiros.</p>
+              <p>Contas podem ser encerradas em caso de violação. Não garantimos disponibilidade contínua nem ausência de erros.</p>
+              <p>Limitação de responsabilidade: na extensão permitida pela lei, não somos responsáveis por perdas indiretas, consequenciais ou lucros cessantes.</p>
+              <p>Alterações serão comunicadas. O uso contínuo após alterações implica aceitação.</p>
+            </div>
+          )}
+          {policyType === "cookies" && (
+            <div className="space-y-2">
+              <p>Usamos cookies e tecnologias similares para lembrar preferências, manter sessões e medir uso.</p>
+              <p>Tipos: essenciais (obrigatórios), funcionalidade e desempenho/analytics.</p>
+              <p>Você pode gerenciar cookies nas configurações do navegador. Desativar cookies essenciais pode impactar o funcionamento.</p>
+            </div>
+          )}
+          {policyType === "eula" && (
+            <div className="space-y-2">
+              <p>Concedemos licença limitada, não exclusiva e intransferível para uso pessoal do app.</p>
+              <p>É proibida engenharia reversa, distribuição não autorizada e uso para fins ilegais.</p>
+              <p>A licença termina se você violar estes termos ou por decisão nossa mediante aviso quando aplicável.</p>
+            </div>
+          )}
+          {policyType === "data" && (
+            <div className="space-y-2">
+              <p>Para excluir dados e a conta, acesse Perfil → Configurações → Excluir conta, ou solicite por e-mail.</p>
+              <p>Pedidos de exclusão serão processados e confirmados. Alguns dados podem ser retidos conforme obrigação legal.</p>
+              <p>Contato para exclusão: suporte@calentrip.com.</p>
+            </div>
+          )}
+          {policyType === "support" && (
+            <div className="space-y-2">
+              <p>Suporte: suporte@calentrip.com</p>
+              <p>URL de suporte: https://www.calentrip.com/suporte</p>
+              <p>Tempo de resposta estimado: até 72 horas úteis.</p>
+            </div>
+          )}
+          {policyType === "licenses" && (
+            <div className="space-y-2">
+              <p>Este aplicativo pode utilizar bibliotecas de terceiros sob diversas licenças. Créditos e termos de cada projeto estão disponíveis mediante solicitação.</p>
+              <p>Quando aplicável, exibiremos notas de copyright e links para repositórios e licenças.</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPolicyType(null)}>Fechar</Button>
           </DialogFooter>
         </div>
       </Dialog>
