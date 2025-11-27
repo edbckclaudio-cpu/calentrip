@@ -233,9 +233,9 @@ export default function FlightsSearchPage() {
                     <div className="mb-2 text-sm font-semibold">{mo.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</div>
                     <div className="grid grid-cols-7 gap-2 text-sm">
                       {buildMonth(mo).map((d, idx) => {
-                        const selected = d.date && ((rangeStart && d.date === rangeStart) || (rangeEnd && d.date === rangeEnd));
-                        const inRange = d.date && rangeStart && rangeEnd && (new Date(d.date) >= new Date(rangeStart)) && (new Date(d.date) <= new Date(rangeEnd));
-                        const disabled = d.date && d.date < todayISO;
+                        const selected = Boolean(d.date && ((rangeStart && d.date === rangeStart) || (rangeEnd && d.date === rangeEnd)));
+                        const inRange = Boolean(d.date && rangeStart && rangeEnd && (new Date(d.date) >= new Date(rangeStart)) && (new Date(d.date) <= new Date(rangeEnd)));
+                        const disabled = !!(d.date && d.date < todayISO);
                         const cls = !d.date ? "h-10 rounded border border-transparent" : disabled ? "h-10 rounded border border-zinc-200 text-zinc-400 dark:border-zinc-800" : selected ? "h-10 rounded border border-[#007AFF] bg-[#007AFF]/10" : inRange ? "h-10 rounded border border-[#007AFF]/40 bg-[#007AFF]/5" : "h-10 rounded border border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800";
                         return (
                           <button key={`d-${idx}`} type="button" disabled={!d.date || disabled} className={cls} onClick={() => {
