@@ -50,6 +50,7 @@ export default function EntertainmentReservationsPage() {
   const [aiDateMap, setAiDateMap] = useState<Record<string, string>>({});
   const [aiTimeMap, setAiTimeMap] = useState<Record<string, string>>({});
   const [aiFilesMap, setAiFilesMap] = useState<Record<string, Array<{ name: string; type: string; size: number; dataUrl?: string }>>>({});
+  const [aiActiveKey, setAiActiveKey] = useState<string | null>(null);
   const [aiRestOpenIdx, setAiRestOpenIdx] = useState<number | null>(null);
   const [restLoading, setRestLoading] = useState(false);
   const [restItems, setRestItems] = useState<RestaurantSuggestion[]>([]);
@@ -57,6 +58,7 @@ export default function EntertainmentReservationsPage() {
   const [restDateMap, setRestDateMap] = useState<Record<string, string>>({});
   const [restTimeMap, setRestTimeMap] = useState<Record<string, string>>({});
   const [restFilesMap, setRestFilesMap] = useState<Record<string, Array<{ name: string; type: string; size: number; dataUrl?: string }>>>({});
+  const [restActiveKey, setRestActiveKey] = useState<string | null>(null);
 
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -386,7 +388,7 @@ export default function EntertainmentReservationsPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm">Horário</label>
-                <Input placeholder="19:30" value={time} onChange={(e) => setTime(formatTimeInput(e.target.value))} />
+                        <Input placeholder="19:30" value={time} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTime(formatTimeInput(e.target.value))} />
               </div>
             </div>
             <div className="flex justify-end">
@@ -476,7 +478,7 @@ export default function EntertainmentReservationsPage() {
         <DialogHeader>
           <div className="flex items-center justify-between">
             <span>Sugestões por IA — atividade/entretenimento</span>
-            <Button type="button" variant="outline" onClick={() => setAiOpenIdx(null)}>Fechar</Button>
+            <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiOpenIdx(null)}>sair</Button>
           </div>
         </DialogHeader>
         {aiOpenIdx !== null && (
@@ -514,22 +516,22 @@ export default function EntertainmentReservationsPage() {
                 ) : null}
                 <ul className="space-y-2">
                   {aiItems.map((s, idx) => (
-                    <li key={`ai-${idx}`} className="rounded border p-2">
+                    <li key={`ai-${idx}`} className={aiActiveKey === `ai-${idx}` ? "rounded border-2 border-[#febb02] p-2" : "rounded border p-2"}>
                       <div className="font-medium">{s.name} • {s.category === "museum" ? "Museu" : s.category === "park" ? "Parque" : s.category === "theatre" ? "Teatro" : s.category === "tour" ? "Tour" : "Atração"}</div>
                       <div>Preço: {s.free === true ? "Gratuito" : s.free === false ? (s.price || "Pago") : (s.price || "Ver no site")}</div>
                       <div>Ingressos antecipados: {s.prebook === null ? "Ver no site" : s.prebook ? "Sim" : "Não"}</div>
                       <div>Antecedência: {s.lead || "Ver no site"}</div>
                       {s.url && (
-                        <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer">Site oficial</a></div>
+                        <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => setAiActiveKey(`ai-${idx}`)}>Site oficial</a></div>
                       )}
                       <div className="mt-2 grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block text-xs">Data</label>
-                          <CalendarInput value={aiDateMap[`ai-${idx}`] || cities[aiOpenIdx!]?.checkin || ""} min={cities[aiOpenIdx!]?.checkin || undefined} max={cities[aiOpenIdx!]?.checkout || undefined} onChange={(e) => setAiDateMap((prev) => ({ ...prev, [`ai-${idx}`]: e.target.value }))} />
+                          <CalendarInput value={aiDateMap[`ai-${idx}`] || cities[aiOpenIdx!]?.checkin || ""} min={cities[aiOpenIdx!]?.checkin || undefined} max={cities[aiOpenIdx!]?.checkout || undefined} onFocus={() => setAiActiveKey(`ai-${idx}`)} onChange={(e) => setAiDateMap((prev) => ({ ...prev, [`ai-${idx}`]: e.target.value }))} />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs">Horário</label>
-                          <Input placeholder="19:30" value={aiTimeMap[`ai-${idx}`] || ""} onChange={(e) => setAiTimeMap((prev) => ({ ...prev, [`ai-${idx}`]: formatTimeInput(e.target.value) }))} />
+                          <Input placeholder="19:30" value={aiTimeMap[`ai-${idx}`] || ""} type="tel" inputMode="numeric" pattern="[0-9]*" onFocus={() => setAiActiveKey(`ai-${idx}`)} onChange={(e) => setAiTimeMap((prev) => ({ ...prev, [`ai-${idx}`]: formatTimeInput(e.target.value) }))} />
                         </div>
                       </div>
                       <div className="mt-2 space-y-2">
@@ -543,18 +545,18 @@ export default function EntertainmentReservationsPage() {
                               reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
                               reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
                               reader.readAsDataURL(f);
-                            }))).then((arr) => setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: [...(prev[`ai-${idx}`] || []), ...arr] })));
+                            }))).then((arr) => { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: [...(prev[`ai-${idx}`] || []), ...arr] })); setAiActiveKey(`ai-${idx}`); });
                           }} />
-                          <Button type="button" className="rounded-md font-semibold" onClick={() => { const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                          <Button type="button" className="rounded-md font-semibold" onClick={() => { setAiActiveKey(`ai-${idx}`); const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
                           <Input id={`ai-file-${idx}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                             const files = Array.from(e.target.files || []);
-                            if (!files.length) { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: prev[`ai-${idx}`] || [] })); return; }
+                            if (!files.length) { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: prev[`ai-${idx}`] || [] })); setAiActiveKey(`ai-${idx}`); return; }
                             Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
                               const reader = new FileReader();
                               reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
                               reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
                               reader.readAsDataURL(f);
-                            }))).then((arr) => setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: [...(prev[`ai-${idx}`] || []), ...arr] })));
+                            }))).then((arr) => { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: [...(prev[`ai-${idx}`] || []), ...arr] })); setAiActiveKey(`ai-${idx}`); });
                           }} />
                         </div>
                         {Boolean((aiFilesMap[`ai-${idx}`] || []).length) && (
@@ -585,7 +587,7 @@ export default function EntertainmentReservationsPage() {
         <DialogHeader>
           <div className="flex items-center justify-between">
             <span>Sugestões por IA — restaurante</span>
-            <Button type="button" variant="outline" onClick={() => setAiRestOpenIdx(null)}>Fechar</Button>
+            <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiRestOpenIdx(null)}>sair</Button>
           </div>
         </DialogHeader>
         {aiRestOpenIdx !== null && (
@@ -600,22 +602,22 @@ export default function EntertainmentReservationsPage() {
             ) : (
               <ul className="space-y-2">
                 {restItems.map((s, idx) => (
-                  <li key={`rest-${idx}`} className="rounded border p-2">
+                  <li key={`rest-${idx}`} className={restActiveKey === `rest-${idx}` ? "rounded border-2 border-[#febb02] p-2" : "rounded border p-2"}>
                     <div className="font-medium">{s.name} • Restaurante</div>
                     <div>Reserva: {s.reservation === null ? "Ver no site" : s.reservation ? "Necessária" : "Opcional"}</div>
                     <div>Tipo de cozinha: {s.cuisine && s.cuisine.length ? s.cuisine.join(", ") : "Ver no site"}</div>
                     <div>Faixa de preço: {s.price || "Ver no site"}</div>
                     {s.url && (
-                      <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer">Site oficial</a></div>
+                      <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => setRestActiveKey(`rest-${idx}`)}>Site oficial</a></div>
                     )}
                     <div className="mt-2 grid grid-cols-2 gap-3">
                       <div>
                         <label className="mb-1 block text-xs">Data</label>
-                        <CalendarInput value={restDateMap[`rest-${idx}`] || cities[aiRestOpenIdx!]?.checkin || ""} min={cities[aiRestOpenIdx!]?.checkin || undefined} max={cities[aiRestOpenIdx!]?.checkout || undefined} onChange={(e) => setRestDateMap((prev) => ({ ...prev, [`rest-${idx}`]: e.target.value }))} />
+                        <CalendarInput value={restDateMap[`rest-${idx}`] || cities[aiRestOpenIdx!]?.checkin || ""} min={cities[aiRestOpenIdx!]?.checkin || undefined} max={cities[aiRestOpenIdx!]?.checkout || undefined} onFocus={() => setRestActiveKey(`rest-${idx}`)} onChange={(e) => setRestDateMap((prev) => ({ ...prev, [`rest-${idx}`]: e.target.value }))} />
                       </div>
                       <div>
                         <label className="mb-1 block text-xs">Horário</label>
-                        <Input placeholder="19:30" value={restTimeMap[`rest-${idx}`] || ""} onChange={(e) => setRestTimeMap((prev) => ({ ...prev, [`rest-${idx}`]: formatTimeInput(e.target.value) }))} />
+                        <Input placeholder="19:30" value={restTimeMap[`rest-${idx}`] || ""} type="tel" inputMode="numeric" pattern="[0-9]*" onFocus={() => setRestActiveKey(`rest-${idx}`)} onChange={(e) => setRestTimeMap((prev) => ({ ...prev, [`rest-${idx}`]: formatTimeInput(e.target.value) }))} />
                       </div>
                     </div>
                     <div className="mt-2 space-y-2">
@@ -629,18 +631,18 @@ export default function EntertainmentReservationsPage() {
                             reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
                             reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
                             reader.readAsDataURL(f);
-                          }))).then((arr) => setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: [...(prev[`rest-${idx}`] || []), ...arr] })));
+                          }))).then((arr) => { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: [...(prev[`rest-${idx}`] || []), ...arr] })); setRestActiveKey(`rest-${idx}`); });
                         }} />
-                        <Button type="button" variant="secondary" className="rounded-md font-semibold" onClick={() => { const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                        <Button type="button" variant="secondary" className="rounded-md font-semibold" onClick={() => { setRestActiveKey(`rest-${idx}`); const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
                         <Input id={`rest-file-${idx}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                           const files = Array.from(e.target.files || []);
-                          if (!files.length) { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: prev[`rest-${idx}`] || [] })); return; }
+                          if (!files.length) { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: prev[`rest-${idx}`] || [] })); setRestActiveKey(`rest-${idx}`); return; }
                           Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
                             const reader = new FileReader();
                             reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
                             reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
                             reader.readAsDataURL(f);
-                          }))).then((arr) => setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: [...(prev[`rest-${idx}`] || []), ...arr] })));
+                          }))).then((arr) => { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: [...(prev[`rest-${idx}`] || []), ...arr] })); setRestActiveKey(`rest-${idx}`); }); 
                         }} />
                       </div>
                       {Boolean((restFilesMap[`rest-${idx}`] || []).length) && (
@@ -682,7 +684,7 @@ export default function EntertainmentReservationsPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm">Horário</label>
-                <Input placeholder="19:30" value={editTime} onChange={(e) => setEditTime(formatTimeInput(e.target.value))} />
+                <Input placeholder="19:30" value={editTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setEditTime(formatTimeInput(e.target.value))} />
               </div>
             </div>
             <div className="flex justify-end">

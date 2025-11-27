@@ -752,11 +752,11 @@ export default function AccommodationSearchPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="mb-1 block text-sm">Horário de saída</label>
-                    <Input placeholder="14:30" value={transportDepTime} onChange={(e) => setTransportDepTime(formatTimeInput(e.target.value))} />
+                    <Input placeholder="14:30" value={transportDepTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportDepTime(formatTimeInput(e.target.value))} />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm">Horário de chegada</label>
-                    <Input placeholder="17:05" value={transportArrTime} onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
+                    <Input placeholder="17:05" value={transportArrTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
                   </div>
                 </div>
                 <div className="mt-2">
