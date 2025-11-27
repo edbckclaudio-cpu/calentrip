@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 
-export function Dialog({ open, onOpenChange, children, placement = "center" }: { open: boolean; onOpenChange: (o: boolean) => void; children: ReactNode; placement?: "center" | "bottom" }) {
+export function Dialog({ open, onOpenChange, children, placement = "center" }: { open: boolean; onOpenChange: (o: boolean) => void; children: ReactNode; placement?: "center" | "bottom" | "left" }) {
   if (!open) return null;
   if (placement === "bottom") {
     const [entered, setEntered] = useState(false);
@@ -21,10 +21,29 @@ export function Dialog({ open, onOpenChange, children, placement = "center" }: {
       </div>
     );
   }
+  if (placement === "left") {
+    const [entered, setEntered] = useState(false);
+    useEffect(() => {
+      const id = setTimeout(() => setEntered(true), 0);
+      return () => clearTimeout(id);
+    }, []);
+    return (
+      <div className="fixed inset-0 z-50">
+        <div className="absolute inset-0 bg-black/40" onClick={() => onOpenChange(false)} />
+        <div
+          role="dialog"
+          aria-modal="true"
+          className={`absolute top-0 bottom-0 left-0 z-10 w-64 max-w-[80vw] rounded-r-2xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-black overflow-y-auto transform transition-transform duration-300 ease-out ${entered ? "translate-x-0" : "-translate-x-full"}`}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={() => onOpenChange(false)} />
-      <div role="dialog" aria-modal="true" className="relative z-10 w-full max-w-md rounded-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto">
+      <div role="dialog" aria-modal="true" className="relative z-10 w/full max-w-md rounded-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto">
         {children}
       </div>
     </div>

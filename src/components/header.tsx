@@ -14,6 +14,7 @@ export default function Header() {
   const { lang, setLang, t } = useI18n();
   const { show } = useToast();
   const [now, setNow] = useState("");
+  const [openNav, setOpenNav] = useState(false);
 
   function onLangChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const v = e.target.value as "pt" | "en" | "es";
@@ -40,6 +41,9 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur border-b border-[var(--border)] shadow-sm">
       <div className="container-page flex h-14 items-center gap-3">
+        <button type="button" aria-label="Menu" className="inline-flex h-8 w-8 items-center justify-center" onClick={() => setOpenNav(true)}>
+          <span className="material-symbols-outlined text-[24px]">menu</span>
+        </button>
         <Link href="/flights/search" className="flex items-center gap-2">
           <Image src="/icon-192.png" alt="CalenTrip" width={24} height={24} className="h-6 w-6" />
           <span className="text-sm font-semibold text-[var(--brand)]">{t("appName")}</span>
@@ -59,6 +63,7 @@ export default function Header() {
         </div>
         
       </div>
+      <NavDrawer t={t} open={openNav} onOpenChange={setOpenNav} />
     </header>
   );
 }
@@ -118,4 +123,111 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
   );
 }
 
- 
+function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { data: session, status } = useSession();
+  const { lang } = useI18n();
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [savedTrips, setSavedTrips] = useState<ReturnType<typeof getTrips>>([]);
+
+  function openSaved() {
+    try { setSavedTrips(getTrips()); } catch { setSavedTrips([] as any); }
+    setSavedOpen(true);
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange} placement="left">
+        <DialogHeader>{t("menu")}</DialogHeader>
+        <div className="space-y-2">
+          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2">
+            {status === "authenticated" ? (
+              <div className="flex items-center gap-2">
+                {session?.user?.image ? (
+                  <Image src={session.user.image} alt="avatar" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
+                )}
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
+                  <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Ver perfil</button>
+                    <button type="button" className="text-xs" onClick={() => signOut()}>Sair</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">PF</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">Entrar</div>
+                  <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button type="button" className="text-xs" onClick={() => signIn("google")}>Google</button>
+                    <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>Demo</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={openSaved}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">lists</span>
+            </span>
+            <span className="text-sm font-medium">Pesquisas salvas</span>
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">list_alt</span>
+            </span>
+            <span className="text-sm font-medium">Calendário em lista</span>
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">calendar_month</span>
+            </span>
+            <span className="text-sm font-medium">Calendário mensal</span>
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">travel_explore</span>
+            </span>
+            <span className="text-sm font-medium">Iniciar nova pesquisa</span>
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">account_circle</span>
+            </span>
+            <span className="text-sm font-medium">Perfil</span>
+          </button>
+        </div>
+      </Dialog>
+
+      <Dialog open={savedOpen} onOpenChange={setSavedOpen} placement="bottom">
+        <DialogHeader>Pesquisas salvas</DialogHeader>
+        <div className="p-4 md:p-6 space-y-4 text-sm max-h-[70vh] overflow-y-auto">
+          {savedTrips.length === 0 ? (
+            <div className="text-zinc-600">Nenhuma viagem salva.</div>
+          ) : (
+            <ul className="space-y-2">
+              {savedTrips.map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-3 rounded border p-2">
+                  <div>
+                    <div className="text-sm font-medium">{t.title}</div>
+                    <div className="text-xs text-zinc-600 dark:text-zinc-400">{t.date} • {t.passengers} pax</div>
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/flights/results"; } catch {} }}>Abrir</Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            <Button type="button" onClick={() => setSavedOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
+    </>
+  );
+}

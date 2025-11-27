@@ -5,7 +5,6 @@ import Providers from "./providers";
 import Header from "@/components/header";
 import BottomNav from "@/components/bottom-nav";
 import SWRegister from "@/components/sw-register";
-import GlobalSidebar from "@/components/global-sidebar";
 
 const geistSans = Inter({
   variable: "--font-geist-sans",
@@ -43,8 +42,7 @@ export default function RootLayout({
         <Providers>
           <SWRegister />
           <Header />
-          <GlobalSidebar />
-          <div className="pl-14">{children}</div>
+          {children}
           <BottomNav />
         </Providers>
       </body>
