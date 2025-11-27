@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/toast";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 import { findAirportByIata } from "@/lib/airports";
 
-type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
+type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }> };
 
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
@@ -43,7 +43,7 @@ export default function FinalCalendarPage() {
   const [returnDrawerOpen, setReturnDrawerOpen] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
-  const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
+  const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
   const [sideOpen, setSideOpen] = useState(false);
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
@@ -1103,7 +1103,19 @@ export default function FinalCalendarPage() {
             })?.stayFiles || [];
             return files.length ? (
               <div>
-                <Button type="button" variant="outline" onClick={() => { setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem"); setDocFiles(files); setDocOpen(true); }}>Arquivos salvos</Button>
+                <Button type="button" variant="outline" onClick={async () => {
+                  setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem");
+                  const mod = await import("@/lib/attachments-store");
+                  const resolved = await Promise.all(files.map(async (f) => {
+                    if (!f.dataUrl && (f as any).id) {
+                      const url = await mod.getObjectUrl((f as any).id);
+                      return { ...f, dataUrl: url || undefined };
+                    }
+                    return f;
+                  }));
+                  setDocFiles(resolved);
+                  setDocOpen(true);
+                }}>Arquivos salvos</Button>
               </div>
             ) : null;
           })()}
@@ -1140,7 +1152,19 @@ export default function FinalCalendarPage() {
               </div>
               {goRecord?.files && goRecord.files.length ? (
                 <div>
-                  <Button type="button" variant="outline" onClick={() => { setDocTitle(goRecord!.title); setDocFiles(goRecord!.files || []); setDocOpen(true); }}>Arquivos salvos</Button>
+                  <Button type="button" variant="outline" onClick={async () => {
+                    setDocTitle(goRecord!.title);
+                    const mod = await import("@/lib/attachments-store");
+                    const resolved = await Promise.all((goRecord!.files || []).map(async (f) => {
+                      if (!f.dataUrl && f.id) {
+                        const url = await mod.getObjectUrl(f.id);
+                        return { ...f, dataUrl: url || undefined };
+                      }
+                      return f;
+                    }));
+                    setDocFiles(resolved);
+                    setDocOpen(true);
+                  }}>Arquivos salvos</Button>
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
@@ -1181,7 +1205,19 @@ export default function FinalCalendarPage() {
               <div>Notificação programada: {returnInfo?.notifyAt ? `às ${returnInfo.notifyAt}` : "—"}</div>
               {returnFiles.length ? (
                 <div>
-                  <Button type="button" variant="outline" onClick={() => { setDocTitle(returnInfo?.airportName || "Voo de volta"); setDocFiles(returnFiles); setDocOpen(true); }}>Visualizar documentos</Button>
+                  <Button type="button" variant="outline" onClick={async () => {
+                    setDocTitle(returnInfo?.airportName || "Voo de volta");
+                    const mod = await import("@/lib/attachments-store");
+                    const resolved = await Promise.all(returnFiles.map(async (f) => {
+                      if (!f.dataUrl && f.id) {
+                        const url = await mod.getObjectUrl(f.id);
+                        return { ...f, dataUrl: url || undefined };
+                      }
+                      return f;
+                    }));
+                    setDocFiles(resolved);
+                    setDocOpen(true);
+                  }}>Visualizar documentos</Button>
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
@@ -1248,8 +1284,17 @@ export default function FinalCalendarPage() {
                       <div className="font-medium">{f.name}</div>
                       <div className="text-xs">{f.type} • {Math.round(f.size / 1024)} KB</div>
                       {f.dataUrl && (
-                        <div className="mt-2">
-                          <a className="underline" href={f.dataUrl} target="_blank" rel="noopener noreferrer">Abrir/baixar</a>
+                        <div className="mt-2 space-y-2">
+                          {f.type.startsWith("image/") ? (
+                            <img src={f.dataUrl} alt={f.name} className="max-h-48 rounded border" />
+                          ) : f.type === "application/pdf" ? (
+                            <iframe src={f.dataUrl} title={f.name} className="w-full h-48 rounded border" />
+                          ) : (
+                            <div className="text-xs text-zinc-600">Arquivo disponível no dispositivo.</div>
+                          )}
+                          <div>
+                            <a className="underline" href={f.dataUrl}>Abrir no dispositivo</a>
+                          </div>
                         </div>
                       )}
                     </li>

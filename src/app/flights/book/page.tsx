@@ -574,7 +574,7 @@ function FlightNotesForm() {
     ];
   }, [tripSearch]);
   const [notes, setNotes] = useState(initial);
-  const [files, setFiles] = useState([[], []] as Array<Array<{ name: string; type: string; size: number; dataUrl?: string }>>);
+  const [files, setFiles] = useState([[], []] as Array<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>);
   const allFilled = notes.every((n) => Boolean(n.dep) && Boolean(n.arr));
 
   function save() {
@@ -593,7 +593,7 @@ function FlightNotesForm() {
       arrivalTime: notes[i]?.arr || undefined,
       flightNumber: notes[i]?.code || undefined,
     }));
-    const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, dataUrl: f.dataUrl })));
+    const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
     addTrip({ id, title, date, passengers, flightNotes, attachments });
     show("Notas salvas, redirecionando…", { variant: "success" });
     router.push("/accommodation/search");
@@ -610,6 +610,9 @@ function FlightNotesForm() {
               <Input
                 placeholder="14:30"
                 value={notes[i]?.dep ?? ""}
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 onChange={(e) => {
                   const v = fmtTime(e.target.value);
                   setNotes((prev) => prev.map((x, idx) => (idx === i ? { ...x, dep: v } : x)));
@@ -621,6 +624,9 @@ function FlightNotesForm() {
               <Input
                 placeholder="18:05"
                 value={notes[i]?.arr ?? ""}
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 onChange={(e) => {
                   const v = fmtTime(e.target.value);
                   setNotes((prev) => prev.map((x, idx) => (idx === i ? { ...x, arr: v } : x)));
@@ -632,6 +638,8 @@ function FlightNotesForm() {
               <Input
                 placeholder="JJ1234"
                 value={notes[i]?.code ?? ""}
+                inputMode="text"
+                type="text"
                 onChange={(e) => {
                   const v = e.target.value;
                   setNotes((prev) => prev.map((x, idx) => (idx === i ? { ...x, code: v } : x)));
@@ -649,18 +657,11 @@ function FlightNotesForm() {
               className="hidden"
               onChange={(e) => {
                 const list = Array.from(e.target.files ?? []);
-                const limit = 2 * 1024 * 1024;
-                const readers = list.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
-                  if (f.size > limit || !(f.type.startsWith("image/") || f.type === "application/pdf")) {
-                    resolve({ name: f.name, type: f.type, size: f.size });
-                  } else {
-                    const fr = new FileReader();
-                    fr.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(fr.result || "") });
-                    fr.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
-                    fr.readAsDataURL(f);
-                  }
-                }));
-                Promise.all(readers).then((items) => {
+                Promise.all(list.map(async (f) => {
+                  const mod = await import("@/lib/attachments-store");
+                  const saved = await mod.saveFromFile(f);
+                  return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                })).then((items) => {
                   setFiles((prev) => prev.map((arr, idx) => (idx === i ? items : arr)));
                 });
               }}

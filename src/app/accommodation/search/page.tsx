@@ -25,8 +25,8 @@ export default function AccommodationSearchPage() {
   const [city, setCity] = useState(initialCity);
   
   const [cityCount, setCityCount] = useState(0);
-  type TransportSegment = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime: string; arrTime: string; files: Array<{ name: string; type: string; size: number; dataUrl?: string }>; route?: { distanceKm?: number; durationMin?: number; gmapsUrl?: string; r2rUrl?: string; osmUrl?: string } | null };
-  const [cities, setCities] = useState<Array<{ name: string; checkin: string; checkout: string; address?: string; checked?: boolean; stayFiles?: Array<{ name: string; type: string; size: number; dataUrl?: string }>; transportToNext?: TransportSegment }>>([]);
+  type TransportSegment = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime: string; arrTime: string; files: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>; route?: { distanceKm?: number; durationMin?: number; gmapsUrl?: string; r2rUrl?: string; osmUrl?: string } | null };
+  const [cities, setCities] = useState<Array<{ name: string; checkin: string; checkout: string; address?: string; checked?: boolean; stayFiles?: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>; transportToNext?: TransportSegment }>>([]);
   const [cityDetailIdx, setCityDetailIdx] = useState<number | null>(null);
   const [citySearchIdx, setCitySearchIdx] = useState<number | null>(null);
   const [citySearchQuery, setCitySearchQuery] = useState("");
@@ -603,33 +603,31 @@ export default function AccommodationSearchPage() {
                       <label htmlFor={`stay-cam-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm cursor-pointer">Usar câmera</label>
                       <input id={`stay-cam-${cityDetailIdx ?? 0}`} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
                         const files = Array.from(e.target.files || []);
-                        Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
-                          const reader = new FileReader();
-                          reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
-                          reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
-                          reader.readAsDataURL(f);
-                        }))).then((list) => {
+                        Promise.all(files.map(async (f) => {
+                          const mod = await import("@/lib/attachments-store");
+                          const saved = await mod.saveFromFile(f);
+                          return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                        })).then((list) => {
                           setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, stayFiles: [...(x.stayFiles || []), ...list] } : x)));
                         });
                       }} />
                       <Input id={`stay-file-${cityDetailIdx ?? 0}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                         const files = Array.from(e.target.files || []);
-                        Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
-                          const reader = new FileReader();
-                          reader.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(reader.result || "") });
-                          reader.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
-                          reader.readAsDataURL(f);
-                        }))).then((list) => {
+                        Promise.all(files.map(async (f) => {
+                          const mod = await import("@/lib/attachments-store");
+                          const saved = await mod.saveFromFile(f);
+                          return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                        })).then((list) => {
                           setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, stayFiles: [...(x.stayFiles || []), ...list] } : x)));
                         });
                       }} />
                     </div>
                     {cities[cityDetailIdx!]?.stayFiles && cities[cityDetailIdx!]!.stayFiles!.length ? (
-                      <ul className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
-                        {cities[cityDetailIdx!]!.stayFiles!.map((f, idx) => (
-                          <li key={`sf-${idx}`}>{f.name} • {Math.round(f.size / 1024)} KB</li>
-                        ))}
-                      </ul>
+                <ul className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
+                      {cities[cityDetailIdx].stayFiles!.map((f, idx) => (
+                        <li key={`sf-${idx}`}>{f.name} • {Math.round(f.size / 1024)} KB</li>
+                      ))}
+                    </ul>
                     ) : null}
                   </div>
                   <div className="mt-2 flex justify-end">

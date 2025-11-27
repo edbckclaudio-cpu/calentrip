@@ -13,6 +13,7 @@ export type AttachmentMeta = {
   name: string;
   type: string;
   size: number;
+  id?: string;
   dataUrl?: string;
 };
 

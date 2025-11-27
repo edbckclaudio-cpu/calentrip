@@ -422,6 +422,9 @@ export default function FlightsResultsPage() {
                     <Input
                       placeholder="14:30"
                       value={timeValue}
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       onChange={(e) => {
                         const v = e.target.value;
                         if (isSame) {
@@ -445,6 +448,8 @@ export default function FlightsResultsPage() {
                     <Input
                       placeholder="JJ1234"
                       value={flightValue}
+                      inputMode="text"
+                      type="text"
                       onChange={(e) => {
                         const v = e.target.value;
                         if (isSame) {
