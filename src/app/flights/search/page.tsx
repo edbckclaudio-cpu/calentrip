@@ -33,6 +33,8 @@ export default function FlightsSearchPage() {
   const [rangeBase, setRangeBase] = useState<Date>(new Date());
   const [exampleOpen, setExampleOpen] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [hintRangeDiff, setHintRangeDiff] = useState(false);
+  const [guideStep, setGuideStep] = useState<null | "out_origin" | "out_dest" | "in_origin" | "in_dest" | "confirm">(null);
 
   function confirm() {
     const filledSame = Boolean(same.origin && same.destination && same.departDate && same.returnDate);
@@ -65,7 +67,7 @@ export default function FlightsSearchPage() {
         <p className="mb-4 text-sm text-zinc-600">{t("welcomeSearch")}</p>
       </div>
       <div className="container-page">
-        <Tabs defaultValue="same" onValueChange={(v) => setMode(v as "same" | "different")}>
+        <Tabs defaultValue="same" onValueChange={(v) => { const mv = v as "same" | "different"; setMode(mv); setGuideStep(null); if (mv === "different" && !(outbound.date && inbound.date)) { setHintRangeDiff(true); } else { setHintRangeDiff(false); } }}>
           <TabsList>
           <TabsTrigger value="same">{t("searchTabSame")}</TabsTrigger>
           <TabsTrigger value="different">{t("searchTabDifferent")}</TabsTrigger>
@@ -109,8 +111,8 @@ export default function FlightsSearchPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className={attempted && mode === "different" && !(outbound.date && inbound.date) ? "ring-2 ring-red-400" : ""}
-                  onClick={() => setRangeOpen(true)}
+                  className={(attempted && mode === "different" && !(outbound.date && inbound.date) ? "ring-2 ring-red-400 " : "") + (mode === "different" && hintRangeDiff ? " animate-pulse ring-4 ring-amber-500 " : "")}
+                  onClick={() => { setRangeOpen(true); setHintRangeDiff(false); }}
                 >
                   {outbound.date && inbound.date ? `${outbound.date} → ${inbound.date}` : "Selecionar período"}
                 </Button>
@@ -124,14 +126,14 @@ export default function FlightsSearchPage() {
               <div className="rounded-lg border p-3">
                 <h2 className="mb-2 text-sm font-semibold">{t("outboundFlight")}</h2>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <div className={guideStep === "out_origin" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
                     <label className="mb-1 block text-sm">{t("tableOrigin")}</label>
-                    <AirportAutocomplete invalid={attempted && mode === "different" && !outbound.origin} value={outbound.origin} onSelect={(iata) => setOutbound({ ...outbound, origin: iata })} />
+                    <AirportAutocomplete invalid={attempted && mode === "different" && !outbound.origin} value={outbound.origin} onSelect={(iata) => { setOutbound({ ...outbound, origin: iata }); if (mode === "different") setGuideStep("out_dest"); }} />
                     {attempted && mode === "different" && !outbound.origin && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
                   </div>
-                  <div>
+                  <div className={guideStep === "out_dest" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
                     <label className="mb-1 block text-sm">{t("tableDestination")}</label>
-                    <AirportAutocomplete invalid={attempted && mode === "different" && !outbound.destination} value={outbound.destination} onSelect={(iata) => setOutbound({ ...outbound, destination: iata })} />
+                    <AirportAutocomplete invalid={attempted && mode === "different" && !outbound.destination} value={outbound.destination} onSelect={(iata) => { setOutbound({ ...outbound, destination: iata }); if (mode === "different") setGuideStep("in_origin"); }} />
                     {attempted && mode === "different" && !outbound.destination && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
                   </div>
                 </div>
@@ -140,20 +142,20 @@ export default function FlightsSearchPage() {
                 <div className="rounded-lg border p-3">
                   <h2 className="mb-2 text-sm font-semibold">{t("inboundFlight")}</h2>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <div className={guideStep === "in_origin" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
                       <label className="mb-1 block text-sm">{t("tableOrigin")}</label>
-                      <AirportAutocomplete invalid={attempted && mode === "different" && !inbound.origin} value={inbound.origin} onSelect={(iata) => setInbound({ ...inbound, origin: iata })} />
+                      <AirportAutocomplete invalid={attempted && mode === "different" && !inbound.origin} value={inbound.origin} onSelect={(iata) => { setInbound({ ...inbound, origin: iata }); if (mode === "different") setGuideStep("in_dest"); }} />
                       {attempted && mode === "different" && !inbound.origin && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
                     </div>
-                    <div>
+                    <div className={guideStep === "in_dest" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
                       <label className="mb-1 block text-sm">{t("tableDestination")}</label>
-                      <AirportAutocomplete invalid={attempted && mode === "different" && !inbound.destination} value={inbound.destination} onSelect={(iata) => setInbound({ ...inbound, destination: iata })} />
+                      <AirportAutocomplete invalid={attempted && mode === "different" && !inbound.destination} value={inbound.destination} onSelect={(iata) => { setInbound({ ...inbound, destination: iata }); if (mode === "different") setGuideStep("confirm"); }} />
                       {attempted && mode === "different" && !inbound.destination && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
                     </div>
                   </div>
                 </div>
 
-              <Button type="button" onClick={confirm}>{t("confirmInfo")}</Button>
+              <Button type="button" className={guideStep === "confirm" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { setGuideStep(null); confirm(); }}>{t("confirmInfo")}</Button>
             </div>
         </TabsContent>
           </Tabs>
@@ -298,14 +300,15 @@ export default function FlightsSearchPage() {
                     } else {
                       setOutbound({ ...outbound, date: rangeStart });
                       setInbound({ ...inbound, date: rangeEnd });
+                      setGuideStep("out_origin");
                     }
                     setRangeOpen(false);
                   }
                 }}
                 disabled={!rangeStart || !rangeEnd}
-              >
-                Aplicar
-              </Button>
+                >
+                  Aplicar
+                </Button>
             </div>
           </div>
         </div>

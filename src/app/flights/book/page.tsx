@@ -128,6 +128,7 @@ export default function BookFlightsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { show } = useToast();
+  const [guide, setGuide] = useState<"aggregators" | "notes" | null>("aggregators");
   const [countries, setCountries] = useState<{ origin?: string; destination?: string; originIn?: string; destinationIn?: string; userRegion?: string }>({});
   const [noteOpen, setNoteOpen] = useState(false);
   const [arrivalNoteOpen, setArrivalNoteOpen] = useState(false);
@@ -350,7 +351,7 @@ export default function BookFlightsPage() {
       </div>
 
       <div className="container-page grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className={guide === "aggregators" ? "ring-4 ring-amber-500 animate-pulse" : undefined}>
           <CardHeader>
             <div className="flex items-center gap-2">
               <CardTitle className="flex items-center gap-2">
@@ -418,7 +419,7 @@ export default function BookFlightsPage() {
               <ul className="space-y-2">
                 {data.links.map((item) => (
                   <li key={item.name}>
-                    <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${item.name}`)}>
+                    <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                       {item.name}
                     </Link>
                   </li>
@@ -433,7 +434,7 @@ export default function BookFlightsPage() {
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
                       <li key={`out-${item.name}`}>
-                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${item.name}`)}>
+                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
                       </li>
@@ -447,7 +448,7 @@ export default function BookFlightsPage() {
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
                       <li key={`in-${item.name}`}>
-                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${item.name}`)}>
+                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
                       </li>
@@ -516,7 +517,7 @@ export default function BookFlightsPage() {
         </Card>
       </div>
       <div className="container-page">
-        <Card>
+        <Card className={guide === "notes" ? "ring-4 ring-amber-500 animate-pulse" : undefined}>
           <CardHeader>
             <CardTitle>{t("flightNotesTitle")}</CardTitle>
           </CardHeader>
@@ -527,7 +528,7 @@ export default function BookFlightsPage() {
                 <Button type="button" onClick={() => router.push("/flights/search")}>{t("searchFlights")}</Button>
               </div>
             ) : (
-              <FlightNotesForm />
+              <FlightNotesForm onProceed={() => setGuide(null)} />
             )}
           </CardContent>
         </Card>
@@ -536,7 +537,7 @@ export default function BookFlightsPage() {
   );
 }
 
-function FlightNotesForm() {
+function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const { tripSearch } = useTrip();
   const { t } = useI18n();
   const router = useRouter();
@@ -596,6 +597,7 @@ function FlightNotesForm() {
     const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
     addTrip({ id, title, date, passengers, flightNotes, attachments });
     show("Notas salvas, redirecionando…", { variant: "success" });
+    try { onProceed?.(); } catch {}
     router.push("/accommodation/search");
   }
 
