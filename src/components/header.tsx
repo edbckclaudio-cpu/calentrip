@@ -44,18 +44,18 @@ export default function Header() {
           <Image src="/icon-192.png" alt="CalenTrip" width={24} height={24} className="h-6 w-6" />
           <span className="text-sm font-semibold text-[var(--brand)]">{t("appName")}</span>
         </Link>
-        <div className="ml-2 w-36">
+        <div className="ml-2 w-24">
           <Select aria-label="Idioma" value={lang} onChange={onLangChange}>
-            <option value="pt">Português</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
+            <option value="pt">Por</option>
+            <option value="en">Ing</option>
+            <option value="es">Esp</option>
           </Select>
         </div>
         <nav className="ml-4 hidden items-center gap-4 sm:flex">
           <TripsMenu t={t} />
         </nav>
         <div className="flex-1 flex justify-center">
-          <div className="text-sm text-zinc-700 dark:text-zinc-300">{now}</div>
+          <div className="text-sm text-blue-600 sm:text-zinc-700 dark:text-zinc-300">{now}</div>
         </div>
         <div className="ml-auto flex items-center gap-3">
           <MainMenu t={t} />

@@ -473,7 +473,12 @@ export default function EntertainmentReservationsPage() {
       )}
 
       <Dialog open={aiOpenIdx !== null} onOpenChange={() => setAiOpenIdx(null)}>
-        <DialogHeader>Sugestões por IA — atividade/entretenimento</DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <span>Sugestões por IA — atividade/entretenimento</span>
+            <Button type="button" variant="outline" onClick={() => setAiOpenIdx(null)}>Fechar</Button>
+          </div>
+        </DialogHeader>
         {aiOpenIdx !== null && (
           <div className="p-4 md:p-6 space-y-4 text-sm max-h-[75vh] overflow-y-auto">
             <div className="rounded border p-2">Cidade: {cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`}</div>
@@ -577,7 +582,12 @@ export default function EntertainmentReservationsPage() {
       </Dialog>
 
       <Dialog open={aiRestOpenIdx !== null} onOpenChange={() => setAiRestOpenIdx(null)}>
-        <DialogHeader>Sugestões por IA — restaurante</DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <span>Sugestões por IA — restaurante</span>
+            <Button type="button" variant="outline" onClick={() => setAiRestOpenIdx(null)}>Fechar</Button>
+          </div>
+        </DialogHeader>
         {aiRestOpenIdx !== null && (
           <div className="p-4 md:p-6 space-y-4 text-sm max-h-[75vh] overflow-y-auto">
             <div className="rounded border p-2">Cidade: {cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`}</div>
