@@ -721,77 +721,85 @@ export default function AccommodationSearchPage() {
               <div className="grid grid-cols-1 gap-2">
                 <div>
                   <label className="mb-1 block text-sm">Origem (aeroporto/estação)</label>
-                  <Input
-                    placeholder="Ex.: FCO / Roma Termini"
-                    value={transportDep}
-                    onFocus={() => {
-                      const cityName = cities[transportOpenIdx || 0]?.name || "";
-                      if (!cityName) return;
-                      if (transportMode === "car") { setTransportDepOpts([]); return; }
-                      const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                      fetchTransportSuggestions(cityName, transportDep, mode).then(setTransportDepOpts);
-                    }}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setTransportDep(v);
-                      const cityName = cities[transportOpenIdx || 0]?.name || "";
-                      if (!cityName) return;
-                      if (transportMode === "car") { setTransportDepOpts([]); return; }
-                      if (v.trim().length >= 1) {
+                  <div className="relative">
+                    <Input
+                      placeholder="Ex.: FCO / Roma Termini"
+                      value={transportDep}
+                      onFocus={() => {
+                        const cityName = cities[transportOpenIdx || 0]?.name || "";
+                        if (!cityName) return;
+                        if (transportMode === "car") { setTransportDepOpts([]); return; }
                         const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                        fetchTransportSuggestions(cityName, v, mode).then(setTransportDepOpts);
-                      }
-                    }}
-                  />
-                  {transportDepOpts.length ? (
-                    <ul className="mt-1 max-h-24 overflow-auto divide-y">
-                      {transportDepOpts.map((o, i) => (
-                        <li key={`dep-${i}`}>
-                          <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportDep(o)}>
-                            <span>{o}</span>
-                            <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? "Aeroporto" : transportMode === "train" ? "Estação de trem" : "Estação de ônibus"}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                        fetchTransportSuggestions(cityName, transportDep, mode).then(setTransportDepOpts);
+                      }}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setTransportDep(v);
+                        const cityName = cities[transportOpenIdx || 0]?.name || "";
+                        if (!cityName) return;
+                        if (transportMode === "car") { setTransportDepOpts([]); return; }
+                        if (v.trim().length >= 1) {
+                          const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
+                          fetchTransportSuggestions(cityName, v, mode).then(setTransportDepOpts);
+                        }
+                      }}
+                    />
+                    {transportDepOpts.length ? (
+                      <Card className="absolute left-0 right-0 bottom-full mb-1 z-40 p-0">
+                        <ul className="max-h-24 overflow-auto divide-y">
+                          {transportDepOpts.map((o, i) => (
+                            <li key={`dep-${i}`}>
+                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportDep(o)}>
+                                <span>{o}</span>
+                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? "Aeroporto" : transportMode === "train" ? "Estação de trem" : "Estação de ônibus"}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card>
+                    ) : null}
+                  </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm">Destino (aeroporto/estação)</label>
-                  <Input
-                    placeholder="Ex.: FLR / Firenze SMN"
-                    value={transportArr}
-                    onFocus={() => {
-                      const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
-                      if (!cityName) return;
-                      if (transportMode === "car") { setTransportArrOpts([]); return; }
-                      const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                      fetchTransportSuggestions(cityName, transportArr, mode).then(setTransportArrOpts);
-                    }}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setTransportArr(v);
-                      const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
-                      if (!cityName) return;
-                      if (transportMode === "car") { setTransportArrOpts([]); return; }
-                      if (v.trim().length >= 1) {
+                  <div className="relative">
+                    <Input
+                      placeholder="Ex.: FLR / Firenze SMN"
+                      value={transportArr}
+                      onFocus={() => {
+                        const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
+                        if (!cityName) return;
+                        if (transportMode === "car") { setTransportArrOpts([]); return; }
                         const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                        fetchTransportSuggestions(cityName, v, mode).then(setTransportArrOpts);
-                      }
-                    }}
-                  />
-                  {transportArrOpts.length ? (
-                    <ul className="mt-1 max-h-24 overflow-auto divide-y">
-                      {transportArrOpts.map((o, i) => (
-                        <li key={`arr-${i}`}>
-                          <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportArr(o)}>
-                            <span>{o}</span>
-                            <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? "Aeroporto" : transportMode === "train" ? "Estação de trem" : "Estação de ônibus"}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                        fetchTransportSuggestions(cityName, transportArr, mode).then(setTransportArrOpts);
+                      }}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setTransportArr(v);
+                        const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
+                        if (!cityName) return;
+                        if (transportMode === "car") { setTransportArrOpts([]); return; }
+                        if (v.trim().length >= 1) {
+                          const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
+                          fetchTransportSuggestions(cityName, v, mode).then(setTransportArrOpts);
+                        }
+                      }}
+                    />
+                    {transportArrOpts.length ? (
+                      <Card className="absolute left-0 right-0 bottom-full mb-1 z-40 p-0">
+                        <ul className="max-h-24 overflow-auto divide-y">
+                          {transportArrOpts.map((o, i) => (
+                            <li key={`arr-${i}`}>
+                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportArr(o)}>
+                                <span>{o}</span>
+                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? "Aeroporto" : transportMode === "train" ? "Estação de trem" : "Estação de ônibus"}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>

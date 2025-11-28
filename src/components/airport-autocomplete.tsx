@@ -54,7 +54,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
         onFocus={onFocus}
         placeholder={placeholder ?? t("typeCityAirport")} />
       {open && (
-        <Card className="absolute left-0 right-0 top-full mt-1 z-50 p-0">
+        <Card className="absolute left-0 right-0 bottom-full mb-1 z-50 p-0">
           <ul className="max-h-60 overflow-auto divide-y">
             {items.map((a) => (
               <li key={a.iata}>
