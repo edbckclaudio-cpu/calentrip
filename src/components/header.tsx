@@ -45,7 +45,7 @@ export default function Header() {
           <span className="material-symbols-outlined text-[24px] text-[var(--brand)]">menu</span>
         </button>
         <Link href="/flights/search" className="flex items-center gap-2">
-          <Image src="/icon-192.png" alt="CalenTrip" width={24} height={24} className="h-6 w-6" />
+          <Image src="/icone-192x192.png" alt="CalenTrip" width={24} height={24} className="h-6 w-6" />
           <span className="text-sm font-semibold text-[var(--brand)]">{t("appName")}</span>
         </Link>
         <div className="ml-2 w-24">
@@ -132,7 +132,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
   const [policyType, setPolicyType] = useState<null | "privacy" | "terms" | "cookies" | "eula" | "data" | "support" | "licenses">(null);
 
   function openSaved() {
-    try { setSavedTrips(getTrips()); } catch { setSavedTrips([] as any); }
+    try { setSavedTrips(getTrips()); } catch { setSavedTrips([]); }
     setSavedOpen(true);
   }
 
@@ -315,7 +315,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
           )}
           {policyType === "terms" && (
             <div className="space-y-2">
-              <p>Ao usar o aplicativo, você concorda com estes termos. O serviço é fornecido "como está" e pode ser atualizado a qualquer momento.</p>
+              <p>Ao usar o aplicativo, você concorda com estes termos. O serviço é fornecido &quot;como está&quot; e pode ser atualizado a qualquer momento.</p>
               <p>Você deve usar o app conforme a lei e não pode abusar, explorar vulnerabilidades, nem infringir direitos de terceiros.</p>
               <p>Contas podem ser encerradas em caso de violação. Não garantimos disponibilidade contínua nem ausência de erros.</p>
               <p>Limitação de responsabilidade: na extensão permitida pela lei, não somos responsáveis por perdas indiretas, consequenciais ou lucros cessantes.</p>

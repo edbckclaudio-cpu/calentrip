@@ -101,6 +101,9 @@ export default function AccommodationSearchPage() {
   })();
   
 
+  
+
+
   function onConfirmCityCount() {
     if (!tripSearch || tripSearch.mode !== "different") return;
     const n = Math.max(0, Math.min(8, Number(cityCount) || 0));
@@ -406,21 +409,6 @@ export default function AccommodationSearchPage() {
 
   
 
-  useEffect(() => {
-    if (tripSearch?.mode === "same") {
-      const filled = ((city || initialCity) || "").trim().length > 0;
-      setSameCityHighlight(!filled);
-      setSameSearchHighlight(filled);
-      setDiffCityCountHighlight(false);
-      setDiffCheckHighlight(false);
-    } else {
-      setSameCityHighlight(false);
-      setSameSearchHighlight(false);
-      const emptyCount = !cityCount;
-      setDiffCityCountHighlight(emptyCount);
-      setDiffCheckHighlight(!emptyCount);
-    }
-  }, [tripSearch, city, initialCity, cityCount]);
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
