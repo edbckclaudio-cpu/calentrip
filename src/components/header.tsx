@@ -201,31 +201,12 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
             onClick={async () => {
               try {
-                if (tripSearch) {
-                  const isSame = tripSearch.mode === "same";
-                  const destIata = isSame ? tripSearch.destination : tripSearch.inbound.destination;
-                  let cityName = destIata || "";
-                  try { const a = await findAirportByIata(destIata); if (a?.city) cityName = a.city; } catch {}
-                  const departDate = isSame ? tripSearch.departDate : tripSearch.outbound.date;
-                  const returnDate = isSame ? tripSearch.returnDate : tripSearch.inbound.date;
-                  const departTime = isSame ? tripSearch.departTime : tripSearch.outbound.time;
-                  const returnTime = isSame ? tripSearch.returnTime : tripSearch.inbound.time;
-                  const pax = tripSearch.passengers.adults + tripSearch.passengers.children + tripSearch.passengers.infants;
-                  const id = Math.random().toString(36).slice(2);
-                  const title = [cityName, departDate, departTime ? `(${departTime})` : null].filter(Boolean).join(" ");
-                  const flightNotes: FlightNote[] = [
-                    { leg: "outbound", origin: isSame ? tripSearch.origin : tripSearch.outbound.origin, destination: destIata || "", date: departDate, departureTime: departTime },
-                    { leg: "inbound", origin: isSame ? tripSearch.destination : tripSearch.inbound.origin, destination: isSame ? tripSearch.origin : tripSearch.outbound.destination, date: returnDate, departureTime: returnTime },
-                  ];
-                  addTrip({ id, title, date: departDate, passengers: pax, flightNotes });
-                }
-              } catch {}
-              try {
                 if (typeof window !== "undefined") {
                   localStorage.removeItem("calentrip_trip_summary");
                   localStorage.removeItem("calentrip:entertainment:records");
                   localStorage.removeItem("calentrip:saved_calendar");
                   localStorage.removeItem("calentrip:tripSearch");
+                  localStorage.removeItem("calentrip:trips");
                 }
                 setTripSearch(null);
               } catch {}
