@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
-import { getTrips, TripItem, addTrip, removeTrip } from "@/lib/trips-store";
+import { getTrips, TripItem, addTrip, removeTrip, FlightNote } from "@/lib/trips-store";
 import { useTrip } from "@/lib/trip-context";
 import { findAirportByIata } from "@/lib/airports";
 
@@ -103,7 +103,7 @@ export default function GlobalSidebar() {
                   const pax = tripSearch.passengers.adults + tripSearch.passengers.children + tripSearch.passengers.infants;
                   const id = Math.random().toString(36).slice(2);
                   const title = [cityName, departDate, departTime ? `(${departTime})` : null].filter(Boolean).join(" ");
-                  const flightNotes = [
+                  const flightNotes: FlightNote[] = [
                     { leg: "outbound", origin: isSame ? tripSearch.origin : tripSearch.outbound.origin, destination: destIata || "", date: departDate, departureTime: departTime },
                     { leg: "inbound", origin: isSame ? tripSearch.destination : tripSearch.inbound.origin, destination: isSame ? tripSearch.origin : tripSearch.outbound.destination, date: returnDate, departureTime: returnTime },
                   ];
