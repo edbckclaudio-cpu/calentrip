@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
@@ -19,8 +19,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CalenTrip",
   description: "Aplicativo de gerenciamento de viagens",
-  themeColor: "#007AFF",
   manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#007AFF",
 };
 
 export default function RootLayout({
