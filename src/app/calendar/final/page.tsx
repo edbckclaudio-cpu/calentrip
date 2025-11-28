@@ -725,7 +725,6 @@ export default function FinalCalendarPage() {
             onClick={() => {
               try {
                 if (typeof window !== "undefined") {
-                  localStorage.removeItem("calentrip:trips");
                   localStorage.removeItem("calentrip_trip_summary");
                   localStorage.removeItem("calentrip:entertainment:records");
                   localStorage.removeItem("calentrip:saved_calendar");

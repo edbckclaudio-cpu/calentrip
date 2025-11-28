@@ -503,7 +503,10 @@ export default function EntertainmentReservationsPage() {
           <div className="p-4 md:p-6 space-y-4 text-sm max-h-[75vh] overflow-y-auto">
             <div className="rounded border p-2">Cidade: {cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`}</div>
             {aiLoading ? (
-              <div>Buscando…</div>
+              <div className="flex items-center justify-center gap-3 py-6">
+                <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
+                <div className="text-sm text-zinc-700">Buscando…</div>
+              </div>
             ) : aiError ? (
               <div className="text-red-600">{aiError}</div>
             ) : aiItems.length === 0 ? (
@@ -612,7 +615,10 @@ export default function EntertainmentReservationsPage() {
           <div className="p-4 md:p-6 space-y-4 text-sm max-h-[75vh] overflow-y-auto">
             <div className="rounded border p-2">Cidade: {cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`}</div>
             {restLoading ? (
-              <div>Buscando…</div>
+              <div className="flex items-center justify-center gap-3 py-6">
+                <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
+                <div className="text-sm text-zinc-700">Buscando…</div>
+              </div>
             ) : restError ? (
               <div className="text-red-600">{restError}</div>
             ) : restItems.length === 0 ? (

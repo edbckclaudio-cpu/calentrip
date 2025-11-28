@@ -5,7 +5,9 @@ import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
-import { getTrips, TripItem } from "@/lib/trips-store";
+import { getTrips, TripItem, addTrip, removeTrip } from "@/lib/trips-store";
+import { useTrip } from "@/lib/trip-context";
+import { findAirportByIata } from "@/lib/airports";
 
 export default function GlobalSidebar() {
   const [sideOpen, setSideOpen] = useState(false);
@@ -13,6 +15,7 @@ export default function GlobalSidebar() {
   const [savedTrips, setSavedTrips] = useState<TripItem[]>([]);
   const { data: session, status } = useSession();
   const { lang } = useI18n();
+  const { tripSearch, setTripSearch } = useTrip();
 
   function openSaved() {
     try { setSavedTrips(getTrips()); } catch { setSavedTrips([]); }
@@ -86,15 +89,35 @@ export default function GlobalSidebar() {
           <button
             type="button"
             className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-            onClick={() => {
+            onClick={async () => {
+              try {
+                if (tripSearch) {
+                  const isSame = tripSearch.mode === "same";
+                  const destIata = isSame ? tripSearch.destination : tripSearch.inbound.destination;
+                  let cityName = destIata || "";
+                  try { const a = await findAirportByIata(destIata); if (a?.city) cityName = a.city; } catch {}
+                  const departDate = isSame ? tripSearch.departDate : tripSearch.outbound.date;
+                  const returnDate = isSame ? tripSearch.returnDate : tripSearch.inbound.date;
+                  const departTime = isSame ? tripSearch.departTime : tripSearch.outbound.time;
+                  const returnTime = isSame ? tripSearch.returnTime : tripSearch.inbound.time;
+                  const pax = tripSearch.passengers.adults + tripSearch.passengers.children + tripSearch.passengers.infants;
+                  const id = Math.random().toString(36).slice(2);
+                  const title = [cityName, departDate, departTime ? `(${departTime})` : null].filter(Boolean).join(" ");
+                  const flightNotes = [
+                    { leg: "outbound", origin: isSame ? tripSearch.origin : tripSearch.outbound.origin, destination: destIata || "", date: departDate, departureTime: departTime },
+                    { leg: "inbound", origin: isSame ? tripSearch.destination : tripSearch.inbound.origin, destination: isSame ? tripSearch.origin : tripSearch.outbound.destination, date: returnDate, departureTime: returnTime },
+                  ];
+                  addTrip({ id, title, date: departDate, passengers: pax, flightNotes });
+                }
+              } catch {}
               try {
                 if (typeof window !== "undefined") {
-                  localStorage.removeItem("calentrip:trips");
                   localStorage.removeItem("calentrip_trip_summary");
                   localStorage.removeItem("calentrip:entertainment:records");
                   localStorage.removeItem("calentrip:saved_calendar");
                   localStorage.removeItem("calentrip:tripSearch");
                 }
+                setTripSearch(null);
               } catch {}
               try { window.location.href = "/flights/search"; } catch {}
             }}
@@ -129,7 +152,20 @@ export default function GlobalSidebar() {
                     <div className="text-sm font-medium">{t.title}</div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{t.date} • {t.passengers} pax</div>
                   </div>
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/flights/results"; } catch {} }}>Abrir</Button>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/flights/results"; } catch {} }}>Abrir</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => {
+                        try { removeTrip(t.id); } catch {}
+                        try { setSavedTrips(getTrips()); } catch { setSavedTrips([]); }
+                      }}
+                    >
+                      Apagar
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -142,4 +178,3 @@ export default function GlobalSidebar() {
     </>
   );
 }
-
