@@ -8,13 +8,20 @@ export default function Page() {
       <Script id="freemium-vars" strategy="beforeInteractive">
         {`
           window.__app_id = "calentrip";
-          // Defina window.__firebase_config com seu config do Firebase para ativar autenticação real.
-          // Exemplo:
-          // window.__firebase_config = {
-          //   apiKey: "...",
-          //   authDomain: "...",
-          //   projectId: "...",
-          // };
+          (function(){
+            try {
+              const cfg = {
+                apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+                authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+              };
+              if (cfg.apiKey && cfg.authDomain && cfg.projectId) {
+                // Injeta config Firebase a partir das variáveis de ambiente públicas
+                // Estas variáveis NÃO devem conter segredos (Firebase config é público)
+                window.__firebase_config = cfg;
+              }
+            } catch {}
+          })();
           // Opcional: token custom (se disponível)
           // window.__initial_auth_token = "...";
         `}
@@ -23,4 +30,3 @@ export default function Page() {
     </>
   );
 }
-
