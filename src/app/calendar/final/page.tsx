@@ -703,19 +703,19 @@ export default function FinalCalendarPage() {
             setSavedDrawerOpen(true);
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">lists</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Pesquisas salvas</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">list_alt</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">calendar_month</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">calendar_month</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Calendário mensal</span> : null}
           </button>
@@ -736,7 +736,7 @@ export default function FinalCalendarPage() {
             }}
           >
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">travel_explore</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">travel_explore</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Iniciar nova pesquisa</span> : null}
           </button>
@@ -748,7 +748,7 @@ export default function FinalCalendarPage() {
             } catch { show("Erro ao salvar", { variant: "error" }); }
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">bookmark_add</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Salvar calendário</span> : null}
           </button>
@@ -764,7 +764,7 @@ export default function FinalCalendarPage() {
             show("Abrindo e-mail", { variant: "info" });
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">mail</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">mail</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Enviar por e-mail</span> : null}
           </button>
@@ -777,7 +777,7 @@ export default function FinalCalendarPage() {
             } catch { show("Erro ao compartilhar", { variant: "error" }); }
           }}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">share</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">share</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Compartilhar calendário</span> : null}
           </button>
@@ -908,8 +908,28 @@ export default function FinalCalendarPage() {
               lines.push("END:VEVENT");
             });
             lines.push("END:VCALENDAR");
-            const blob = new Blob([lines.join("\n")], { type: "text/calendar" });
+            const blob = new Blob([lines.join("\n")], { type: "text/calendar;charset=utf-8" });
+            const file = new File([blob], "calentrip.ics", { type: "text/calendar" });
+            try {
+              const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
+              const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
+              if (canShareFiles && typeof nav.share === "function") {
+                await nav.share({ files: [file], title: "CalenTrip" });
+                show("Calendário enviado ao sistema", { variant: "success" });
+                return;
+              }
+            } catch {}
             const url = URL.createObjectURL(blob);
+            try {
+              const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+              const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
+              if (isIOS) {
+                window.open(url, "_blank");
+                setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 30000);
+                show("Abrindo arquivo de calendário", { variant: "success" });
+                return;
+              }
+            } catch {}
             const a = document.createElement("a");
             a.href = url;
             a.download = "calentrip.ics";
@@ -947,42 +967,71 @@ export default function FinalCalendarPage() {
           </CardHeader>
           <CardContent>
             {sorted.length ? (
-              <ul className="space-y-2 text-sm">
-                {sorted.map((ev, idx) => (
-                  <li key={`ev-${idx}`} className="flex items-center justify-between gap-3">
-                    <div>
-                      {ev.date} {ev.time || ""} • {ev.label}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" && (ev.meta as FlightNote)?.departureTime ? (
-                        <Button type="button" variant="outline" onClick={() => openTransportDrawer(ev)}>Transporte até o aeroporto</Button>
-                      ) : null}
-                      {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
-                        <Button type="button" variant="outline" onClick={() => openReturnAirportDrawer()}>Transporte até o aeroporto</Button>
-                      ) : null}
-                      {ev.type === "transport" ? (
-                        <Button type="button" variant="outline" onClick={() => openDepartureDrawer(ev)}>Como chegar da hospedagem de checkout até o transporte para a próxima cidade</Button>
-                      ) : null}
-                      {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
-                        <Button type="button" variant="outline" onClick={() => openCheckinDrawer(ev)}>Transporte até hospedagem</Button>
-                      ) : null}
-                      {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkout" && idx === lastCheckoutIdx ? (
-                        <Button type="button" variant="outline" onClick={() => openReturnAirportDrawer()}>Transporte até o aeroporto final da viagem</Button>
-                      ) : null}
-                      {(ev.type === "activity" || ev.type === "restaurant") ? (
-                        <Button type="button" variant="outline" onClick={() => openGoDrawer(ev)}>Como ir</Button>
-                      ) : null}
-                      {((ev.type === "activity" || ev.type === "restaurant") && (ev.meta as RecordItem)?.files && (ev.meta as RecordItem)?.files!.length) ? (
-                        <Button type="button" variant="outline" onClick={() => {
-                          const m = ev.meta as RecordItem;
-                          setDocTitle(m.title);
-                          setDocFiles(m.files || []);
-                          setDocOpen(true);
-                        }}>Documentos</Button>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
+              <ul className="space-y-3 text-sm">
+                {sorted.map((ev, idx) => {
+                  const accent = ev.type === "flight" ? "border-l-[#007AFF]" : ev.type === "stay" ? "border-l-[#febb02]" : ev.type === "transport" ? "border-l-[#007AFF]" : "border-l-[#34c759]";
+                  const icon = ev.type === "flight" ? "local_airport" : ev.type === "stay" ? "home" : ev.type === "transport" ? "transfer_within_a_station" : "event";
+                  return (
+                    <li key={`ev-${idx}`} className={`rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 flex items-start justify-between gap-3 border-l-4 ${accent}`}>
+                      <div className="leading-relaxed">
+                        <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                          <span className="material-symbols-outlined text-[16px]">{icon}</span>
+                          <span>{ev.date} {ev.time || ""}</span>
+                        </div>
+                        <div className="mt-1">{ev.label}</div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" && (ev.meta as FlightNote)?.departureTime ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
+                            <span className="material-symbols-outlined text-[16px]">local_taxi</span>
+                            <span>Aeroporto</span>
+                          </Button>
+                        ) : null}
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openReturnAirportDrawer()}>
+                            <span className="material-symbols-outlined text-[16px]">local_taxi</span>
+                            <span>Aeroporto</span>
+                          </Button>
+                        ) : null}
+                        {ev.type === "transport" ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
+                            <span className="material-symbols-outlined text-[16px]">directions</span>
+                            <span>Rota</span>
+                          </Button>
+                        ) : null}
+                        {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(ev)}>
+                            <span className="material-symbols-outlined text-[16px]">home</span>
+                            <span>Hospedagem</span>
+                          </Button>
+                        ) : null}
+                        {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkout" && idx === lastCheckoutIdx ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openReturnAirportDrawer()}>
+                            <span className="material-symbols-outlined text-[16px]">local_airport</span>
+                            <span>Aeroporto final</span>
+                          </Button>
+                        ) : null}
+                        {(ev.type === "activity" || ev.type === "restaurant") ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openGoDrawer(ev)}>
+                            <span className="material-symbols-outlined text-[16px]">map</span>
+                            <span>Ir</span>
+                          </Button>
+                        ) : null}
+                        {((ev.type === "activity" || ev.type === "restaurant") && (ev.meta as RecordItem)?.files && (ev.meta as RecordItem)?.files!.length) ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
+                            const m = ev.meta as RecordItem;
+                            setDocTitle(m.title);
+                            setDocFiles(m.files || []);
+                            setDocOpen(true);
+                          }}>
+                            <span className="material-symbols-outlined text-[16px]">description</span>
+                            <span>Docs</span>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div className="text-sm text-zinc-600">Nenhum evento encontrado.</div>

@@ -138,7 +138,7 @@ export default function MonthCalendarPage() {
           </div>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">list_alt</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
           </button>
@@ -169,7 +169,7 @@ export default function MonthCalendarPage() {
                 const hasEvent = !!d.enabled && !!d.date;
                 const base = "h-10 rounded relative";
                 const ring = hasEvent ? " border-2 border-[#febb02]" : " border border-zinc-200 dark:border-zinc-800";
-                const bg = isTravel ? " bg-[var(--brand)] text-white" : hasEvent ? " hover:bg-zinc-50 dark:hover:bg-zinc-900" : " text-zinc-400";
+                const bg = isTravel ? " bg-[#007AFF] text-white" : hasEvent ? " hover:bg-zinc-50 dark:hover:bg-zinc-900" : " text-zinc-400";
                 const cls = !d.date ? "h-10 rounded border border-transparent" : `${base}${ring}${bg}`;
                 return (
                   <button key={`d-${i}`} type="button" disabled={!d.date || !hasEvent} className={cls} onClick={() => setDayOpen(d.date)}>
@@ -189,19 +189,29 @@ export default function MonthCalendarPage() {
             <DialogHeader>Atividades do dia</DialogHeader>
             <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
               {grouped[dayOpen!] && grouped[dayOpen!].length ? (
-                <ul className="space-y-2">
-                  {grouped[dayOpen!].map((e, idx) => (
-                    <li key={`ev-${idx}`} className="rounded border p-2">
-                      <div className="font-medium">{e.time || ""} • {e.label}</div>
-                    </li>
-                  ))}
+                <ul className="space-y-3">
+                  {grouped[dayOpen!].map((e, idx) => {
+                    const accent = e.type === "flight" ? "border-l-[#007AFF]" : e.type === "stay" ? "border-l-[#febb02]" : e.type === "transport" ? "border-l-[#007AFF]" : "border-l-[#34c759]";
+                    const icon = e.type === "flight" ? "local_airport" : e.type === "stay" ? "home" : e.type === "transport" ? "transfer_within_a_station" : "event";
+                    return (
+                      <li key={`ev-${idx}`} className={`rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 flex items-start justify-between gap-3 border-l-4 ${accent}`}>
+                        <div className="leading-relaxed">
+                          <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                            <span className="material-symbols-outlined text-[16px]">{icon}</span>
+                            <span>{e.time || ""}</span>
+                          </div>
+                          <div className="mt-1 text-sm">{e.label}</div>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <div className="text-zinc-600">Sem eventos neste dia.</div>
               )}
               <div className="mt-3 flex items-center justify-between">
-                <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Voltar para calendário em lista</Button>
-                <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setDayOpen(null)}>Fechar</Button>
+                <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Calendário em lista</Button>
+                <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setDayOpen(null)}>Fechar</Button>
               </div>
             </div>
           </div>
