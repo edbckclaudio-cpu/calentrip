@@ -1,25 +1,21 @@
-import { NextResponse } from "next/server";
 export const dynamic = "force-static";
 
-function pickEnv<T extends string>(env: string, prodVar: T, stgVar: T): string {
-  const v = env === "staging" ? process.env[stgVar] : process.env[prodVar];
-  return (v || process.env[prodVar] || "").toString();
-}
-
 export async function GET() {
-  const env = (process.env.NEXT_PUBLIC_TWA_ENV || "prod").toLowerCase();
-  const pkg = pickEnv(env, "NEXT_PUBLIC_TWA_PACKAGE", "NEXT_PUBLIC_TWA_PACKAGE_STAGING") || "com.example.calentrip";
-  const shaRaw = pickEnv(env, "NEXT_PUBLIC_TWA_SHA256", "NEXT_PUBLIC_TWA_SHA256_STAGING");
-  const sha = (shaRaw || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const pkg = process.env.NEXT_PUBLIC_TWA_PACKAGE || "digital.calentrip.android";
+  const shaEnv = process.env.NEXT_PUBLIC_TWA_SHA256 || "55:9F:B1:76:04:0A:11:00:FB:3B:36:3C:51:1C:B8:F2:B9:3D:53:2B:7F:A5:46:67:89:48:A7:1D:51:39:E3:55";
+  const shaList = shaEnv.split(",").map((s) => s.trim()).filter(Boolean);
   const body = [
     {
-      relation: ["delegate_permission/common.handle_all_urls"],
+      relation: [
+        "delegate_permission/common.handle_all_urls",
+        "delegate_permission/common.get_login_creds",
+      ],
       target: {
         namespace: "android_app",
         package_name: pkg,
-        sha256_cert_fingerprints: sha.length ? sha : ["CHANGE_ME"],
+        sha256_cert_fingerprints: shaList,
       },
     },
   ];
-  return NextResponse.json(body, { status: 200, headers: { "Cache-Control": "public, max-age=3600" } });
+  return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600" } });
 }
