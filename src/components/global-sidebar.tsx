@@ -14,11 +14,11 @@ export default function GlobalSidebar() {
   const [savedOpen, setSavedOpen] = useState(false);
   const [savedTrips, setSavedTrips] = useState<TripItem[]>([]);
   const { data: session, status } = useSession();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const { tripSearch, setTripSearch } = useTrip();
 
   function openSaved() {
-    try { setSavedTrips(getTrips()); } catch { setSavedTrips([]); }
+    try { setSavedTrips(getTrips().filter((t) => t.reachedFinalCalendar)); } catch { setSavedTrips([]); }
     setSavedOpen(true);
   }
 
@@ -153,14 +153,15 @@ export default function GlobalSidebar() {
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{t.date} • {t.passengers} pax</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/flights/results"; } catch {} }}>Abrir</Button>
+                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
+                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
                     <Button
                       type="button"
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50"
                       onClick={() => {
                         try { removeTrip(t.id); } catch {}
-                        try { setSavedTrips(getTrips()); } catch { setSavedTrips([]); }
+                        try { setSavedTrips(getTrips().filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
                       }}
                     >
                       Apagar

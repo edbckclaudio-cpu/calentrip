@@ -80,7 +80,7 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
   const list = items === "init" ? [] : (JSON.parse(items) as ReturnType<typeof getTrips>);
 
   function refresh() {
-    const data = getTrips();
+    const data = getTrips().filter((t) => t.reachedFinalCalendar);
     setItems(JSON.stringify(data));
   }
 
@@ -100,9 +100,11 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
                   <div className="text-sm font-medium">{trip.title}</div>
                   <div className="text-xs text-zinc-600 dark:text-zinc-400">{trip.date} • {trip.passengers} pax</div>
                 </div>
-                <Button type="button" variant="outline" onClick={() => { removeTrip(trip.id); refresh(); }}>
-                  {t("remove")}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
+                  <Button type="button" variant="outline" onClick={() => { removeTrip(trip.id); refresh(); }}>{t("remove")}</Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -136,7 +138,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
   const { tripSearch, setTripSearch } = useTrip();
 
   function openSaved() {
-    try { setSavedTrips(getTrips()); } catch { setSavedTrips([]); }
+    try { setSavedTrips(getTrips().filter((t) => t.reachedFinalCalendar)); } catch { setSavedTrips([]); }
     setSavedOpen(true);
   }
 
@@ -274,14 +276,15 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{t.date} • {t.passengers} pax</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/flights/results"; } catch {} }}>Abrir</Button>
+                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
+                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
                     <Button
                       type="button"
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50"
                       onClick={() => {
                         try { removeTrip(t.id); } catch {}
-                        try { setSavedTrips(getTrips()); } catch { setSavedTrips([]); }
+                        try { setSavedTrips(getTrips().filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
                       }}
                     >
                       Apagar

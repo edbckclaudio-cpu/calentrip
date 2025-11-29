@@ -25,6 +25,7 @@ export type TripItem = {
   flightNotes?: FlightNote[];
   attachments?: AttachmentMeta[];
   stayAddress?: string;
+  reachedFinalCalendar?: boolean;
 };
 
 const KEY = "calentrip:trips";

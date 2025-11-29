@@ -64,6 +64,30 @@ export default function MonthCalendarPage() {
     } catch {}
   }, [status]);
 
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+      const ts = raw ? JSON.parse(raw) : null;
+      if (!ts) return;
+      const isSame = ts.mode === "same";
+      const origin = isSame ? ts.origin : ts.outbound?.origin;
+      const destination = isSame ? ts.destination : ts.outbound?.destination;
+      const date = isSame ? ts.departDate : ts.outbound?.date;
+      const pax = (() => {
+        const p = ts.passengers || {};
+        return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
+      })();
+      if (!origin || !destination || !date) return;
+      const title = `${origin} → ${destination}`;
+      const trips: TripItem[] = getTrips();
+      const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+      if (idx < 0) return;
+      const next = [...trips];
+      next[idx] = { ...next[idx], reachedFinalCalendar: true };
+      if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
+    } catch {}
+  }, []);
+
   const grouped = useMemo(() => {
     const g: Record<string, EventItem[]> = {};
     events.forEach((e) => { if (e.date) { const k = e.date; (g[k] ||= []).push(e); } });

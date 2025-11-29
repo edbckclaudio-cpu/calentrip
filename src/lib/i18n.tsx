@@ -86,6 +86,8 @@ const dict: Record<Lang, Record<string, string>> = {
     transportDisclaimer: "Estimativas obtidas de serviços públicos na internet. Podem conter variações ou erros; confirme com os fornecedores antes de viajar.",
     stayRouteFromAirportLabel: "Origem",
     stayRouteToAddressLabel: "Destino",
+    calendarList: "Calendário em lista",
+    calendarMonth: "Calendário mensal",
   },
   en: {
     appName: "CalenTrip",
@@ -169,6 +171,8 @@ const dict: Record<Lang, Record<string, string>> = {
     transportDisclaimer: "Estimates are sourced from public internet services and may vary or be inaccurate. Confirm with providers before traveling.",
     stayRouteFromAirportLabel: "Origin",
     stayRouteToAddressLabel: "Destination",
+    calendarList: "List calendar",
+    calendarMonth: "Monthly calendar",
   },
   es: {
     appName: "CalenTrip",
@@ -252,6 +256,8 @@ const dict: Record<Lang, Record<string, string>> = {
     transportDisclaimer: "Estimaciones obtenidas de servicios públicos en internet. Pueden variar o contener errores; confirma con los proveedores antes de viajar.",
     stayRouteFromAirportLabel: "Origen",
     stayRouteToAddressLabel: "Destino",
+    calendarList: "Calendario en lista",
+    calendarMonth: "Calendario mensual",
   },
 };
 
