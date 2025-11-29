@@ -165,7 +165,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
               </div>
             ) : (
               <div className="flex items-center justify-between gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">PF</span>
+                <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs" onClick={() => onOpenChange(true)}>PF</button>
                 <div className="flex-1">
                   <div className="text-sm font-semibold">Entrar</div>
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>

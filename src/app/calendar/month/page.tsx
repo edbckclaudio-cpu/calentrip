@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
+import { isTripPremium } from "@/lib/premium";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -17,11 +18,19 @@ export default function MonthCalendarPage() {
   const [dayOpen, setDayOpen] = useState<string | null>(null);
   const { data: session, status } = useSession();
   const { lang } = useI18n();
+  const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium" } | null>(null);
 
   useEffect(() => {
     try {
       const list: EventItem[] = [];
       const trips: TripItem[] = getTrips();
+      const current = trips.length ? trips[0] : null;
+      if (current) {
+        const premium = isTripPremium(current.id);
+        if (status !== "authenticated") setGating({ show: true, reason: "anon" });
+        else if (!premium) setGating({ show: true, reason: "noPremium" });
+        else setGating(null);
+      }
       trips.forEach((t) => {
         if (t.flightNotes && t.flightNotes.length) {
           t.flightNotes.forEach((fn) => {
@@ -53,7 +62,7 @@ export default function MonthCalendarPage() {
       });
       setEvents(unique);
     } catch {}
-  }, []);
+  }, [status]);
 
   const grouped = useMemo(() => {
     const g: Record<string, EventItem[]> = {};
@@ -99,6 +108,34 @@ export default function MonthCalendarPage() {
 
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
+      {gating?.show ? (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="max-w-md w-full bg-white rounded-xl p-5 space-y-3">
+            <div className="text-lg font-semibold">{gating.reason === "anon" ? "Faça login para desbloquear" : "Assinatura necessária"}</div>
+            <div className="text-sm text-zinc-700">
+              {gating.reason === "anon" ? (
+                <div>
+                  Entre para continuar e desbloquear recursos premium.
+                </div>
+              ) : (
+                <div>
+                  Assinatura única de R$ 15 por viagem. Válida até o último dia; depois, você continua consultando o calendário. Para nova viagem, é necessário assinar novamente.
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 mt-2">
+              {gating.reason === "anon" ? (
+                <>
+                  <button type="button" className="btn" onClick={() => signIn("google")}>Entrar com Google</button>
+                  <button type="button" className="btn" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/month" })}>Entrar Demo</button>
+                </>
+              ) : (
+                <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Assinar agora</button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className={sideOpen ? "fixed left-0 top-0 bottom-0 z-40 w-56 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all" : "fixed left-0 top-0 bottom-0 z-40 w-14 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all"}>
         <div className="h-14 flex items-center justify-center border-b border-zinc-200 dark:border-zinc-800">
           <button type="button" className="rounded-md p-2" onClick={() => setSideOpen((v) => !v)}>

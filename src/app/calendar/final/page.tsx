@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
+import { isTripPremium, setTripPremium, computeExpiryFromData } from "@/lib/premium";
  
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ export default function FinalCalendarPage() {
   const [savedTripsList, setSavedTripsList] = useState<TripItem[]>([]);
   const { data: session, status } = useSession();
   const { lang } = useI18n();
+  const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
 
   const sorted = useMemo(() => {
     const parse = (d: string, t?: string) => {
@@ -63,6 +65,18 @@ export default function FinalCalendarPage() {
     };
     return [...events].sort((a, b) => parse(a.date, a.time).getTime() - parse(b.date, b.time).getTime());
   }, [events]);
+
+  useEffect(() => {
+    try {
+      const trips: TripItem[] = getTrips();
+      const current = trips.length ? trips[0] : null;
+      if (!current) return;
+      const premium = isTripPremium(current.id);
+      if (status !== "authenticated") setGating({ show: true, reason: "anon", tripId: current.id });
+      else if (!premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
+      else setGating(null);
+    } catch {}
+  }, [status]);
 
   const lastInboundSignature = useMemo(() => {
     let sig = "";
@@ -644,6 +658,55 @@ export default function FinalCalendarPage() {
 
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
+      {gating?.show ? (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="max-w-md w-full bg-white rounded-xl p-5 space-y-3">
+            <DialogHeader>{gating.reason === "anon" ? "Faça login para desbloquear" : "Assinatura necessária"}</DialogHeader>
+            <div className="text-sm text-zinc-700">
+              {gating.reason === "anon" ? (
+                <div>
+                  Entre para continuar e desbloquear recursos premium. Você pode usar Google ou conta demo.
+                </div>
+              ) : (
+                <div>
+                  Assinatura única de R$ 15 por viagem. Válida até o último dia da viagem; depois, você continua consultando o calendário. Para nova viagem, é necessário assinar novamente.
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 mt-2">
+              {gating.reason === "anon" ? (
+                <>
+                  <Button type="button" onClick={() => signIn("google")}>Entrar com Google</Button>
+                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/final" })}>Entrar Demo</Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      const trips: TripItem[] = getTrips();
+                      const current = trips.find((t) => t.id === gating?.tripId);
+                      const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+                      const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: { checkout?: string }[] }) : null;
+                      const lastCheckout = Array.isArray(summary?.cities) ? (summary!.cities!.map((c) => c.checkout).filter(Boolean).slice(-1)[0] || undefined) : undefined;
+                      const returnDate = (() => {
+                        const notes = current?.flightNotes || [];
+                        const ret = notes.filter((n) => n.leg === "inbound").map((n) => n.date).filter(Boolean).slice(-1)[0];
+                        return ret;
+                      })();
+                      const expiresAt = computeExpiryFromData({ tripDate: current?.date, returnDate, lastCheckout });
+                      if (current) setTripPremium(current.id, expiresAt);
+                      setGating(null);
+                    } catch {}
+                  }}
+                >
+                  Assinar agora (R$ 15)
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className={sideOpen ? "fixed left-0 top-0 bottom-0 z-40 w-56 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all" : "fixed left-0 top-0 bottom-0 z-40 w-14 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all"}>
         <div className="h-14 flex items-center justify-center border-b border-zinc-200 dark:border-zinc-800">
           <button type="button" className="rounded-md p-2" onClick={() => setSideOpen((v) => !v)}>
