@@ -1002,7 +1002,16 @@ export default function FinalCalendarPage() {
               const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
               if (canShareFiles && typeof nav.share === "function") {
                 await nav.share({ files: [file], title: "CalenTrip" });
-                show("Calendário enviado ao sistema", { variant: "success" });
+                const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+                const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
+                const isAndroid = /Android/.test(ua);
+                if (isIOS) {
+                  show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+                } else if (isAndroid) {
+                  show("Calendário enviado. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+                } else {
+                  show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
+                }
                 return;
               }
             } catch {}
@@ -1010,10 +1019,15 @@ export default function FinalCalendarPage() {
             try {
               const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
               const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
-              if (isIOS) {
+              const isAndroid = /Android/.test(ua);
+              if (isIOS || isAndroid) {
                 window.open(url, "_blank");
                 setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 30000);
-                show("Abrindo arquivo de calendário", { variant: "success" });
+                if (isIOS) {
+                  show("Importação aberta. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+                } else {
+                  show("Importação aberta. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+                }
                 return;
               }
             } catch {}
@@ -1024,7 +1038,7 @@ export default function FinalCalendarPage() {
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
-            show("Arquivo de calendário gerado", { variant: "success" });
+            show("Arquivo .ics baixado. Abra com Google/Outlook/Apple Calendar para importar.", { variant: "info" });
             }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
