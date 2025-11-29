@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CalenTrip</string>
+    <string name="title_activity_main">CalenTrip</string>
+    <string name="package_name">digital.calentrip</string>
+    <string name="custom_url_scheme">digital.calentrip</string>
+</resources>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-export const runtime = "edge";
+export const dynamic = "force-static";
 
 function pickEnv<T extends string>(env: string, prodVar: T, stgVar: T): string {
   const v = env === "staging" ? process.env[stgVar] : process.env[prodVar];
