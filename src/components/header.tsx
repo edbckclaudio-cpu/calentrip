@@ -342,7 +342,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
               <p>Usamos os dados para oferecer e melhorar recursos, cumprir obrigações legais e prevenir abuso.</p>
               <p>Compartilhamos dados apenas com provedores estritamente necessários (autenticação, hospedagem, analytics) sob contratos e medidas de segurança.</p>
               <p>Você pode solicitar acesso, correção ou exclusão de dados. Guardamos dados pelo tempo necessário para operar o serviço e conforme a lei.</p>
-              <p>Contato do controlador: suporte@calentrip.com. Caso necessário, você pode exercer direitos conforme LGPD, GDPR e demais legislações aplicáveis.</p>
+              <p>Contato do controlador: calentrip.support@proton.me. Caso necessário, você pode exercer direitos conforme LGPD, GDPR e demais legislações aplicáveis.</p>
               <p>Seus dados podem ser transferidos internacionalmente mediante salvaguardas adequadas.</p>
             </div>
           )}
@@ -373,13 +373,12 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             <div className="space-y-2">
               <p>Para excluir dados e a conta, acesse Perfil → Configurações → Excluir conta, ou solicite por e-mail.</p>
               <p>Pedidos de exclusão serão processados e confirmados. Alguns dados podem ser retidos conforme obrigação legal.</p>
-              <p>Contato para exclusão: suporte@calentrip.com.</p>
+              <p>Contato para exclusão: calentrip.support@proton.me.</p>
             </div>
           )}
           {policyType === "support" && (
             <div className="space-y-2">
-              <p>Suporte: suporte@calentrip.com</p>
-              <p>URL de suporte: https://www.calentrip.com/suporte</p>
+              <p>Suporte: calentrip.support@proton.me</p>
               <p>Tempo de resposta estimado: até 72 horas úteis.</p>
             </div>
           )}
