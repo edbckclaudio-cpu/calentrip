@@ -277,7 +277,7 @@ export default function FinalCalendarPage() {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(dest)}`;
       setTransportInfo({ distanceKm: undefined, durationMin: undefined, durationWithTrafficMin: undefined, gmapsUrl, r2rUrl, airportName: dest });
-      try { show("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "warning" }); } catch {}
+      try { show("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setLoading(false);
     }
@@ -368,7 +368,7 @@ export default function FinalCalendarPage() {
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
       setStayInfo({ origin: originAddr, destination: depPoint, gmapsUrl, r2rUrl, uberUrl });
-      try { show("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "warning" }); } catch {}
+      try { show("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setStayLoading(false);
     }
@@ -486,19 +486,19 @@ export default function FinalCalendarPage() {
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(query)}`;
         setGoInfo({ destination: query, gmapsUrl, uberUrl });
-        try { show("Sem localização atual. Links básicos foram gerados.", { variant: "warning" }); } catch {}
+        try { show("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
       } else {
         gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
         setGoInfo({ destination: query, gmapsUrl, uberUrl });
-        try { show("Destino não geocodificado. Usando busca genérica.", { variant: "warning" }); } catch {}
+        try { show("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
       }
     } catch {
       const q = `${rec.title} ${rec.cityName}`.trim();
       const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
       setGoInfo({ destination: q, gmapsUrl, uberUrl });
-      try { show("Erro ao calcular rota. Usando links básicos.", { variant: "warning" }); } catch {}
+      try { show("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setGoLoading(false);
     }
