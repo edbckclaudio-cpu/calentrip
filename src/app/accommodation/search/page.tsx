@@ -645,6 +645,21 @@ export default function AccommodationSearchPage() {
                         </ul>
                       )}
                     </div>
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!citySearchQuery.trim()}
+                        onClick={() => {
+                          const v = citySearchQuery.trim();
+                          if (!v) return;
+                          onPickCity(Number(citySearchIdx), v);
+                          show("Cidade definida manualmente");
+                        }}
+                      >
+                        Usar cidade digitada
+                      </Button>
+                    </div>
                   </div>
                 </Dialog>
                 
