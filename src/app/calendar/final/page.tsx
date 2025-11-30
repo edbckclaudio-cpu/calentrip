@@ -119,11 +119,16 @@ export default function FinalCalendarPage() {
     try {
       const trips: TripItem[] = getTrips();
       const list: EventItem[] = [];
+      const seenFlights = new Set<string>();
       trips.forEach((t) => {
         if (t.flightNotes && t.flightNotes.length) {
           t.flightNotes.forEach((fn) => {
             const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
-            list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
+            const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
+            if (!seenFlights.has(sig)) {
+              seenFlights.add(sig);
+              list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
+            }
             const addDays = (d: string, days: number) => {
               const dt = new Date(`${d}T00:00:00`);
               if (Number.isNaN(dt.getTime())) return d;
@@ -131,11 +136,7 @@ export default function FinalCalendarPage() {
               const p = (n: number) => String(n).padStart(2, "0");
               return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
             };
-            if (fn.arrivalTime) {
-              const arrDate = fn.arrivalNextDay ? addDays(fn.date, 1) : fn.date;
-              const arrLabel = fn.leg === "outbound" ? "Chegada voo de ida" : "Chegada voo de volta";
-              list.push({ type: "flight", label: `${arrLabel}: ${fn.destination}`, date: arrDate, time: fn.arrivalTime || undefined, meta: fn });
-            }
+            // Removemos a criação de eventos de chegada para evitar duplicação visual
           });
         } else {
           list.push({ type: "flight", label: t.title, date: t.date });
@@ -149,7 +150,9 @@ export default function FinalCalendarPage() {
         const cityName = c.name || `Cidade ${i + 1}`;
         const addr = c.address || "(endereço não informado)";
         if (c.checkin) {
-          list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "17:00", meta: { city: cityName, address: addr, kind: "checkin" } });
+          let ciTime = "23:59";
+          try { if (localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+          list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
         }
         if (c.checkout) {
           list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "09:00", meta: { city: cityName, address: addr, kind: "checkout" } });
