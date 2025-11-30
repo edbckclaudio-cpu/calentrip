@@ -387,7 +387,14 @@ export default function FinalCalendarPage() {
       return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
     };
     const dest = await geocode(m.address || m.city || "");
-    if (!dest) { setArrivalInfo({ city: m.city, address: m.address }); return; }
+    if (!dest) {
+      const q = (m.address || m.city || "").trim();
+      const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
+      try { show("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
+      return;
+    }
     const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
       try {
         if (!ensureLocationConsent()) { resolve(null); return; }
@@ -396,7 +403,14 @@ export default function FinalCalendarPage() {
     });
     try {
       const pos = await getPos();
-      if (!pos) { setArrivalInfo({ city: m.city, address: m.address }); return; }
+      if (!pos) {
+        const q = (m.address || m.city || "").trim();
+        const gmapsUrl = q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : undefined;
+        const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(q)}`;
+        setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
+        try { show("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
+        return;
+      }
       const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
       const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${dest.lon},${dest.lat}?overview=false`;
       const resD = await fetch(osrmDrive);
@@ -425,7 +439,11 @@ export default function FinalCalendarPage() {
       const priceEstimate = Math.round((distKm || 0) * 6 + 3);
       setArrivalInfo({ city: m.city, address: m.address, distanceKm: distKm, walkingMin, drivingMin: driveWithTraffic ?? drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl });
     } catch {
-      setArrivalInfo({ city: m.city, address: m.address });
+      const q = (m.address || m.city || "").trim();
+      const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
+      try { show("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     }
   }
 
