@@ -133,7 +133,9 @@ export default function FinalCalendarPage() {
 
   useEffect(() => {
     try {
-      const trips: TripItem[] = getTrips();
+      const all: TripItem[] = getTrips();
+      const actives = all.filter((t) => t.reachedFinalCalendar);
+      const trips: TripItem[] = actives.length ? [actives[actives.length - 1]] : (all.length ? [all[all.length - 1]] : []);
       const list: EventItem[] = [];
       const seenFlights = new Set<string>();
       trips.forEach((t) => {
