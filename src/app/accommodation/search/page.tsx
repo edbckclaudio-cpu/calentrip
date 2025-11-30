@@ -620,10 +620,12 @@ export default function AccommodationSearchPage() {
                   </div>
                 )}
                 <Dialog open={citySearchIdx !== null} onOpenChange={() => setCitySearchIdx(null)}>
-                  <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md rounded-l-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800">
-                    <DialogHeader>Buscar cidade</DialogHeader>
-                    <Input placeholder="Digite a cidade" value={citySearchQuery} onChange={(e) => searchCities(e.target.value)} />
-                    <div className="mt-2">
+                  <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
+                    <div className="p-4">
+                      <DialogHeader>Buscar cidade</DialogHeader>
+                      <Input placeholder="Digite a cidade" value={citySearchQuery} onChange={(e) => searchCities(e.target.value)} />
+                    </div>
+                    <div className="px-4 pb-4 flex-1 overflow-y-auto">
                       {citySearchLoading ? (
                         <div className="text-sm text-zinc-600">Carregando…</div>
                       ) : citySearchResults.length === 0 ? (
@@ -645,20 +647,8 @@ export default function AccommodationSearchPage() {
                         </ul>
                       )}
                     </div>
-                    <div className="mt-3 flex justify-end">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={!citySearchQuery.trim()}
-                        onClick={() => {
-                          const v = citySearchQuery.trim();
-                          if (!v) return;
-                          onPickCity(Number(citySearchIdx), v);
-                          show("Cidade definida manualmente");
-                        }}
-                      >
-                        Usar cidade digitada
-                      </Button>
+                    <div className="sticky bottom-0 p-4 border-t bg-white dark:bg-black">
+                      <Button type="button" variant="secondary" disabled={!citySearchQuery.trim()} onClick={() => { const v = citySearchQuery.trim(); if (!v) return; onPickCity(Number(citySearchIdx), v); show("Cidade definida manualmente"); }}>Usar cidade digitada</Button>
                     </div>
                   </div>
                 </Dialog>
@@ -755,25 +745,27 @@ export default function AccommodationSearchPage() {
         )}
         
         <Dialog open={transportOpenIdx !== null} onOpenChange={(o) => { if (!o) { setTransportOpenIdx(null); setTransportNotice(null); setTransportHighlight(false); } }}>
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md rounded-l-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800">
-            <DialogHeader>
-              <div className={transportHighlight ? "rounded-md p-1 ring-4 ring-amber-500 animate-pulse" : undefined}>
-                Transporte entre {transportOpenIdx !== null ? cities[transportOpenIdx]?.name : ""} e {transportOpenIdx !== null ? cities[transportOpenIdx + 1]?.name : ""}
-              </div>
-            </DialogHeader>
-            {transportNotice ? (
-              <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-300 dark:bg-amber-900/20 dark:text-amber-200">
-                <div className="flex items-start gap-2">
-                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-amber-100 text-[11px] font-semibold text-amber-800">i</span>
-                  <span>{transportNotice}</span>
+          <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
+            <div className="p-4">
+              <DialogHeader>
+                <div className={transportHighlight ? "rounded-md p-1 ring-4 ring-amber-500 animate-pulse" : undefined}>
+                  Transporte entre {transportOpenIdx !== null ? cities[transportOpenIdx]?.name : ""} e {transportOpenIdx !== null ? cities[transportOpenIdx + 1]?.name : ""}
                 </div>
-              </div>
-            ) : null}
-            <div className="text-sm">
+              </DialogHeader>
+              {transportNotice ? (
+                <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-300 dark:bg-amber-900/20 dark:text-amber-200">
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-amber-100 text-[11px] font-semibold text-amber-800">i</span>
+                    <span>{transportNotice}</span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <div className="px-4 pb-2 flex-1 overflow-y-auto text-sm">
               <div className="mb-2">Distância: {transportRoute?.distanceKm ? `${transportRoute.distanceKm} km` : "—"}</div>
               <div className="mb-2">Tempo estimado: {transportRoute?.durationMin ? `${transportRoute.durationMin} min` : "—"}</div>
               {transportRoute?.osmUrl ? (
-                <iframe title="map" src={transportRoute.osmUrl} className="mb-3 h-40 w-full rounded-md border" />
+                <iframe title="map" src={transportRoute.osmUrl} className="mb-3 h-32 md:h-40 w-full rounded-md border" />
               ) : null}
               <ul className="space-y-1 mb-2">
                 <li><a className="underline" href={transportRoute?.r2rUrl} target="_blank" rel="noopener noreferrer">Rome2Rio</a></li>
@@ -913,10 +905,10 @@ export default function AccommodationSearchPage() {
                   ) : null}
                 </div>
               </div>
-              <p className="mt-2 text-xs text-zinc-600">Compare opções: avião, trem, ônibus, carro. Alguns sites oferecem compra direta.</p>
-              <div className="mt-3 flex justify-end">
-                <Button type="button" onClick={onSaveTransport}>Salvar transporte</Button>
-              </div>
+            </div>
+            <div className="sticky bottom-0 p-4 border-t bg-white dark:bg-black">
+              <p className="mb-2 text-xs text-zinc-600">Compare opções: avião, trem, ônibus, carro. Alguns sites oferecem compra direta.</p>
+              <div className="flex justify-end"><Button type="button" onClick={onSaveTransport}>Salvar transporte</Button></div>
             </div>
           </div>
         </Dialog>
