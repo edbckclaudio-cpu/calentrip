@@ -34,6 +34,8 @@ export default function FinalCalendarPage() {
   const [arrivalDrawerOpen, setArrivalDrawerOpen] = useState(false);
   const [arrivalInfo, setArrivalInfo] = useState<{ city?: string; address?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
   const { show } = useToast();
+  const [locConsent, setLocConsent] = useState<"granted" | "denied" | "skipped" | "default">("default");
+  const [locModalOpen, setLocModalOpen] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [docTitle, setDocTitle] = useState("");
   const [docFiles, setDocFiles] = useState<SavedFile[]>([]);
@@ -78,6 +80,20 @@ export default function FinalCalendarPage() {
       if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try {
+      const v = typeof window !== "undefined" ? localStorage.getItem("calentrip:locConsent") : null;
+      if (v === "granted" || v === "denied" || v === "skipped") setLocConsent(v as typeof locConsent);
+      else setLocConsent("default");
+    } catch { setLocConsent("default"); }
+  }, []);
+
+  const ensureLocationConsent = useCallback(() => {
+    if (locConsent === "granted") return true;
+    setLocModalOpen(true);
+    return false;
+  }, [locConsent]);
 
   const sorted = useMemo(() => {
     const parse = (d: string, t?: string) => {
@@ -195,6 +211,7 @@ export default function FinalCalendarPage() {
       const originQ = airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`;
       const pos = await new Promise<GeolocationPosition | null>((resolve) => {
         if (!navigator.geolocation) resolve(null);
+        if (!ensureLocationConsent()) { resolve(null); return; }
         navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, timeout: 10000 });
       });
       const geocode = async (q: string) => {
@@ -357,7 +374,10 @@ export default function FinalCalendarPage() {
     const dest = await geocode(m.address || m.city || "");
     if (!dest) { setArrivalInfo({ city: m.city, address: m.address }); return; }
     const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
-      try { navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 }); } catch { resolve(null); }
+      try {
+        if (!ensureLocationConsent()) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+      } catch { resolve(null); }
     });
     try {
       const pos = await getPos();
@@ -403,6 +423,7 @@ export default function FinalCalendarPage() {
     try {
       const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
         if (!navigator.geolocation) resolve(null);
+        if (!ensureLocationConsent()) { resolve(null); return; }
         navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
       });
       const geocode = async (q: string) => {
@@ -637,6 +658,7 @@ export default function FinalCalendarPage() {
       if (!dest) return;
       const ok = await ensurePermission();
       const thresholdKm = 20;
+      if (!ensureLocationConsent()) return;
       const watchId = navigator.geolocation.watchPosition(
         async (pos) => {
           const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
@@ -697,6 +719,61 @@ export default function FinalCalendarPage() {
 
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
+      {locModalOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="max-w-md w-full bg-white rounded-xl p-5 space-y-3">
+            <DialogHeader>Permitir localização</DialogHeader>
+            <div className="text-sm text-zinc-700">
+              A localização é usada para estimar rotas, tempo e opções de transporte até sua hospedagem e aeroporto.
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  try { localStorage.setItem("calentrip:locConsent", "skipped"); } catch {}
+                  setLocConsent("skipped");
+                  setLocModalOpen(false);
+                }}
+              >
+                Pular
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  try {
+                    if (!navigator.geolocation) {
+                      try { localStorage.setItem("calentrip:locConsent", "denied"); } catch {}
+                      setLocConsent("denied");
+                      setLocModalOpen(false);
+                      return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                      () => {
+                        try { localStorage.setItem("calentrip:locConsent", "granted"); } catch {}
+                        setLocConsent("granted");
+                        setLocModalOpen(false);
+                      },
+                      () => {
+                        try { localStorage.setItem("calentrip:locConsent", "denied"); } catch {}
+                        setLocConsent("denied");
+                        setLocModalOpen(false);
+                      },
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  } catch {
+                    try { localStorage.setItem("calentrip:locConsent", "denied"); } catch {}
+                    setLocConsent("denied");
+                    setLocModalOpen(false);
+                  }
+                }}
+              >
+                Ativar localização
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {gating?.show ? (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
           <div className="max-w-md w-full bg-white rounded-xl p-5 space-y-3">

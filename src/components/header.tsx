@@ -131,6 +131,7 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
 function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: boolean; onOpenChange: (o: boolean) => void }) {
   const { data: session, status } = useSession();
   const { lang } = useI18n();
+  const { show } = useToast();
   const [savedOpen, setSavedOpen] = useState(false);
   const [savedTrips, setSavedTrips] = useState<ReturnType<typeof getTrips>>([]);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -256,6 +257,23 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("licenses")}> 
                 <span className="material-symbols-outlined text-[20px]">developer_board</span>
                 <span className="text-sm">Licenças de Terceiros</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                onClick={async () => {
+                  try {
+                    if (typeof Notification === "undefined") { show("Avisos não suportados neste dispositivo", { variant: "info" }); return; }
+                    const res = await Notification.requestPermission();
+                    try { localStorage.setItem("calentrip:notifConsent", res); } catch {}
+                    if (res === "granted") show("Avisos ativados", { variant: "success" });
+                    else if (res === "denied") show("Permissão de avisos negada", { variant: "error" });
+                    else show("Permissão de avisos pendente", { variant: "info" });
+                  } catch {}
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px]">notifications_active</span>
+                <span className="text-sm">Ativar avisos</span>
               </button>
             </div>
           </div>
