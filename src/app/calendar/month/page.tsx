@@ -36,6 +36,18 @@ export default function MonthCalendarPage() {
           t.flightNotes.forEach((fn) => {
             const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
             list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
+            const addDays = (d: string, days: number) => {
+              const dt = new Date(`${d}T00:00:00`);
+              if (Number.isNaN(dt.getTime())) return d;
+              dt.setDate(dt.getDate() + days);
+              const p = (n: number) => String(n).padStart(2, "0");
+              return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+            };
+            if (fn.arrivalTime) {
+              const arrDate = fn.arrivalNextDay ? addDays(fn.date, 1) : fn.date;
+              const arrLabel = fn.leg === "outbound" ? "Chegada voo de ida" : "Chegada voo de volta";
+              list.push({ type: "flight", label: `${arrLabel}: ${fn.destination}`, date: arrDate, time: fn.arrivalTime || undefined, meta: fn });
+            }
           });
         } else {
           list.push({ type: "flight", label: t.title, date: t.date });

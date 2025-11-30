@@ -576,7 +576,22 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   }, [tripSearch]);
   const [notes, setNotes] = useState(initial);
   const [files, setFiles] = useState([[], []] as Array<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>);
+  const [nextDay, setNextDay] = useState<[boolean, boolean]>([false, false]);
+  function toMinutes(s: string): number {
+    const m = (s || "").trim();
+    const parts = m.split(":");
+    const h = Number(parts[0] || 0);
+    const mm = Number(parts[1] || 0);
+    return h * 60 + mm;
+  }
+  const invalidLeg = (i: number) => {
+    const dep = notes[i]?.dep || "";
+    const arr = notes[i]?.arr || "";
+    if (!dep || !arr) return false;
+    return toMinutes(arr) < toMinutes(dep) && !nextDay[i as 0 | 1];
+  };
   const allFilled = notes.every((n) => Boolean(n.dep) && Boolean(n.arr));
+  const allValid = allFilled && !invalidLeg(0) && !invalidLeg(1);
 
   function save() {
     if (!tripSearch) return;
@@ -593,6 +608,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
       departureTime: notes[i]?.dep || undefined,
       arrivalTime: notes[i]?.arr || undefined,
       flightNumber: notes[i]?.code || undefined,
+      arrivalNextDay: nextDay[i as 0 | 1] || undefined,
     }));
     const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
     addTrip({ id, title, date, passengers, flightNotes, attachments });
@@ -632,8 +648,18 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onChange={(e) => {
                   const v = fmtTime(e.target.value);
                   setNotes((prev) => prev.map((x, idx) => (idx === i ? { ...x, arr: v } : x)));
+                  try {
+                    const dep = notes[i]?.dep || "";
+                    const arr = v || "";
+                    if (dep && arr && toMinutes(arr) < toMinutes(dep) && !nextDay[i as 0 | 1]) {
+                      show(t("arrivalNextDayAsk"));
+                    }
+                  } catch {}
                 }}
               />
+              {invalidLeg(i) && (
+                <div className="mt-1 text-xs text-red-600">{t("arrivalNextDayWarn")}</div>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-sm">{t("flightNumberOptional")}</label>
@@ -649,6 +675,19 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
               />
             </div>
           </div>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              id={`nextday-${i}`}
+              type="checkbox"
+              checked={nextDay[i as 0 | 1]}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setNextDay((prev) => (i === 0 ? [checked, prev[1]] : [prev[0], checked]));
+              }}
+            />
+            <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
+          </div>
+          <div className="mt-1 text-xs text-zinc-600">{t("arrivalNextDayHelp")}</div>
           <div className="mt-3">
             <input
               id={`file-${i}`}
@@ -683,7 +722,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         </div>
       ))}
       <div className="flex justify-end">
-        <Button type="button" disabled={!allFilled} onClick={save}>{t("proceedToAccommodation")}</Button>
+        <Button type="button" disabled={!allValid} onClick={save}>{t("proceedToAccommodation")}</Button>
       </div>
     </div>
   );

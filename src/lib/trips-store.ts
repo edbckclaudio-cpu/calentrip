@@ -6,6 +6,7 @@ export type FlightNote = {
   departureTime?: string;
   arrivalTime?: string;
   flightNumber?: string;
+  arrivalNextDay?: boolean;
 };
 
 export type AttachmentMeta = {

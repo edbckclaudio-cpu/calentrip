@@ -9,7 +9,7 @@ import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { findAirportByIata, getCountryByIata } from "@/lib/airports";
-import { addTrip } from "@/lib/trips-store";
+import { getTrips } from "@/lib/trips-store";
 import { useToast } from "@/components/ui/toast";
 
 export default function AccommodationSearchPage() {
@@ -92,12 +92,27 @@ export default function AccommodationSearchPage() {
     });
   }, [tripSearch, city]);
 
+  function addDaysISO(d: string, days: number): string {
+    if (!d) return "";
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return d;
+    dt.setDate(dt.getDate() + days);
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+  }
   const dates = (() => {
     if (!tripSearch) return { checkin: "", checkout: "" };
-    if (tripSearch.mode === "same") {
-      return { checkin: tripSearch.departDate ?? "", checkout: tripSearch.returnDate ?? "" };
-    }
-    return { checkin: tripSearch.outbound.date ?? "", checkout: tripSearch.inbound.date ?? "" };
+    const checkinBase = tripSearch.mode === "same" ? (tripSearch.departDate ?? "") : (tripSearch.outbound.date ?? "");
+    const checkout = tripSearch.mode === "same" ? (tripSearch.returnDate ?? "") : (tripSearch.inbound.date ?? "");
+    let bump = 0;
+    try {
+      const trips = getTrips();
+      const currentOut = trips.find((t) => (t.flightNotes || []).some((n) => n.leg === "outbound" && n.date === checkinBase));
+      const note = currentOut?.flightNotes?.find((n) => n.leg === "outbound" && n.date === checkinBase);
+      if (note?.arrivalNextDay) bump = 1;
+    } catch {}
+    const checkin = bump ? addDaysISO(checkinBase, bump) : checkinBase;
+    return { checkin, checkout };
   })();
   
 

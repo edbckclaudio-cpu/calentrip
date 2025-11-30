@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { Select } from "@/components/ui/select";
 import PassengerSelector from "@/components/passenger-selector";
+import { useToast } from "@/components/ui/toast";
 
 function buildLinks(origin: string, destination: string, date: string, passengers: number) {
   const lang = typeof navigator !== "undefined" ? navigator.language : "";
@@ -32,6 +33,7 @@ export default function FlightsResultsPage() {
   const router = useRouter();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const { t } = useI18n();
+  const { show } = useToast();
   const todayISO = (() => {
     const d = new Date();
     const p = (n: number) => String(n).padStart(2, "0");
@@ -111,6 +113,22 @@ export default function FlightsResultsPage() {
       passengers: paxCount(tripSearch.passengers as unknown),
     };
   }, [tripSearch]);
+
+  function fmtTime(v: string) {
+    const s = (v || "").replace(/\D/g, "").slice(0, 4);
+    if (!s) return "";
+    if (s.length <= 2) return s;
+    return `${s.slice(0, 2)}:${s.slice(2)}`;
+  }
+  function toMinutes(s: string): number {
+    const m = (s || "").trim();
+    const parts = m.split(":");
+    const h = Number(parts[0] || 0);
+    const mm = Number(parts[1] || 0);
+    return h * 60 + mm;
+  }
+  const [arrivalTimes, setArrivalTimes] = useState<[string, string]>(["", ""]);
+  const [arrivalNextDay, setArrivalNextDay] = useState<[boolean, boolean]>([false, false]);
 
   useEffect(() => {
     (async () => {
@@ -331,16 +349,28 @@ export default function FlightsResultsPage() {
                 <TableCell className="font-semibold">{t("tablePassengers")}</TableCell>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {summary.legs.map((l, i) => (
-                <TableRow key={i}>
-                  <TableCell>{l.origin}</TableCell>
-                  <TableCell>{l.destination}</TableCell>
-                  <TableCell>{l.date}</TableCell>
-                  <TableCell>{summary.passengers}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+          <TableBody>
+            {summary.legs.map((l, i) => (
+              <TableRow key={i}>
+                <TableCell>{l.origin}</TableCell>
+                <TableCell>{l.destination}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span>{l.date}</span>
+                      {arrivalNextDay[i as 0 | 1] && (
+                        <span className="rounded px-2 py-0.5 text-[11px] bg-amber-100 text-amber-800 border border-amber-300">{t("arrivalNextDayLabel")}</span>
+                      )}
+                    </div>
+                    {arrivalTimes[i as 0 | 1] && (
+                      <div className="mt-1 text-xs text-zinc-600">{t("arrivalTime")}: {arrivalTimes[i as 0 | 1]}</div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>{summary.passengers}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
           </Table>
         </CardContent>
       </Card>
@@ -356,10 +386,16 @@ export default function FlightsResultsPage() {
               <CardTitle className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-base">flight_takeoff</span>
                 <span>{i === 0 ? l.title : l.title}, {l.date}</span>
+                {arrivalNextDay[i as 0 | 1] && (
+                  <span className="ml-2 rounded px-2 py-0.5 text-[11px] bg-amber-100 text-amber-800 border border-amber-300">{t("arrivalNextDayLabel")}</span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-3">
+                {arrivalTimes[i as 0 | 1] && (
+                  <div className="text-xs text-zinc-600">{t("arrivalTime")}: {arrivalTimes[i as 0 | 1]}</div>
+                )}
                 <Button type="button" onClick={() => setOpenIdx(i)}>Pesquisar Voos</Button>
                 <Dialog open={openIdx === i} onOpenChange={(o) => setOpenIdx(o ? i : null)}>
                   <DialogHeader>
@@ -469,6 +505,50 @@ export default function FlightsResultsPage() {
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
+                    <Input
+                      placeholder="18:05"
+                      value={arrivalTimes[i as 0 | 1]}
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const v = fmtTime(e.target.value);
+                        setArrivalTimes((prev) => (i === 0 ? [v, prev[1]] : [prev[0], v]));
+                        try {
+                          const dep = timeValue || "";
+                          const arr = v || "";
+                          if (dep && arr && toMinutes(arr) < toMinutes(dep) && !arrivalNextDay[i as 0 | 1]) {
+                            show(t("arrivalNextDayAsk"));
+                          }
+                        } catch {}
+                      }}
+                    />
+                    {(() => {
+                      const dep = timeValue || "";
+                      const arr = arrivalTimes[i as 0 | 1] || "";
+                      const invalid = dep && arr && toMinutes(arr) < toMinutes(dep) && !arrivalNextDay[i as 0 | 1];
+                      return invalid ? <div className="mt-1 text-xs text-red-600">{t("arrivalNextDayWarn")}</div> : null;
+                    })()}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id={`nextday-${i}`}
+                      type="checkbox"
+                      checked={arrivalNextDay[i as 0 | 1]}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setArrivalNextDay((prev) => (i === 0 ? [checked, prev[1]] : [prev[0], checked]));
+                      }}
+                    />
+                    <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
+                  </div>
+                </div>
+                {arrivalNextDay[i as 0 | 1] && (
+                  <div className="text-xs text-amber-700">{t("arrivalNextDayHelp")}</div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -478,7 +558,13 @@ export default function FlightsResultsPage() {
       <div className="flex justify-between">
         <Button
           type="button"
-          disabled={!allTimesFilled || !isValid(tripSearch)}
+          disabled={!allTimesFilled || !isValid(tripSearch) || (() => {
+            const dep0 = tripSearch.mode === "same" ? (tripSearch.departTime || "") : (tripSearch.outbound.time || "");
+            const dep1 = tripSearch.mode === "same" ? (tripSearch.returnTime || "") : (tripSearch.inbound.time || "");
+            const inv0 = dep0 && arrivalTimes[0] && toMinutes(arrivalTimes[0]) < toMinutes(dep0) && !arrivalNextDay[0];
+            const inv1 = dep1 && arrivalTimes[1] && toMinutes(arrivalTimes[1]) < toMinutes(dep1) && !arrivalNextDay[1];
+            return Boolean(inv0 || inv1);
+          })()}
           onClick={() => {
             const id = String(Date.now());
             const title = `${summary.legs[0].origin} → ${summary.legs[0].destination}`;
@@ -488,7 +574,17 @@ export default function FlightsResultsPage() {
         >
           {t("saveTrip")}
         </Button>
-        <Button type="button" disabled={!allTimesFilled || !isValid(tripSearch)} onClick={() => router.push("/accommodation/search")}>
+        <Button
+          type="button"
+          disabled={!allTimesFilled || !isValid(tripSearch) || (() => {
+            const dep0 = tripSearch.mode === "same" ? (tripSearch.departTime || "") : (tripSearch.outbound.time || "");
+            const dep1 = tripSearch.mode === "same" ? (tripSearch.returnTime || "") : (tripSearch.inbound.time || "");
+            const inv0 = dep0 && arrivalTimes[0] && toMinutes(arrivalTimes[0]) < toMinutes(dep0) && !arrivalNextDay[0];
+            const inv1 = dep1 && arrivalTimes[1] && toMinutes(arrivalTimes[1]) < toMinutes(dep1) && !arrivalNextDay[1];
+            return Boolean(inv0 || inv1);
+          })()}
+          onClick={() => router.push("/accommodation/search")}
+        >
           {t("advanceToStay")}
         </Button>
       </div>
