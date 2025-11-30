@@ -89,6 +89,7 @@ function enrich(arr: Airport[]): Airport[] {
   addAlias("New York", ["NYC", "Nova Iorque", "Nueva York"]);
   addAlias("London", ["Londres"]);
   addAlias("Tokyo", ["Tóquio", "Tokio"]);
+  addAlias("Tokyo", ["Narita", "Haneda"]);
   addAlias("São Paulo", ["Sao Paulo"]);
   addAlias("Rio de Janeiro", ["Rio"]);
   addAlias("Paris", ["París"]);

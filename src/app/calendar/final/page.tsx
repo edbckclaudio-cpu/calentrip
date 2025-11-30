@@ -168,12 +168,12 @@ export default function FinalCalendarPage() {
         const cityName = c.name || `Cidade ${i + 1}`;
         const addr = c.address || "(endereço não informado)";
         if (c.checkin) {
-          let ciTime = "23:59";
-          try { if (localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+          let ciTime = i === 0 ? "23:59" : "17:00";
+          try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
           list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
         }
         if (c.checkout) {
-          list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "09:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+          list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
         }
       });
       for (let i = 0; i < cities.length - 1; i++) {
@@ -183,7 +183,7 @@ export default function FinalCalendarPage() {
         if (seg) {
           const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
           const date = c.checkout || n?.checkin || "";
-          const time = seg.depTime || "10:00";
+          const time = seg.depTime || "11:00";
           list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
         }
       }
