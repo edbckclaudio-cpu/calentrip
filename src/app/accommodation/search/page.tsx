@@ -106,10 +106,8 @@ export default function AccommodationSearchPage() {
     const checkout = tripSearch.mode === "same" ? (tripSearch.returnDate ?? "") : (tripSearch.inbound.date ?? "");
     let bump = 0;
     try {
-      const trips = getTrips();
-      const currentOut = trips.find((t) => (t.flightNotes || []).some((n) => n.leg === "outbound" && n.date === checkinBase));
-      const note = currentOut?.flightNotes?.find((n) => n.leg === "outbound" && n.date === checkinBase);
-      if (note?.arrivalNextDay) bump = 1;
+      const flag = localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true";
+      if (flag) bump = 1;
     } catch {}
     const checkin = bump ? addDaysISO(checkinBase, bump) : checkinBase;
     return { checkin, checkout };
@@ -125,7 +123,13 @@ export default function AccommodationSearchPage() {
     if (n === 0) { setCities([]); return; }
     const arr: Array<{ name: string; checkin: string; checkout: string; address?: string; checked?: boolean }> = [];
     for (let i = 0; i < n; i++) {
-      const ci = i === 0 ? (arrivalDate || "") : (arr[i-1]?.checkout || "");
+      const baseCi = i === 0 ? (arrivalDate || "") : (arr[i-1]?.checkout || "");
+      let ci = baseCi;
+      try {
+        if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") {
+          ci = addDaysISO(baseCi, 1);
+        }
+      } catch {}
       const co = i === n - 1 ? (returnDate || "") : "";
       arr.push({ name: "", checkin: ci, checkout: co });
     }
@@ -443,6 +447,9 @@ export default function AccommodationSearchPage() {
                   <div><span className="font-semibold">Check-in</span>: {dates.checkin || "—"}</div>
                   <div><span className="font-semibold">Check-out</span>: {dates.checkout || "—"}</div>
                 </div>
+                {(() => { try { return localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true"; } catch { return false; } })() && (
+                  <div className="text-xs text-amber-700">{t("stayCheckinNextDayNote")}</div>
+                )}
                 <label className="mb-1 block text-sm">Cidade para a hospedagem</label>
                 <Input
                   placeholder="Roma"

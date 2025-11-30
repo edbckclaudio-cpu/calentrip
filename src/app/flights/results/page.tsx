@@ -129,6 +129,7 @@ export default function FlightsResultsPage() {
   }
   const [arrivalTimes, setArrivalTimes] = useState<[string, string]>(["", ""]);
   const [arrivalNextDay, setArrivalNextDay] = useState<[boolean, boolean]>([false, false]);
+  const [arrivalWarnShown, setArrivalWarnShown] = useState<[boolean, boolean]>([false, false]);
 
   useEffect(() => {
     (async () => {
@@ -520,8 +521,10 @@ export default function FlightsResultsPage() {
                         try {
                           const dep = timeValue || "";
                           const arr = v || "";
-                          if (dep && arr && toMinutes(arr) < toMinutes(dep) && !arrivalNextDay[i as 0 | 1]) {
+                          const warnAlready = arrivalWarnShown[i as 0 | 1];
+                          if (dep && arr && toMinutes(arr) < toMinutes(dep) && !arrivalNextDay[i as 0 | 1] && !warnAlready) {
                             show(t("arrivalNextDayAsk"));
+                            setArrivalWarnShown((prev) => (i === 0 ? [true, prev[1]] : [prev[0], true]));
                           }
                         } catch {}
                       }}
@@ -541,6 +544,10 @@ export default function FlightsResultsPage() {
                       onChange={(e) => {
                         const checked = e.target.checked;
                         setArrivalNextDay((prev) => (i === 0 ? [checked, prev[1]] : [prev[0], checked]));
+                        try {
+                          if (i === 0) localStorage.setItem("calentrip:arrivalNextDay_outbound", String(checked));
+                          if (i === 1) localStorage.setItem("calentrip:arrivalNextDay_inbound", String(checked));
+                        } catch {}
                       }}
                     />
                     <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
