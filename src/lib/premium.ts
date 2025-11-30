@@ -26,7 +26,11 @@ export function setTripPremium(tripId: string, expiresAt: number) {
   } catch {}
 }
 
-export function computeExpiryFromData(opts: { tripDate?: string; returnDate?: string; lastCheckout?: string }): number {
+export function computeExpiryFromData(opts: {
+  tripDate?: string;
+  returnDate?: string;
+  lastCheckout?: string;
+}): number {
   const dates = [opts.returnDate, opts.lastCheckout, opts.tripDate].filter(Boolean) as string[];
   const ts = dates.map((d) => Date.parse(d)).filter((n) => Number.isFinite(n));
   const end = ts.length ? Math.max(...ts) : Date.now() + 30 * 24 * 60 * 60 * 1000;
