@@ -522,7 +522,7 @@ export default function FlightsResultsPage() {
                           const dep = timeValue || "";
                           const arr = v || "";
                           const warnAlready = arrivalWarnShown[i as 0 | 1];
-                          if (dep && arr && toMinutes(arr) < toMinutes(dep) && !arrivalNextDay[i as 0 | 1] && !warnAlready) {
+                          if (dep && arr && arr.length === 5 && toMinutes(arr) < toMinutes(dep) && !arrivalNextDay[i as 0 | 1] && !warnAlready) {
                             show(t("arrivalNextDayAsk"));
                             setArrivalWarnShown((prev) => (i === 0 ? [true, prev[1]] : [prev[0], true]));
                           }

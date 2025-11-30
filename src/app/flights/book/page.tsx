@@ -577,6 +577,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const [notes, setNotes] = useState(initial);
   const [files, setFiles] = useState([[], []] as Array<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>);
   const [nextDay, setNextDay] = useState<[boolean, boolean]>([false, false]);
+  const [arrivalWarnShown, setArrivalWarnShown] = useState<[boolean, boolean]>([false, false]);
   function toMinutes(s: string): number {
     const m = (s || "").trim();
     const parts = m.split(":");
@@ -651,8 +652,10 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                   try {
                     const dep = notes[i]?.dep || "";
                     const arr = v || "";
-                    if (dep && arr && toMinutes(arr) < toMinutes(dep) && !nextDay[i as 0 | 1]) {
+                    const warnAlready = arrivalWarnShown[i as 0 | 1];
+                    if (dep && arr && arr.length === 5 && toMinutes(arr) < toMinutes(dep) && !nextDay[i as 0 | 1] && !warnAlready) {
                       show(t("arrivalNextDayAsk"));
+                      setArrivalWarnShown((prev) => (i === 0 ? [true, prev[1]] : [prev[0], true]));
                     }
                   } catch {}
                 }}
@@ -683,6 +686,10 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
               onChange={(e) => {
                 const checked = e.target.checked;
                 setNextDay((prev) => (i === 0 ? [checked, prev[1]] : [prev[0], checked]));
+                try {
+                  if (i === 0) localStorage.setItem("calentrip:arrivalNextDay_outbound", String(checked));
+                  if (i === 1) localStorage.setItem("calentrip:arrivalNextDay_inbound", String(checked));
+                } catch {}
               }}
             />
             <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
