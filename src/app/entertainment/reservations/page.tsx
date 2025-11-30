@@ -16,7 +16,7 @@ type RestaurantSuggestion = { name: string; cuisine?: string[]; price?: string |
 
 export default function EntertainmentReservationsPage() {
   const router = useRouter();
-  const { show } = useToast();
+  const { show, dismiss } = useToast();
   const [cities, setCities] = useState<CityStay[]>(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
@@ -44,6 +44,7 @@ export default function EntertainmentReservationsPage() {
   });
 
   const [aiOpenIdx, setAiOpenIdx] = useState<number | null>(null);
+  const [aiTipId, setAiTipId] = useState<number | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiItems, setAiItems] = useState<AISuggestion[]>([]);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export default function EntertainmentReservationsPage() {
   const [aiFilesMap, setAiFilesMap] = useState<Record<string, Array<{ name: string; type: string; size: number; dataUrl?: string }>>>({});
   const [aiActiveKey, setAiActiveKey] = useState<string | null>(null);
   const [aiRestOpenIdx, setAiRestOpenIdx] = useState<number | null>(null);
+  const [restTipId, setRestTipId] = useState<number | null>(null);
   const [restLoading, setRestLoading] = useState(false);
   const [restItems, setRestItems] = useState<RestaurantSuggestion[]>([]);
   const [restError, setRestError] = useState<string | null>(null);
@@ -95,6 +97,36 @@ export default function EntertainmentReservationsPage() {
       localStorage.setItem("calentrip:entertainment:records", JSON.stringify(records));
     } catch {}
   }, [records]);
+
+  useEffect(() => {
+    const msg = "Selecione a Data e o Horário da sugestão antes de adicionar. Esses campos são essenciais para posicionar corretamente no cronograma e no calendário final.";
+    if (aiOpenIdx !== null) {
+      if (aiTipId === null) {
+        const id = show(msg, { variant: "info", sticky: true });
+        setAiTipId(id);
+      }
+    } else {
+      if (aiTipId !== null) {
+        dismiss(aiTipId);
+        setAiTipId(null);
+      }
+    }
+  }, [aiOpenIdx, aiTipId, show, dismiss]);
+
+  useEffect(() => {
+    const msg = "Selecione a Data e o Horário da sugestão antes de adicionar. Esses campos são essenciais para posicionar corretamente no cronograma e no calendário final.";
+    if (aiRestOpenIdx !== null) {
+      if (restTipId === null) {
+        const id = show(msg, { variant: "info", sticky: true });
+        setRestTipId(id);
+      }
+    } else {
+      if (restTipId !== null) {
+        dismiss(restTipId);
+        setRestTipId(null);
+      }
+    }
+  }, [aiRestOpenIdx, restTipId, show, dismiss]);
 
   function formatTimeInput(s: string): string {
     const d = (s || "").replace(/\D/g, "");

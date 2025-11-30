@@ -16,6 +16,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
   const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const [dir, setDir] = useState<"down" | "up">("down");
   const [dropdownH, setDropdownH] = useState<number>(240);
+  const [dropdownMaxH, setDropdownMaxH] = useState<number>(240);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -36,15 +37,19 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
       setPos({ left: Math.round(r.left), top: Math.round(r.bottom), width: Math.round(r.width) });
       const above = Math.round(r.top);
       const below = Math.round(window.innerHeight - r.bottom);
-      const need = 260;
-      setDir(above > below && above >= need ? "up" : "down");
+      const margin = 12;
+      const availDown = Math.max(below - margin, 120);
+      const availUp = Math.max(above - margin, 120);
+      const useDown = availDown >= availUp;
+      setDir(useDown ? "down" : "up");
+      setDropdownMaxH(Math.min(useDown ? availDown : availUp, 320));
     }
     if (open) {
       updatePos();
-      window.addEventListener("scroll", updatePos, true);
+      window.addEventListener("scroll", updatePos);
       window.addEventListener("resize", updatePos);
       return () => {
-        window.removeEventListener("scroll", updatePos, true);
+        window.removeEventListener("scroll", updatePos);
         window.removeEventListener("resize", updatePos);
       };
     }
@@ -56,11 +61,11 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
       const box = portalRef.current;
       if (box) {
         const rect = box.getBoundingClientRect();
-        if (rect.height) setDropdownH(Math.min(Math.round(rect.height), 240));
+        if (rect.height) setDropdownH(Math.min(Math.round(rect.height), dropdownMaxH));
       }
     }, 0);
     return () => window.clearTimeout(id);
-  }, [open, items.length, pos]);
+  }, [open, items.length, pos, dropdownMaxH]);
 
   useEffect(() => {
     const id = setTimeout(async () => {
@@ -100,7 +105,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
           style={{
             position: "fixed",
             left: pos.left,
-            top: dir === "down" ? pos.top + 8 : Math.max(pos.top - dropdownH - 8, 0),
+            top: dir === "down" ? pos.top + 8 : Math.max(pos.top - dropdownMaxH - 8, 0),
             width: pos.width,
             zIndex: 1000,
           }}
@@ -111,8 +116,8 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
           ) : (
             <span className="absolute -bottom-2 left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white dark:border-t-black" />
           )}
-          <Card className={dir === "up" ? "p-0 shadow-xl" : "p-0 shadow-lg"}>
-            <ul className="max-h-60 overflow-auto divide-y">
+          <Card className={(dir === "up" ? "p-0 shadow-xl" : "p-0 shadow-lg") + " bg-white dark:bg-black"} style={{ maxHeight: dropdownMaxH }}>
+            <ul className="overflow-auto divide-y">
               {items.map((a) => (
                 <li key={a.iata}>
                   <button type="button" className="w-full px-3 py-2 text-left hover:bg-zinc-50" onClick={() => select(a)}>

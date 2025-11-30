@@ -146,11 +146,11 @@ export default function GlobalSidebar() {
             <div className="text-zinc-600">Nenhuma viagem salva.</div>
           ) : (
             <ul className="space-y-2">
-              {savedTrips.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 rounded border p-2">
+              {savedTrips.map((it) => (
+                <li key={it.id} className="flex items-center justify-between gap-3 rounded border p-2">
                   <div>
-                    <div className="text-sm font-medium">{t.title}</div>
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400">{t.date} • {t.passengers} pax</div>
+                    <div className="text-sm font-medium">{it.title}</div>
+                    <div className="text-xs text-zinc-600 dark:text-zinc-400">{it.date} • {it.passengers} pax</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
@@ -160,7 +160,7 @@ export default function GlobalSidebar() {
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50"
                       onClick={() => {
-                        try { removeTrip(t.id); } catch {}
+                        try { removeTrip(it.id); } catch {}
                         try { setSavedTrips(getTrips().filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
                       }}
                     >

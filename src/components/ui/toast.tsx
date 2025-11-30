@@ -3,23 +3,33 @@ import { createContext, useContext, useState, ReactNode } from "react";
 
 type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number };
 
-const ToastContext = createContext<{ show: (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number }) => void } | null>(null);
+const ToastContext = createContext<{
+  show: (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) => number;
+  dismiss: (id: number) => void;
+} | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
 
-  function show(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number }) {
+  function show(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) {
     const id = Date.now() + Math.random();
     const variant = opts?.variant ?? "info";
-    const duration = opts?.duration ?? 5000;
+    const duration = opts?.sticky ? undefined : (opts?.duration ?? 5000);
     setItems((prev) => [...prev, { id, message, variant, duration }]);
-    setTimeout(() => {
-      setItems((prev) => prev.filter((t) => t.id !== id));
-    }, duration);
+    if (typeof duration === "number") {
+      setTimeout(() => {
+        setItems((prev) => prev.filter((t) => t.id !== id));
+      }, duration);
+    }
+    return id;
+  }
+
+  function dismiss(id: number) {
+    setItems((prev) => prev.filter((t) => t.id !== id));
   }
 
   return (
-    <ToastContext.Provider value={{ show }}>
+    <ToastContext.Provider value={{ show, dismiss }}>
       {children}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {items.map((t) => (
