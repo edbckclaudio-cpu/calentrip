@@ -53,6 +53,26 @@ export default function AccommodationSearchPage() {
   const [proceedHighlight, setProceedHighlight] = useState(false);
   const [diffCityCountHighlight, setDiffCityCountHighlight] = useState(false);
   const [diffCheckHighlight, setDiffCheckHighlight] = useState(false);
+  const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
+  useEffect(() => {
+    try {
+      const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 480px)").matches;
+      setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const mq = window.matchMedia("(max-width: 480px)");
+      const handler = (e: MediaQueryListEvent) => {
+        setNoteAnim({ maxH: e.matches ? 160 : 240, transition: e.matches ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
+      };
+      mq.addEventListener("change", handler);
+      return () => {
+        try { mq.removeEventListener("change", handler); } catch {}
+      };
+    } catch {}
+  }, []);
 
   function totalPassengers(p: { adults?: number; children?: number; infants?: number } | number | undefined) {
     if (typeof p === "number") return p;
@@ -447,9 +467,23 @@ export default function AccommodationSearchPage() {
                   <div><span className="font-semibold">Check-in</span>: {dates.checkin || "—"}</div>
                   <div><span className="font-semibold">Check-out</span>: {dates.checkout || "—"}</div>
                 </div>
-                {(() => { try { return localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true"; } catch { return false; } })() && (
-                  <div className="text-xs text-amber-700">{t("stayCheckinNextDayNote")}</div>
-                )}
+                {(() => {
+                  try {
+                    const on = localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true";
+                    return (
+                      <div
+                        className="mt-2 flex items-start gap-2 rounded-md border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900"
+                        style={{ maxHeight: on ? noteAnim.maxH : 0, opacity: on ? 1 : 0, transition: noteAnim.transition, overflow: "hidden" }}
+                        aria-hidden={!on}
+                      >
+                        <span className="material-symbols-outlined text-amber-700">warning</span>
+                        <span>{t("stayCheckinNextDayNote")}</span>
+                      </div>
+                    );
+                  } catch {
+                    return null;
+                  }
+                })()}
                 <label className="mb-1 block text-sm">Cidade para a hospedagem</label>
                 <Input
                   placeholder="Roma"

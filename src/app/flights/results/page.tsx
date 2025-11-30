@@ -130,6 +130,26 @@ export default function FlightsResultsPage() {
   const [arrivalTimes, setArrivalTimes] = useState<[string, string]>(["", ""]);
   const [arrivalNextDay, setArrivalNextDay] = useState<[boolean, boolean]>([false, false]);
   const [arrivalWarnShown, setArrivalWarnShown] = useState<[boolean, boolean]>([false, false]);
+  const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
+  useEffect(() => {
+    try {
+      const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 480px)").matches;
+      setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const mq = window.matchMedia("(max-width: 480px)");
+      const handler = (e: MediaQueryListEvent) => {
+        setNoteAnim({ maxH: e.matches ? 160 : 240, transition: e.matches ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
+      };
+      mq.addEventListener("change", handler);
+      return () => {
+        try { mq.removeEventListener("change", handler); } catch {}
+      };
+    } catch {}
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -553,9 +573,14 @@ export default function FlightsResultsPage() {
                     <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
                   </div>
                 </div>
-                {arrivalNextDay[i as 0 | 1] && (
-                  <div className="text-xs text-amber-700">{t("arrivalNextDayHelp")}</div>
-                )}
+                <div
+                  className="mt-2 flex items-start gap-2 rounded-md border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900"
+                  style={{ maxHeight: arrivalNextDay[i as 0 | 1] ? noteAnim.maxH : 0, opacity: arrivalNextDay[i as 0 | 1] ? 1 : 0, transition: noteAnim.transition, overflow: "hidden" }}
+                  aria-hidden={!arrivalNextDay[i as 0 | 1]}
+                >
+                  <span className="material-symbols-outlined text-amber-700">warning</span>
+                  <span>{t("arrivalNextDayHelp")}</span>
+                </div>
               </div>
             </CardContent>
           </Card>

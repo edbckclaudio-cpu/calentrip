@@ -287,7 +287,21 @@ export default function EntertainmentReservationsPage() {
       const endISO = (cities[idx]?.checkout || startISO).replace(/\//g, "-");
       if (startISO) {
         const evs = await fetchCityEvents(qid, `${startISO}T00:00:00`, `${endISO || startISO}T23:59:59`);
-        setAiEvents(evs);
+        const startDay = startISO.slice(0, 10);
+        const endDay = (endISO || startISO).slice(0, 10);
+        const within = evs.filter((e) => {
+          try {
+            const d = new Date(e.date).toISOString().slice(0, 10);
+            return d >= startDay && d <= endDay;
+          } catch { return false; }
+        });
+        const dedup = [] as CityEvent[];
+        const seen = new Set<string>();
+        for (const e of within) {
+          const key = `${e.name}|${new Date(e.date).toISOString().slice(0,10)}`;
+          if (!seen.has(key)) { seen.add(key); dedup.push(e); }
+        }
+        setAiEvents(dedup);
       }
       setAiDateMap({}); setAiTimeMap({}); setAiFilesMap({});
     } catch { setAiError("Falha ao buscar sugestões"); }

@@ -578,6 +578,26 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const [files, setFiles] = useState([[], []] as Array<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>);
   const [nextDay, setNextDay] = useState<[boolean, boolean]>([false, false]);
   const [arrivalWarnShown, setArrivalWarnShown] = useState<[boolean, boolean]>([false, false]);
+  const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
+  useEffect(() => {
+    try {
+      const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 480px)").matches;
+      setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const mq = window.matchMedia("(max-width: 480px)");
+      const handler = (e: MediaQueryListEvent) => {
+        setNoteAnim({ maxH: e.matches ? 160 : 240, transition: e.matches ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
+      };
+      mq.addEventListener("change", handler);
+      return () => {
+        try { mq.removeEventListener("change", handler); } catch {}
+      };
+    } catch {}
+  }, []);
   function toMinutes(s: string): number {
     const m = (s || "").trim();
     const parts = m.split(":");
@@ -694,7 +714,14 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
             />
             <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
           </div>
-          <div className="mt-1 text-xs text-zinc-600">{t("arrivalNextDayHelp")}</div>
+          <div
+            className="mt-2 flex items-start gap-2 rounded-md border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900"
+            style={{ maxHeight: nextDay[i as 0 | 1] ? noteAnim.maxH : 0, opacity: nextDay[i as 0 | 1] ? 1 : 0, transition: noteAnim.transition, overflow: "hidden" }}
+            aria-hidden={!nextDay[i as 0 | 1]}
+          >
+            <span className="material-symbols-outlined text-amber-700">warning</span>
+            <span>{t("arrivalNextDayHelp")}</span>
+          </div>
           <div className="mt-3">
             <input
               id={`file-${i}`}
