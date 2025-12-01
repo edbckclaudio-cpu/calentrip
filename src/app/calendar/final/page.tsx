@@ -96,14 +96,25 @@ export default function FinalCalendarPage() {
   }, [locConsent]);
 
   const sorted = useMemo(() => {
-    const parse = (d: string, t?: string) => {
-      const dd = (d || "").replace(/\//g, "-");
-      const tt = (t || "00:00").padStart(5, "0");
-      const iso = `${dd}T${tt}:00`;
-      const dt = new Date(iso);
-      return isNaN(dt.getTime()) ? new Date(0) : dt;
-    };
-    return [...events].sort((a, b) => parse(a.date, a.time).getTime() - parse(b.date, b.time).getTime());
+    const dateOnly = (d: string) => (d || "").replace(/\//g, "-");
+    return [...events].sort((a, b) => {
+      const da = dateOnly(a.date);
+      const db = dateOnly(b.date);
+      if (da !== db) return da.localeCompare(db);
+      const aIsOutbound = a.type === "flight" && (a.meta as FlightNote | undefined)?.leg === "outbound";
+      const bIsOutbound = b.type === "flight" && (b.meta as FlightNote | undefined)?.leg === "outbound";
+      const aIsCheckin = a.type === "stay" && ((a.meta as { kind?: string } | undefined)?.kind === "checkin");
+      const bIsCheckin = b.type === "stay" && ((b.meta as { kind?: string } | undefined)?.kind === "checkin");
+      const aIsInbound = a.type === "flight" && (a.meta as FlightNote | undefined)?.leg === "inbound";
+      const bIsInbound = b.type === "flight" && (b.meta as FlightNote | undefined)?.leg === "inbound";
+      const aIsCheckout = a.type === "stay" && ((a.meta as { kind?: string } | undefined)?.kind === "checkout");
+      const bIsCheckout = b.type === "stay" && ((b.meta as { kind?: string } | undefined)?.kind === "checkout");
+      if (aIsOutbound && bIsCheckin) return -1;
+      if (bIsOutbound && aIsCheckin) return 1;
+      if (aIsCheckout && bIsInbound) return -1;
+      if (bIsCheckout && aIsInbound) return 1;
+      return (a.time || "00:00").padStart(5, "0").localeCompare((b.time || "00:00").padStart(5, "0"));
+    });
   }, [events]);
 
   useEffect(() => {
