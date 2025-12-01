@@ -457,12 +457,15 @@ export default function FinalCalendarPage() {
           distanceKm = Math.round((r.distance ?? 0) / 1000);
           durationMin = Math.round((r.duration ?? 0) / 60);
         }
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(originQ)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${o.lat}&pickup[longitude]=${o.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(originQ)}`;
       }
       const gmapsUrl = pos
         ? `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude}%2C${pos.coords.longitude}&destination=${encodeURIComponent(originQ)}`
         : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(originQ)}`;
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(originQ)}`;
+      if (!uberUrl && airportLoc) {
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${airportLoc.lat}&dropoff[longitude]=${airportLoc.lon}&dropoff[formatted_address]=${encodeURIComponent(originQ)}`;
+      }
       const trafficFactor = 1.3;
       const durationWithTrafficMin = durationMin ? Math.round(durationMin * trafficFactor) : undefined;
       let callTime: string | undefined;
@@ -545,7 +548,18 @@ export default function FinalCalendarPage() {
         } catch {}
         const bbox = [Math.min(o.lon, d.lon), Math.min(o.lat, d.lat), Math.max(o.lon, d.lon), Math.max(o.lat, d.lat)];
         mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox.join("%2C")}&layer=mapnik`;
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+        const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+          try {
+            if (!ensureLocationConsent()) { resolve(null); return; }
+            navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+          } catch { resolve(null); }
+        });
+        if (pos) {
+          const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+        } else {
+          uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+        }
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
         r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
       }
@@ -645,7 +659,7 @@ export default function FinalCalendarPage() {
       const busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
       const trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(m.address || m.city || "")}`;
-      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(m.address || m.city || "")}`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(m.address || m.city || "")}`;
       const distKm = (() => {
         const toRad = (v: number) => (v * Math.PI) / 180;
         const R = 6371;
@@ -718,7 +732,7 @@ export default function FinalCalendarPage() {
         trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
         const priceEstimate = Math.round((distanceKm || 0) * 6 + 3);
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(query)}`;
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(query)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(query)}`;
         setGoInfo({ destination: query, distanceKm, walkingMin, drivingMin: driveWithTraffic ?? drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl });
       } else if (dest && !pos) {
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
