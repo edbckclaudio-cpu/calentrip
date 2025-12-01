@@ -595,10 +595,17 @@ export default function FinalCalendarPage() {
           notifyAt = `${String(notify.getHours()).padStart(2, "0")}:${String(notify.getMinutes()).padStart(2, "0")}`;
           callTime = notifyAt;
         }
+      } else {
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+        try { show("Destino não geocodificado. Usando links básicos.", { variant: "info" }); } catch {}
       }
       setReturnInfo({ city: last.name, address: last.address, airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl, callTime, notifyAt });
     } catch {
-      setReturnInfo({ city: summaryCities[summaryCities.length - 1]?.name, address: summaryCities[summaryCities.length - 1]?.address });
+      const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("aeroporto")}`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      setReturnInfo({ city: summaryCities[summaryCities.length - 1]?.name, address: summaryCities[summaryCities.length - 1]?.address, gmapsUrl, uberUrl });
+      try { show("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setReturnLoading(false);
     }

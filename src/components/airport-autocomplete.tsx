@@ -115,7 +115,8 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
       {open && isMobile && items.length > 0 && createPortal(
         <div ref={portalRef} className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+          <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border-2 border-[var(--brand)] bg-white p-5 md:p-6 shadow-xl dark:border-[var(--brand)] dark:bg-black">
+            <div className="h-1.5 w-16 rounded-full bg-[var(--brand)] mx-auto mb-3" />
             <DialogHeader>Escolher aeroporto</DialogHeader>
             <div className="space-y-3 text-sm">
               <Input autoFocus value={q} onChange={(e) => onChangeInput(e.target.value)} placeholder={placeholder ?? t("typeCityAirport")} />
@@ -123,7 +124,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
                 <ul className="divide-y">
                   {items.map((a) => (
                     <li key={a.iata}>
-                      <button type="button" className="w-full px-3 py-2 text-left hover:bg-zinc-50" onClick={() => select(a)}>
+                      <button type="button" className="w-full px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900/30" onClick={() => select(a)}>
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-sm font-medium">{a.city} – {a.name}</div>
@@ -157,15 +158,15 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
           className="relative"
         >
           {dir === "down" ? (
-            <span className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-white dark:border-b-black" />
+            <span className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-[var(--brand)]" />
           ) : (
-            <span className="absolute -bottom-2 left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white dark:border-t-black" />
+            <span className="absolute -bottom-2 left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[var(--brand)]" />
           )}
-          <Card className={(dir === "up" ? "p-0 shadow-xl" : "p-0 shadow-lg") + " bg-white dark:bg-black"} style={{ maxHeight: dropdownMaxH }}>
+          <Card className={(dir === "up" ? "p-0 shadow-xl" : "p-0 shadow-lg") + " bg-white dark:bg-black border-2 border-[var(--brand)]"} style={{ maxHeight: dropdownMaxH }}>
             <ul className="overflow-auto divide-y">
               {items.map((a) => (
                 <li key={a.iata}>
-                  <button type="button" className="w-full px-3 py-2 text-left hover:bg-zinc-50" onClick={() => select(a)}>
+                  <button type="button" className="w-full px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900/30" onClick={() => select(a)}>
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-sm font-medium">{a.city} – {a.name}</div>
