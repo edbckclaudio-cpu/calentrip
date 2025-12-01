@@ -246,7 +246,7 @@ export default function FinalCalendarPage() {
           const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
           callTime = fmt(callAt);
           notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
-          try { callAtISO = callAt.toISOString(); notifyAtISO = notifyAtDate.toISOString(); } catch {}
+          
         }
       }
       return { airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, gmapsUrl, uberUrl, callTime, notifyAt, callAtISO, notifyAtISO };
@@ -774,6 +774,12 @@ export default function FinalCalendarPage() {
       };
       const o = await geocode(last.address || "");
       const d = await geocode(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`);
+      const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
+        try {
+          if (!ensureLocationConsent()) { resolve(null); return; }
+          navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+        } catch { resolve(null); }
+      });
       let walkingMin: number | undefined;
       let drivingMin: number | undefined;
       let busMin: number | undefined;
@@ -784,7 +790,55 @@ export default function FinalCalendarPage() {
       let callTime: string | undefined;
       let notifyAt: string | undefined;
       let priceEstimate: number | undefined;
-      if (o && d) {
+      const pos = await getPos();
+      if (d && pos) {
+        const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${d.lon},${d.lat}?overview=false`;
+        const resD = await fetch(osrmDrive);
+        const jsD = await resD.json();
+        const rD = jsD?.routes?.[0];
+        if (rD) {
+          drivingMin = Math.round((rD.duration ?? 0) / 60);
+          distanceKm = Math.round((rD.distance ?? 0) / 1000);
+          priceEstimate = Math.round((distanceKm || 0) * 6 + 3);
+        }
+        try {
+          const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${d.lon},${d.lat}?overview=false`;
+          const resW = await fetch(osrmWalk);
+          const jsW = await resW.json();
+          const rW = jsW?.routes?.[0];
+          if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60);
+        } catch {}
+        const trafficFactor = 1.3;
+        const driveWithTraffic = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+        busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
+        trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        if (fn.departureTime && fn.date) {
+          const [h, m] = (fn.departureTime || "00:00").split(":");
+          const dt = new Date(`${fn.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
+          const mins = 240 + (driveWithTraffic ?? drivingMin ?? 60);
+          const callAt = new Date(dt.getTime() - mins * 60 * 1000);
+          const notifyAtDate = new Date(callAt.getTime() - 2 * 60 * 60 * 1000);
+          const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+          callTime = fmt(callAt);
+          notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
+          try {
+            if (typeof Notification !== "undefined") {
+              if (Notification.permission === "default") await Notification.requestPermission();
+              if (Notification.permission === "granted") {
+                const delay = notifyAtDate.getTime() - Date.now();
+                if (delay > 0 && delay < 365 * 24 * 60 * 60 * 1000) {
+                  setTimeout(() => {
+                    try { new Notification("Lembrete de transporte", { body: `Chame o Uber às ${callTime}.` }); } catch {}
+                  }, delay);
+                }
+              }
+            }
+          } catch {}
+        }
+      } else if (o && d) {
         const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
         const resD = await fetch(osrmDrive);
         const jsD = await resD.json();
@@ -816,19 +870,7 @@ export default function FinalCalendarPage() {
           const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
           callTime = fmt(callAt);
           notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
-          try {
-            if (typeof Notification !== "undefined") {
-              if (Notification.permission === "default") await Notification.requestPermission();
-              if (Notification.permission === "granted") {
-                const delay = notifyAtDate.getTime() - Date.now();
-                if (delay > 0 && delay < 365 * 24 * 60 * 60 * 1000) {
-                  setTimeout(() => {
-                    try { new Notification("Lembrete de transporte", { body: `Chame o Uber às ${callTime}.` }); } catch {}
-                  }, delay);
-                }
-              }
-            }
-          } catch {}
+          
         }
       } else {
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
@@ -1379,7 +1421,7 @@ export default function FinalCalendarPage() {
                   const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
                   callTime = fmt(callAt);
                   notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
-                  try { callAtISO = callAt.toISOString(); notifyAtISO = notifyAtDate.toISOString(); } catch {}
+          
                 
                   try {
                     if (typeof Notification !== "undefined") {
@@ -1672,7 +1714,7 @@ export default function FinalCalendarPage() {
                     <a className="underline" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
                   </div>
                   <div>
-                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Abrir Uber com destino preenchido</a>
+                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
                   </div>
                   <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
                   <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
@@ -1754,7 +1796,7 @@ export default function FinalCalendarPage() {
             <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
           </div>
           <div>
-            <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Abrir Uber com destino preenchido</a>
+            <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
           </div>
           {(() => {
             const files = summaryCities.find((c) => {
@@ -1809,7 +1851,7 @@ export default function FinalCalendarPage() {
                 <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
               </div>
               <div>
-                <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Abrir Uber com destino preenchido</a>
+                <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
               </div>
               {goRecord?.files && goRecord.files.length ? (
                 <div>
@@ -1860,7 +1902,7 @@ export default function FinalCalendarPage() {
                 <a className="underline" href={returnInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
               </div>
               <div>
-                <a className="underline" href={returnInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Abrir Uber com destino preenchido</a>
+                <a className="underline" href={returnInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
               </div>
               <div className="mt-2">Chamar Uber às: {returnInfo?.callTime || "—"}</div>
               <div>Notificação programada: {returnInfo?.notifyAt ? `às ${returnInfo.notifyAt}` : "—"}</div>
@@ -1919,7 +1961,7 @@ export default function FinalCalendarPage() {
                     <a className="underline" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
                   </div>
                   <div>
-                    <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Abrir Uber com destino preenchido</a>
+                    <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
                   </div>
                   <div className="mt-2">Chamar Uber às: {stayInfo?.callTime || "—"}</div>
                   <div>Notificação programada: {stayInfo?.notifyAt ? `às ${stayInfo.notifyAt}` : "—"}</div>
