@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CalendarInput } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,25 @@ export default function FlightsSearchPage() {
     | "same_period"
     | "same_confirm"
   >(null);
+
+  useEffect(() => {
+    try {
+      setTripSearch(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("calentrip_trip_summary");
+        localStorage.removeItem("calentrip:entertainment:records");
+        localStorage.removeItem("calentrip:saved_calendar");
+        localStorage.removeItem("calentrip:open_calendar_help");
+        localStorage.removeItem("calentrip:arrivalNextDay_outbound");
+      }
+    } catch {}
+    setSame({ origin: "", destination: "", departDate: "", returnDate: "", passengers: { adults: 1, children: 0, infants: 0 } });
+    setOutbound({ origin: "", destination: "", date: "" });
+    setInbound({ origin: "", destination: "", date: "" });
+    setPassengers({ adults: 1, children: 0, infants: 0 });
+    setAttempted(false);
+    setGuideStep(null);
+  }, [setTripSearch]);
 
   function confirm() {
     const filledSame = Boolean(same.origin && same.destination && same.departDate && same.returnDate);
