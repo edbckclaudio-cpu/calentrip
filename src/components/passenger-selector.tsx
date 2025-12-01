@@ -13,44 +13,44 @@ export default function PassengerSelector({ value, onChange }: { value: Passenge
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm">{t("adults")}</div>
-        <div className="flex items-center gap-2">
-          <Button type="button" className="h-8 w-8 px-0" onClick={() => set("adults", -1)}>
-            <span className="material-symbols-outlined text-base">remove</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs">{t("adults")}</div>
+        <div className="flex items-center gap-1">
+          <Button type="button" className="h-6 w-6 px-0" onClick={() => set("adults", -1)}>
+            <span className="material-symbols-outlined text-[14px]">remove</span>
           </Button>
-          <div className="w-8 text-center text-sm font-medium">{value.adults ?? 0}</div>
-          <Button type="button" className="h-8 w-8 px-0" onClick={() => set("adults", 1)}>
-            <span className="material-symbols-outlined text-base">add</span>
-          </Button>
-        </div>
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm">{t("children")}</div>
-        <div className="flex items-center gap-2">
-          <Button type="button" className="h-8 w-8 px-0" onClick={() => set("children", -1)}>
-            <span className="material-symbols-outlined text-base">remove</span>
-          </Button>
-          <div className="w-8 text-center text-sm font-medium">{value.children ?? 0}</div>
-          <Button type="button" className="h-8 w-8 px-0" onClick={() => set("children", 1)}>
-            <span className="material-symbols-outlined text-base">add</span>
+          <div className="w-7 text-center text-xs font-medium">{value.adults ?? 0}</div>
+          <Button type="button" className="h-6 w-6 px-0" onClick={() => set("adults", 1)}>
+            <span className="material-symbols-outlined text-[14px]">add</span>
           </Button>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm">{t("infants")}</div>
-        <div className="flex items-center gap-2">
-          <Button type="button" className="h-8 w-8 px-0" onClick={() => set("infants", -1)}>
-            <span className="material-symbols-outlined text-base">remove</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs">{t("children")}</div>
+        <div className="flex items-center gap-1">
+          <Button type="button" className="h-6 w-6 px-0" onClick={() => set("children", -1)}>
+            <span className="material-symbols-outlined text-[14px]">remove</span>
           </Button>
-          <div className="w-8 text-center text-sm font-medium">{value.infants ?? 0}</div>
-          <Button type="button" className="h-8 w-8 px-0" onClick={() => set("infants", 1)}>
-            <span className="material-symbols-outlined text-base">add</span>
+          <div className="w-7 text-center text-xs font-medium">{value.children ?? 0}</div>
+          <Button type="button" className="h-6 w-6 px-0" onClick={() => set("children", 1)}>
+            <span className="material-symbols-outlined text-[14px]">add</span>
           </Button>
         </div>
       </div>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs">{t("infants")}</div>
+        <div className="flex items-center gap-1">
+          <Button type="button" className="h-6 w-6 px-0" onClick={() => set("infants", -1)}>
+            <span className="material-symbols-outlined text-[14px]">remove</span>
+          </Button>
+          <div className="w-7 text-center text-xs font-medium">{value.infants ?? 0}</div>
+          <Button type="button" className="h-6 w-6 px-0" onClick={() => set("infants", 1)}>
+            <span className="material-symbols-outlined text-[14px]">add</span>
+          </Button>
+        </div>
+      </div>
+      <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
         {t("ageNotePassengers")}
       </p>
     </div>
