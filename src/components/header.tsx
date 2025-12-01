@@ -111,9 +111,11 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
         ) : (
           <div className="flex flex-col gap-3">
             <Button type="button" onClick={() => { show("Abrindo login Google..."); signIn("google"); }}>{t("signInGoogle")}</Button>
-            <Button type="button" onClick={() => { show("Iniciando login..."); signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" }); }}>
-              {t("signInCredentials")}
-            </Button>
+            {process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "1" ? (
+              <Button type="button" onClick={() => { show("Iniciando login..."); signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" }); }}>
+                {t("signInCredentials")}
+              </Button>
+            ) : null}
           </div>
         )}
         <DialogFooter>
@@ -174,31 +176,15 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                   <div className="mt-2 flex items-center gap-2">
                     <button type="button" className="text-xs" onClick={() => signIn("google")}>Google</button>
-                    <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>Demo</button>
+                    {process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "1" ? (
+                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>Demo</button>
+                    ) : null}
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={openSaved}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
-            </span>
-            <span className="text-sm font-medium">Pesquisas salvas</span>
-          </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
-            </span>
-            <span className="text-sm font-medium">Calendário em lista</span>
-          </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">calendar_month</span>
-            </span>
-            <span className="text-sm font-medium">Calendário mensal</span>
-          </button>
           <button
             type="button"
             className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
@@ -221,12 +207,58 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             </span>
             <span className="text-sm font-medium">Iniciar nova pesquisa</span>
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setProfileOpen(true)}>
+
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={openSaved}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">account_circle</span>
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
+            </span>
+            <span className="text-sm font-medium">Pesquisas salvas</span>
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
+            </span>
+            <span className="text-sm font-medium">Calendário em lista</span>
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">calendar_month</span>
+            </span>
+            <span className="text-sm font-medium">Calendário mensal</span>
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">person</span>
             </span>
             <span className="text-sm font-medium">Perfil</span>
           </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/legal/privacy"; } catch {} }}>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+                <span className="material-symbols-outlined text-[22px] text-[#007AFF]">policy</span>
+              </span>
+              <span className="text-sm font-medium">Privacidade</span>
+            </button>
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/legal/terms"; } catch {} }}>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+                <span className="material-symbols-outlined text-[22px] text-[#007AFF]">gavel</span>
+              </span>
+              <span className="text-sm font-medium">Termos</span>
+            </button>
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/support"; } catch {} }}>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+                <span className="material-symbols-outlined text-[22px] text-[#007AFF]">support_agent</span>
+              </span>
+              <span className="text-sm font-medium">Suporte</span>
+            </button>
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/account/delete"; } catch {} }}>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+                <span className="material-symbols-outlined text-[22px] text-[#007AFF]">person_remove</span>
+              </span>
+              <span className="text-sm font-medium">Excluir conta</span>
+            </button>
+          </div>
+          
           <div className="mt-2 rounded-md border border-zinc-200 dark:border-zinc-800">
             <div className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300">Termos e Políticas</div>
             <div className="px-2 pb-2 space-y-1">

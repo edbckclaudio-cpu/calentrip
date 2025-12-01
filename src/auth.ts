@@ -13,23 +13,25 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-providers.push(
-  Credentials({
-    name: "Credenciais",
-    credentials: {
-      email: { label: "Email", type: "email" },
-      password: { label: "Senha", type: "password" },
-    },
-    authorize: async (credentials) => {
-      const email = credentials?.email as string | undefined;
-      const password = credentials?.password as string | undefined;
-      if (email && password && password.length >= 4) {
-        return { id: email, name: email, email };
-      }
-      return null;
-    },
-  })
-);
+if (process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "1") {
+  providers.push(
+    Credentials({
+      name: "Credenciais",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Senha", type: "password" },
+      },
+      authorize: async (credentials) => {
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        if (email && password && password.length >= 4) {
+          return { id: email, name: email, email };
+        }
+        return null;
+      },
+    })
+  );
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
