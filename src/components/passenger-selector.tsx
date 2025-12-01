@@ -24,6 +24,7 @@ export default function PassengerSelector({ value, onChange }: { value: Passenge
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs" title={t("ageNotePassengers")}> 
       <div className="relative flex items-center justify-between gap-2 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700" aria-label={t("adults")} title={t("adults")} onMouseEnter={() => showHint("adults")} onTouchStart={() => showHint("adults")}>
+        <span className="text-[10px] font-medium">Ad</span>
         {hint === "adults" ? (
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 rounded bg-[var(--brand)] px-2 py-1 text-[10px] font-semibold text-black shadow">
             {t("adults")}
@@ -40,6 +41,7 @@ export default function PassengerSelector({ value, onChange }: { value: Passenge
         </div>
       </div>
       <div className="relative flex items-center justify-between gap-2 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700" aria-label={t("children")} title={t("children")} onMouseEnter={() => showHint("children")} onTouchStart={() => showHint("children")}>
+        <span className="text-[10px] font-medium">Cri</span>
         {hint === "children" ? (
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 rounded bg-[var(--brand)] px-2 py-1 text-[10px] font-semibold text-black shadow">
             {t("children")}
@@ -56,6 +58,7 @@ export default function PassengerSelector({ value, onChange }: { value: Passenge
         </div>
       </div>
       <div className="relative flex items-center justify-between gap-2 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700" aria-label={t("infants")} title={t("infants")} onMouseEnter={() => showHint("infants")} onTouchStart={() => showHint("infants")}>
+        <span className="text-[10px] font-medium">Beb</span>
         {hint === "infants" ? (
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 rounded bg-[var(--brand)] px-2 py-1 text-[10px] font-semibold text-black shadow">
             {t("infants")}
