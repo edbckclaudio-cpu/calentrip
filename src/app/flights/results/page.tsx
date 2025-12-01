@@ -475,7 +475,7 @@ export default function FlightsResultsPage() {
                   <div>
                     <label className="mb-1 block text-sm">{t("departureTime")}</label>
                     <Input
-                      placeholder="14:30"
+                      placeholder=""
                       value={timeValue}
                       type="tel"
                       inputMode="numeric"
@@ -501,7 +501,7 @@ export default function FlightsResultsPage() {
                   <div>
                     <label className="mb-1 block text-sm">{t("flightNumberOptional")}</label>
                     <Input
-                      placeholder="JJ1234"
+                      placeholder=""
                       value={flightValue}
                       inputMode="text"
                       type="text"
@@ -528,7 +528,7 @@ export default function FlightsResultsPage() {
                   <div>
                     <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
                     <Input
-                      placeholder="18:05"
+                      placeholder=""
                       value={arrivalTimes[i as 0 | 1]}
                       type="tel"
                       inputMode="numeric"

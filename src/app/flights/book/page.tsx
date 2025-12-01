@@ -650,7 +650,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
             <div>
               <label className="mb-1 block text-sm">{t("departureTime")}</label>
               <Input
-                placeholder="14:30"
+                placeholder=""
                 value={notes[i]?.dep ?? ""}
                 type="tel"
                 inputMode="numeric"
@@ -669,7 +669,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
             <div>
               <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
               <Input
-                placeholder="18:05"
+                placeholder=""
                 value={notes[i]?.arr ?? ""}
                 type="tel"
                 inputMode="numeric"
@@ -700,7 +700,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
             <div>
               <label className="mb-1 block text-sm">{t("flightNumberOptional")}</label>
               <Input
-                placeholder="JJ1234"
+                placeholder=""
                 value={notes[i]?.code ?? ""}
                 inputMode="text"
                 type="text"
