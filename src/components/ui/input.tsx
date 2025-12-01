@@ -10,7 +10,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   const [focused, setFocused] = useState(false);
   const focusValueRef = useRef<string | number | readonly string[] | undefined>(undefined);
   const { onFocus, onBlur, value } = props;
-  const clearOnFocus = (props as any).clearOnFocus ?? true;
+  const clearOnFocus = (props as any).clearOnFocus ?? false;
   const shouldClear = focused && clearOnFocus && typeof value !== "undefined" && String(value) !== "" && value === focusValueRef.current;
   return (
     <input
