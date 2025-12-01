@@ -270,12 +270,11 @@ export default function FlightsResultsPage() {
                   </div>
                   <div>
                     <label className="mb-1 block text-sm">{t("returnDate")}</label>
-                    <CalendarInput
-                      value={tripSearch.returnDate ?? ""}
-                      min={tripSearch.departDate || undefined}
-                      onFocus={() => { if (!tripSearch.returnDate && tripSearch.departDate) setTripSearch({ ...tripSearch, returnDate: tripSearch.departDate }); }}
-                      onChange={(e) => setTripSearch({ ...tripSearch, returnDate: e.target.value })}
-                    />
+                      <CalendarInput
+                        value={tripSearch.returnDate ?? ""}
+                        min={tripSearch.departDate || undefined}
+                        onChange={(e) => setTripSearch({ ...tripSearch, returnDate: e.target.value })}
+                      />
                     {!tripSearch.returnDate && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
                   </div>
                 </div>
@@ -332,7 +331,6 @@ export default function FlightsResultsPage() {
                       <CalendarInput
                         value={tripSearch.inbound.date ?? ""}
                         min={tripSearch.outbound.date || undefined}
-                        onFocus={() => { if (!tripSearch.inbound.date && tripSearch.outbound.date) setTripSearch({ ...tripSearch, inbound: { ...tripSearch.inbound, date: tripSearch.outbound.date } }); }}
                         onChange={(e) => setTripSearch({ ...tripSearch, inbound: { ...tripSearch.inbound, date: e.target.value } })}
                       />
                       {!tripSearch.inbound.date && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}

@@ -343,14 +343,14 @@ export default function EntertainmentReservationsPage() {
                 <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
                   <div className="text-[10px] leading-tight font-semibold uppercase tracking-wide text-zinc-600 mb-2 break-all text-center">Atividade/entretenimento</div>
                   <div className="space-y-2">
-                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("activity"); setTitle(""); setDate(c.checkin || ""); setTime(""); }}>Agendar</Button>
+                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("activity"); setTitle(""); setDate(""); setTime(""); }}>Agendar</Button>
                     <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAISuggestions(i)}>Sugestões por IA</Button>
                   </div>
                 </div>
                 <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
                   <div className="text-[10px] leading-tight font-semibold uppercase tracking-wide text-zinc-600 mb-2 break-all text-center">Restaurante</div>
                   <div className="space-y-2">
-                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("restaurant"); setTitle(""); setDate(c.checkin || ""); setTime(""); }}>Agendar</Button>
+                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("restaurant"); setTitle(""); setDate(""); setTime(""); }}>Agendar</Button>
                     <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAIRestaurants(i)}>Sugestões por IA</Button>
                   </div>
                 </div>
@@ -594,7 +594,7 @@ export default function EntertainmentReservationsPage() {
                       <div className="mt-2 grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block text-xs">Data</label>
-                          <CalendarInput value={aiDateMap[`ai-${idx}`] || cities[aiOpenIdx!]?.checkin || ""} min={cities[aiOpenIdx!]?.checkin || undefined} max={cities[aiOpenIdx!]?.checkout || undefined} onFocus={() => setAiActiveKey(`ai-${idx}`)} onChange={(e) => setAiDateMap((prev) => ({ ...prev, [`ai-${idx}`]: e.target.value }))} />
+                        <CalendarInput value={aiDateMap[`ai-${idx}`] || ""} min={cities[aiOpenIdx!]?.checkin || undefined} max={cities[aiOpenIdx!]?.checkout || undefined} onFocus={() => setAiActiveKey(`ai-${idx}`)} onChange={(e) => setAiDateMap((prev) => ({ ...prev, [`ai-${idx}`]: e.target.value }))} />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs">Horário</label>
@@ -633,7 +633,7 @@ export default function EntertainmentReservationsPage() {
                       <div className="mt-2">
                         <Button type="button" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
                           const cityName = cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`;
-                          const d = aiDateMap[`ai-${idx}`] || cities[aiOpenIdx!]?.checkin || "";
+                          const d = aiDateMap[`ai-${idx}`] || "";
                           const t = aiTimeMap[`ai-${idx}`] || "";
                           const files = aiFilesMap[`ai-${idx}`] || [];
                           if (!d) return;
@@ -683,7 +683,7 @@ export default function EntertainmentReservationsPage() {
                     <div className="mt-2 grid grid-cols-2 gap-3">
                       <div>
                         <label className="mb-1 block text-xs">Data</label>
-                        <CalendarInput value={restDateMap[`rest-${idx}`] || cities[aiRestOpenIdx!]?.checkin || ""} min={cities[aiRestOpenIdx!]?.checkin || undefined} max={cities[aiRestOpenIdx!]?.checkout || undefined} onFocus={() => setRestActiveKey(`rest-${idx}`)} onChange={(e) => setRestDateMap((prev) => ({ ...prev, [`rest-${idx}`]: e.target.value }))} />
+                        <CalendarInput value={restDateMap[`rest-${idx}`] || ""} min={cities[aiRestOpenIdx!]?.checkin || undefined} max={cities[aiRestOpenIdx!]?.checkout || undefined} onFocus={() => setRestActiveKey(`rest-${idx}`)} onChange={(e) => setRestDateMap((prev) => ({ ...prev, [`rest-${idx}`]: e.target.value }))} />
                       </div>
                       <div>
                         <label className="mb-1 block text-xs">Horário</label>
@@ -722,7 +722,7 @@ export default function EntertainmentReservationsPage() {
                     <div className="mt-2">
                         <Button type="button" variant="secondary" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
                         const cityName = cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`;
-                        const d = restDateMap[`rest-${idx}`] || cities[aiRestOpenIdx!]?.checkin || "";
+                        const d = restDateMap[`rest-${idx}`] || "";
                         const t = restTimeMap[`rest-${idx}`] || "";
                         const files = restFilesMap[`rest-${idx}`] || [];
                         if (!d) return;

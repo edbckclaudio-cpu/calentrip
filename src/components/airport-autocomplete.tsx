@@ -12,6 +12,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Airport[]>([]);
+  const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const portalRef = useRef<HTMLDivElement | null>(null);
@@ -99,15 +100,17 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
     onSelect(a.iata);
     setOpen(false);
     setQ("");
+    setEditing(false);
   }
 
   return (
     <div ref={ref} className="relative">
       <Input
         className={invalid ? "border-red-500 focus:ring-red-400" : ""}
-        value={q.length ? q : value}
+        value={editing ? q : (q.length ? q : value)}
         onChange={(e) => onChangeInput(e.target.value)}
-        onFocus={onFocus}
+        onFocus={() => { setEditing(true); setQ(""); if (onFocus) onFocus(); }}
+        onBlur={() => { setEditing(false); setQ(""); }}
         placeholder={placeholder ?? t("typeCityAirport")} />
       {open && isMobile && items.length > 0 && createPortal(
         <div ref={portalRef} className="fixed inset-0 z-50">
