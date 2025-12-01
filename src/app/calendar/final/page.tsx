@@ -84,6 +84,16 @@ export default function FinalCalendarPage() {
 
   useEffect(() => {
     try {
+      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_calendar_help") : null;
+      if (flag === "1") {
+        setCalendarHelpOpen(true);
+        localStorage.removeItem("calentrip:open_calendar_help");
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
       const v = typeof window !== "undefined" ? localStorage.getItem("calentrip:locConsent") : null;
       if (v === "granted" || v === "denied" || v === "skipped") setLocConsent(v as typeof locConsent);
       else setLocConsent("default");
@@ -1203,6 +1213,29 @@ export default function FinalCalendarPage() {
             try {
               const payload = { events };
               if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+              try {
+                const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+                const ts = raw ? JSON.parse(raw) : null;
+                if (ts) {
+                  const isSame = ts.mode === "same";
+                  const origin = isSame ? ts.origin : ts.outbound?.origin;
+                  const destination = isSame ? ts.destination : ts.outbound?.destination;
+                  const date = isSame ? ts.departDate : ts.outbound?.date;
+                  const pax = (() => {
+                    const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
+                  })();
+                  if (origin && destination && date) {
+                    const title = `${origin} → ${destination}`;
+                    const trips: TripItem[] = getTrips();
+                    const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+                    if (idx >= 0) {
+                      const next = [...trips];
+                      next[idx] = { ...next[idx], reachedFinalCalendar: true };
+                      localStorage.setItem("calentrip:trips", JSON.stringify(next));
+                    }
+                  }
+                }
+              } catch {}
               show("Salvo em pesquisas salvas", { variant: "success" });
               setCalendarHelpOpen(true);
             } catch { show("Erro ao salvar", { variant: "error" }); }
@@ -1480,7 +1513,35 @@ export default function FinalCalendarPage() {
           Para receber notificações antes de cada evento, salve esta viagem no calendário do seu dispositivo.
           Use o botão abaixo. O mesmo botão está disponível no menu.
           <div className="mt-2">
-            <Button type="button" variant="outline" onClick={() => setCalendarHelpOpen(true)}>
+            <Button type="button" variant="outline" onClick={() => {
+              try {
+                const payload = { events };
+                if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+                try {
+                  const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+                  const ts = raw ? JSON.parse(raw) : null;
+                  if (ts) {
+                    const isSame = ts.mode === "same";
+                    const origin = isSame ? ts.origin : ts.outbound?.origin;
+                    const destination = isSame ? ts.destination : ts.outbound?.destination;
+                    const date = isSame ? ts.departDate : ts.outbound?.date;
+                    const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+                    if (origin && destination && date) {
+                      const title = `${origin} → ${destination}`;
+                      const trips: TripItem[] = getTrips();
+                      const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+                      if (idx >= 0) {
+                        const next = [...trips];
+                        next[idx] = { ...next[idx], reachedFinalCalendar: true };
+                        localStorage.setItem("calentrip:trips", JSON.stringify(next));
+                      }
+                    }
+                  }
+                } catch {}
+                show("Salvo em pesquisas salvas", { variant: "success" });
+              } catch { show("Erro ao salvar", { variant: "error" }); }
+              setCalendarHelpOpen(true);
+            }}>
               Salvar viagem no calendário
             </Button>
           </div>

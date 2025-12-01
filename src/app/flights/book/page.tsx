@@ -541,10 +541,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const { tripSearch } = useTrip();
   const { t } = useI18n();
   const router = useRouter();
-  const { show } = useToast();
+  const { show, dismiss } = useToast();
   const [activeLeg, setActiveLeg] = useState<0 | 1>(0);
   const [proceedPulse, setProceedPulse] = useState(false);
   const [infoShown, setInfoShown] = useState(false);
+  const [hintId, setHintId] = useState<number | null>(null);
   function fmtTime(v: string) {
     const s = v.replace(/\D/g, "").slice(0, 4);
     if (!s) return "";
@@ -636,6 +637,9 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     }));
     const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
     addTrip({ id, title, date, passengers, flightNotes, attachments });
+    if (hintId != null) {
+      try { dismiss(hintId); } catch {}
+    }
     show("Notas salvas, redirecionando…", { variant: "success" });
     try { onProceed?.(); } catch {}
     router.push("/accommodation/search");
@@ -662,7 +666,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
+                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
             </div>
@@ -690,7 +694,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
+                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
               {invalidLeg(i) && (
@@ -711,7 +715,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
+                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
             </div>
@@ -729,12 +733,12 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                   if (i === 1) localStorage.setItem("calentrip:arrivalNextDay_inbound", String(checked));
                 } catch {}
               }}
-              onFocus={() => {
-                setActiveLeg(i as 0 | 1);
-                setProceedPulse(i === 1);
-                if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
-              }}
-            />
+                onFocus={() => {
+                  setActiveLeg(i as 0 | 1);
+                  setProceedPulse(i === 1);
+                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
+                }}
+              />
             <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
           </div>
           <div
@@ -763,12 +767,12 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                   setFiles((prev) => prev.map((arr, idx) => (idx === i ? items : arr)));
                 });
               }}
-              onFocus={() => {
-                setActiveLeg(i as 0 | 1);
-                setProceedPulse(i === 1);
-                if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção."); setInfoShown(true); }
-              }}
-            />
+                onFocus={() => {
+                  setActiveLeg(i as 0 | 1);
+                  setProceedPulse(i === 1);
+                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
+                }}
+              />
             <div className="flex items-center gap-2">
               <Button type="button" variant="secondary" onClick={() => document.getElementById(`file-${i}`)?.click()}>{t("attachProofButton")}</Button>
               <span className="text-xs text-zinc-600">{t("attachProofHelp")}</span>

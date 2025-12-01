@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DialogHeader } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/toast";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
@@ -19,6 +20,7 @@ export default function MonthCalendarPage() {
   const { data: session, status } = useSession();
   const { lang } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium" } | null>(null);
+  const { show } = useToast();
 
   useEffect(() => {
     try {
@@ -209,19 +211,100 @@ export default function MonthCalendarPage() {
               </div>
             )}
           </div>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
-            </span>
-            {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
-          </button>
-        </div>
+        <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+            <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
+          </span>
+          {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
+        </button>
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+          onClick={() => {
+            try {
+              const payload = { events };
+              if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+              try {
+                const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+                const ts = raw ? JSON.parse(raw) : null;
+                if (ts) {
+                  const isSame = ts.mode === "same";
+                  const origin = isSame ? ts.origin : ts.outbound?.origin;
+                  const destination = isSame ? ts.destination : ts.outbound?.destination;
+                  const date = isSame ? ts.departDate : ts.outbound?.date;
+                  const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+                  if (origin && destination && date) {
+                    const title = `${origin} → ${destination}`;
+                    const trips: TripItem[] = getTrips();
+                    const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+                    if (idx >= 0) {
+                      const next = [...trips];
+                      next[idx] = { ...next[idx], reachedFinalCalendar: true };
+                      localStorage.setItem("calentrip:trips", JSON.stringify(next));
+                    }
+                  }
+                }
+              } catch {}
+              try { localStorage.setItem("calentrip:open_calendar_help", "1"); } catch {}
+              show("Salvo em pesquisas salvas", { variant: "success" });
+              try { window.location.href = "/calendar/final"; } catch {}
+            } catch { show("Erro ao salvar", { variant: "error" }); }
+          }}
+        >
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+            <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
+          </span>
+          {sideOpen ? <span className="text-sm font-medium">Salvar calendário</span> : null}
+        </button>
       </div>
+    </div>
       {sideOpen ? (<div className="fixed top-0 right-0 bottom-0 left-56 z-30 bg-black/10" onClick={() => setSideOpen(false)} />) : null}
 
       <div className="container-page">
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário da viagem</h1>
         <div className="text-sm text-zinc-700 dark:text-zinc-300">{monthLabel}</div>
+        <div className="mt-3 rounded-lg border border-[#007AFF]/30 bg-[#007AFF]/10 p-3 text-sm">
+          Para receber notificações antes de cada evento, salve esta viagem no calendário do seu dispositivo.
+          Use o botão abaixo. O mesmo botão está disponível no menu.
+          <div className="mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                try {
+                  const payload = { events };
+                  if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+                  try {
+                    const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+                    const ts = raw ? JSON.parse(raw) : null;
+                    if (ts) {
+                      const isSame = ts.mode === "same";
+                      const origin = isSame ? ts.origin : ts.outbound?.origin;
+                      const destination = isSame ? ts.destination : ts.outbound?.destination;
+                      const date = isSame ? ts.departDate : ts.outbound?.date;
+                      const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+                      if (origin && destination && date) {
+                        const title = `${origin} → ${destination}`;
+                        const trips: TripItem[] = getTrips();
+                        const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+                        if (idx >= 0) {
+                          const next = [...trips];
+                          next[idx] = { ...next[idx], reachedFinalCalendar: true };
+                          localStorage.setItem("calentrip:trips", JSON.stringify(next));
+                        }
+                      }
+                    }
+                  } catch {}
+                  try { localStorage.setItem("calentrip:open_calendar_help", "1"); } catch {}
+                  show("Salvo em pesquisas salvas", { variant: "success" });
+                  try { window.location.href = "/calendar/final"; } catch {}
+                } catch { show("Erro ao salvar", { variant: "error" }); }
+              }}
+            >
+              Salvar viagem no calendário
+            </Button>
+          </div>
+        </div>
         <div className="mt-2 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
           <span className="material-symbols-outlined text-[18px] text-[#febb02]">sticky_note_2</span>
           <span>
