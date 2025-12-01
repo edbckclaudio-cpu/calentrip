@@ -1286,8 +1286,18 @@ export default function FinalCalendarPage() {
               const s = "00";
               return `${y}${m}${da}T${h}${mi}${s}`;
             }
+            function fmtUTC(d: Date) {
+              const y = String(d.getUTCFullYear());
+              const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+              const da = String(d.getUTCDate()).padStart(2, "0");
+              const h = String(d.getUTCHours()).padStart(2, "0");
+              const mi = String(d.getUTCMinutes()).padStart(2, "0");
+              const s = String(d.getUTCSeconds()).padStart(2, "0");
+              return `${y}${m}${da}T${h}${mi}${s}Z`;
+            }
             function parseDT(date: string, time?: string) {
-              const s = `${date || ""} ${time || "00:00"}`.trim().replace(/\//g, "-");
+              const t = (time || "00:00").padStart(5, "0");
+              const s = `${(date || "").replace(/\//g, "-")}T${t}:00`;
               const d = new Date(s);
               if (Number.isNaN(d.getTime())) return null;
               return d;
@@ -1398,6 +1408,9 @@ export default function FinalCalendarPage() {
               const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
               const desc = e.label;
               lines.push("BEGIN:VEVENT");
+              const uid = `ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`;
+              lines.push(`UID:${uid}`);
+              lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
               if (start) lines.push(`DTSTART:${fmt(start)}`);
               if (end) lines.push(`DTEND:${fmt(end)}`);
               lines.push(`SUMMARY:${e.label}`);
@@ -1422,6 +1435,9 @@ export default function FinalCalendarPage() {
                   const callAt = new Date(extra.callAtISO);
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
                   lines.push("BEGIN:VEVENT");
+                  const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
+                  lines.push(`UID:${uid2}`);
+                  lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
                   lines.push(`DTSTART:${fmt(callAt)}`);
                   lines.push(`DTEND:${fmt(callEnd)}`);
                   lines.push(`SUMMARY:Chamar Uber`);
@@ -1590,12 +1606,7 @@ export default function FinalCalendarPage() {
                             <span>Hospedagem</span>
                           </Button>
                         ) : null}
-                        {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkout" && idx === lastCheckoutIdx ? (
-                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openReturnAirportDrawer()}>
-                            <span className="material-symbols-outlined text-[16px]">local_airport</span>
-                            <span>Aeroporto final</span>
-                          </Button>
-                        ) : null}
+                        
                         {(ev.type === "activity" || ev.type === "restaurant") ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openGoDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">map</span>

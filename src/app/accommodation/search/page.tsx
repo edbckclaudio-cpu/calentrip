@@ -934,18 +934,32 @@ export default function AccommodationSearchPage() {
             <div ref={summaryRef} className={(summaryHighlight ? "ring-4 ring-amber-500 animate-pulse " : "") + "rounded-lg"}>
               <ul className="space-y-2 text-sm p-3">
                 {cities.map((c, i) => (
-                  <li key={`stay-${i}`} className={c.checked && c.address ? "rounded border border-green-200 bg-green-50 p-2" : undefined}>
+                  <li
+                    key={`stay-${i}`}
+                    className={
+                      c.checked && c.address
+                        ? "rounded border border-green-200 bg-green-50 p-2 text-zinc-900 dark:bg-green-900 dark:border-green-800 dark:text-green-100"
+                        : undefined
+                    }
+                  >
                     <span className="inline-flex items-center gap-1">
-                      {c.checked && c.address ? <span className="material-symbols-outlined text-[16px] text-green-700">task_alt</span> : null}
+                      {c.checked && c.address ? <span className="material-symbols-outlined text-[16px] text-green-700 dark:text-green-300">task_alt</span> : null}
                       <span>Hospedagem: {c.name || `Cidade ${i + 1}`} • {c.checkin || "—"} → {c.checkout || "—"} • {c.address || "(endereço não informado)"}</span>
                     </span>
                   </li>
                 ))}
                 {cities.map((c, i) => (
                   i < cities.length - 1 ? (
-                    <li key={`tr-${i}`} className={c.transportToNext ? "rounded border border-green-200 bg-green-50 p-2" : undefined}>
+                    <li
+                      key={`tr-${i}`}
+                      className={
+                        c.transportToNext
+                          ? "rounded border border-green-200 bg-green-50 p-2 text-zinc-900 dark:bg-green-900 dark:border-green-800 dark:text-green-100"
+                          : undefined
+                      }
+                    >
                       <span className="inline-flex items-center gap-1">
-                        {c.transportToNext ? <span className="material-symbols-outlined text-[16px] text-green-700">task_alt</span> : null}
+                        {c.transportToNext ? <span className="material-symbols-outlined text-[16px] text-green-700 dark:text-green-300">task_alt</span> : null}
                         <span>Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext?.mode || "").toUpperCase()} • {c.transportToNext?.depTime || "—"} → {c.transportToNext?.arrTime || "—"} • Anexos: {(c.transportToNext?.files || []).length}</span>
                       </span>
                     </li>
