@@ -95,14 +95,14 @@ export default function FlightsSearchPage() {
               <AirportAutocomplete invalid={attempted && mode === "same" && !same.origin} value={same.origin} onFocus={() => { if (mode === "same") setGuideStep("same_origin"); }} onSelect={(iata) => { setSame({ ...same, origin: iata }); if (mode === "same") setGuideStep("same_dest"); }} />
               {attempted && mode === "same" && !same.origin && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
             </div>
-            <div className={guideStep === "same_dest" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
+            <div className={guideStep === "same_dest" ? "ring-4 ring-amber-500 pulse-ring rounded-md" : undefined}>
               <label className="mb-1 block text-sm">{t("destination")}</label>
               <AirportAutocomplete invalid={attempted && mode === "same" && !same.destination} value={same.destination} onFocus={() => { if (mode === "same") setGuideStep("same_dest"); }} onSelect={(iata) => { setSame({ ...same, destination: iata }); if (mode === "same") setGuideStep("same_period"); }} />
               {attempted && mode === "same" && !same.destination && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
             </div>
               <div>
                 <label className="mb-1 block text-sm">Data de Ida/Volta</label>
-                <Button type="button" variant="outline" className={(attempted && mode === "same" && !(same.departDate && same.returnDate) ? "ring-2 ring-red-400 " : "") + (guideStep === "same_period" ? " ring-4 ring-amber-500 animate-pulse " : "")} onClick={() => setRangeOpen(true)}>
+                <Button type="button" variant="outline" className={(attempted && mode === "same" && !(same.departDate && same.returnDate) ? "ring-2 ring-red-400 " : "") + (guideStep === "same_period" ? " ring-4 ring-amber-500 pulse-ring " : "")} onClick={() => setRangeOpen(true)}>
                   {same.departDate && same.returnDate ? `${same.departDate} → ${same.returnDate}` : "Selecionar período"}
                 </Button>
                 {attempted && mode === "same" && !(same.departDate && same.returnDate) && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
@@ -122,7 +122,7 @@ export default function FlightsSearchPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className={(attempted && mode === "different" && !(outbound.date && inbound.date) ? "ring-2 ring-red-400 " : "") + (mode === "different" && hintRangeDiff ? " animate-pulse ring-4 ring-amber-500 " : "")}
+                  className={(attempted && mode === "different" && !(outbound.date && inbound.date) ? "ring-2 ring-red-400 " : "") + (mode === "different" && hintRangeDiff ? " pulse-ring ring-4 ring-amber-500 " : "")}
                   onClick={() => { setRangeOpen(true); setHintRangeDiff(false); }}
                 >
                   {outbound.date && inbound.date ? `${outbound.date} → ${inbound.date}` : "Selecionar período"}
@@ -137,7 +137,7 @@ export default function FlightsSearchPage() {
               <div className="rounded-lg border p-3">
                 <h2 className="mb-2 text-sm font-semibold">{t("outboundFlight")}</h2>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className={guideStep === "out_origin" ? "ring-4 ring-amber-500 animate-pulse rounded-md" : undefined}>
+                  <div className={guideStep === "out_origin" ? "ring-4 ring-amber-500 pulse-ring rounded-md" : undefined}>
                     <label className="mb-1 block text-sm">{t("tableOrigin")}</label>
                     <AirportAutocomplete invalid={attempted && mode === "different" && !outbound.origin} value={outbound.origin} onSelect={(iata) => { setOutbound({ ...outbound, origin: iata }); if (mode === "different") setGuideStep("out_dest"); }} />
                     {attempted && mode === "different" && !outbound.origin && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}

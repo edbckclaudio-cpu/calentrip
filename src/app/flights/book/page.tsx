@@ -351,7 +351,7 @@ export default function BookFlightsPage() {
       </div>
 
       <div className="container-page grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className={guide === "aggregators" ? "ring-4 ring-amber-500 animate-pulse" : undefined}>
+        <Card className={guide === "aggregators" ? "ring-4 ring-amber-500 pulse-ring" : undefined}>
           <CardHeader>
             <div className="flex items-center gap-2">
               <CardTitle className="flex items-center gap-2">
@@ -517,7 +517,7 @@ export default function BookFlightsPage() {
         </Card>
       </div>
       <div className="container-page">
-        <Card className={guide === "notes" ? "ring-4 ring-amber-500 animate-pulse" : undefined}>
+        <Card>
           <CardHeader>
             <CardTitle>{t("flightNotesTitle")}</CardTitle>
           </CardHeader>
@@ -542,6 +542,9 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
   const { show } = useToast();
+  const [activeLeg, setActiveLeg] = useState<0 | 1>(0);
+  const [proceedPulse, setProceedPulse] = useState(false);
+  const [infoShown, setInfoShown] = useState(false);
   function fmtTime(v: string) {
     const s = v.replace(/\D/g, "").slice(0, 4);
     if (!s) return "";
@@ -641,7 +644,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   return (
     <div className="space-y-4">
       {legs.map((l, i) => (
-        <div key={`${l.title}-${i}`} className="rounded-lg border p-3">
+        <div key={`${l.title}-${i}`} className={(activeLeg === i ? "ring-4 ring-amber-500 pulse-ring " : "") + "rounded-lg border p-3"}>
           <div className="mb-2 text-sm font-semibold">{l.title} • {l.origin} → {l.destination} • {l.date}</div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
@@ -655,6 +658,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onChange={(e) => {
                   const v = fmtTime(e.target.value);
                   setNotes((prev) => prev.map((x, idx) => (idx === i ? { ...x, dep: v } : x)));
+                }}
+                onFocus={() => {
+                  setActiveLeg(i as 0 | 1);
+                  setProceedPulse(i === 1);
+                  if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
                 }}
               />
             </div>
@@ -679,6 +687,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                     }
                   } catch {}
                 }}
+                onFocus={() => {
+                  setActiveLeg(i as 0 | 1);
+                  setProceedPulse(i === 1);
+                  if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
+                }}
               />
               {invalidLeg(i) && (
                 <div className="mt-1 text-xs text-red-600">{t("arrivalNextDayWarn")}</div>
@@ -695,6 +708,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                   const v = e.target.value;
                   setNotes((prev) => prev.map((x, idx) => (idx === i ? { ...x, code: v } : x)));
                 }}
+                onFocus={() => {
+                  setActiveLeg(i as 0 | 1);
+                  setProceedPulse(i === 1);
+                  if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
+                }}
               />
             </div>
           </div>
@@ -710,6 +728,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                   if (i === 0) localStorage.setItem("calentrip:arrivalNextDay_outbound", String(checked));
                   if (i === 1) localStorage.setItem("calentrip:arrivalNextDay_inbound", String(checked));
                 } catch {}
+              }}
+              onFocus={() => {
+                setActiveLeg(i as 0 | 1);
+                setProceedPulse(i === 1);
+                if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção.", { duration: 12000 }); setInfoShown(true); }
               }}
             />
             <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
@@ -740,6 +763,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                   setFiles((prev) => prev.map((arr, idx) => (idx === i ? items : arr)));
                 });
               }}
+              onFocus={() => {
+                setActiveLeg(i as 0 | 1);
+                setProceedPulse(i === 1);
+                if (i === 0 && !infoShown) { show("Os horários dos voos serão incluídos no calendário final. A partir deles, calcularemos os horários de locomoção."); setInfoShown(true); }
+              }}
             />
             <div className="flex items-center gap-2">
               <Button type="button" variant="secondary" onClick={() => document.getElementById(`file-${i}`)?.click()}>{t("attachProofButton")}</Button>
@@ -756,7 +784,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         </div>
       ))}
       <div className="flex justify-end">
-        <Button type="button" disabled={!allValid} onClick={save}>{t("proceedToAccommodation")}</Button>
+        <Button type="button" disabled={!allValid} onClick={save} className={proceedPulse ? "ring-4 ring-amber-500 pulse-ring" : undefined}>{t("proceedToAccommodation")}</Button>
       </div>
     </div>
   );

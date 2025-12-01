@@ -47,3 +47,17 @@ body {
     'GRAD' 0,
     'opsz' 24;
 }
+
+/* Pulse only the ring/glow, keep content solid */
+.pulse-ring {
+  animation: ringPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(254, 187, 2, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(254, 187, 2, 0.25);
+  }
+}

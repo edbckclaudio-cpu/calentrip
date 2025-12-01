@@ -665,7 +665,7 @@ export default function AccommodationSearchPage() {
                 <div className="font-semibold">{cities[cityDetailIdx!]?.name || `Cidade ${(cityDetailIdx ?? 0) + 1}`}</div>
                 <div>Check-in: {cities[cityDetailIdx!]?.checkin || "—"}</div>
                 <div>Check-out: {cities[cityDetailIdx!]?.checkout || "—"}</div>
-                <div className="mt-2 font-semibold">Links de acomodação</div>
+                <div className="mt-2 font-bold text-[#febb02]">Links de acomodação</div>
                 <ul className="space-y-1">
                   {(() => {
                     const c = encodeURIComponent(cities[cityDetailIdx!]?.name || "");
@@ -677,7 +677,7 @@ export default function AccommodationSearchPage() {
                       { name: "Trivago", href: `https://www.trivago.com/?s=${c}&checkIn=${ci}&checkOut=${co}` },
                     ];
                   })().map((l) => (
-                    <li key={l.name}><a className="underline" href={l.href} target="_blank" rel="noopener noreferrer">{l.name}</a></li>
+                    <li key={l.name}><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={l.href} target="_blank" rel="noopener noreferrer">{l.name}</a></li>
                   ))}
                 </ul>
                 <div className="mt-3">
@@ -736,7 +736,7 @@ export default function AccommodationSearchPage() {
                     ) : null}
                   </div>
                   <div className="mt-2 flex justify-end">
-                    <Button type="button" className={guideIdx === cityDetailIdx && guideStep === "check" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { onCityCheck(cityDetailIdx!); setCityDetailIdx(null); }}>Check</Button>
+                    <Button type="button" className={guideIdx === cityDetailIdx && guideStep === "check" ? "ring-4 ring-amber-500 pulse-ring" : undefined} onClick={() => { onCityCheck(cityDetailIdx!); setCityDetailIdx(null); }}>Check</Button>
                   </div>
                 </div>
               </div>
@@ -748,7 +748,7 @@ export default function AccommodationSearchPage() {
           <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
             <div className="p-4">
               <DialogHeader>
-                <div className={transportHighlight ? "rounded-md p-1 ring-4 ring-amber-500 animate-pulse" : undefined}>
+                <div className={transportHighlight ? "rounded-md p-1 ring-4 ring-amber-500 pulse-ring" : undefined}>
                   Transporte entre {transportOpenIdx !== null ? cities[transportOpenIdx]?.name : ""} e {transportOpenIdx !== null ? cities[transportOpenIdx + 1]?.name : ""}
                 </div>
               </DialogHeader>
@@ -768,9 +768,9 @@ export default function AccommodationSearchPage() {
                 <iframe title="map" src={transportRoute.osmUrl} className="mb-3 h-32 md:h-40 w-full rounded-md border" />
               ) : null}
               <ul className="space-y-1 mb-2">
-                <li><a className="underline" href={transportRoute?.r2rUrl} target="_blank" rel="noopener noreferrer">Rome2Rio</a></li>
-                <li><a className="underline" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">Rentalcars</a></li>
-                <li><a className="underline" href={transportRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
+                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={transportRoute?.r2rUrl} target="_blank" rel="noopener noreferrer">Rome2Rio</a></li>
+                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">Rentalcars</a></li>
+                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={transportRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
               </ul>
               <div className="mb-2">
                 <label className="mb-1 block text-sm">Modal</label>
@@ -933,7 +933,7 @@ export default function AccommodationSearchPage() {
                 ))}
               </ul>
               <div className="mt-3 flex justify-end p-3 pt-0">
-                <Button type="button" className={proceedHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => {
+                <Button type="button" className={proceedHighlight ? "ring-4 ring-amber-500 pulse-ring" : undefined} onClick={() => {
                   try {
                     const data = { cities: cities };
                     if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));
