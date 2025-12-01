@@ -110,7 +110,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
         onFocus={onFocus}
         placeholder={placeholder ?? t("typeCityAirport")} />
       {open && isMobile && items.length > 0 && createPortal(
-        <div className="fixed inset-0 z-50">
+        <div ref={portalRef} className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
             <DialogHeader>Escolher aeroporto</DialogHeader>
