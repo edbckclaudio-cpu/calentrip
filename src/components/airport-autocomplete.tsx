@@ -110,7 +110,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
         value={editing ? q : (q.length ? q : value)}
         onChange={(e) => onChangeInput(e.target.value)}
         onFocus={() => { setEditing(true); setQ(""); if (onFocus) onFocus(); }}
-        onBlur={() => { setEditing(false); setQ(""); }}
+        onBlur={() => { setEditing(false); }}
         placeholder={placeholder ?? t("typeCityAirport")} />
       {open && isMobile && items.length > 0 && createPortal(
         <div ref={portalRef} className="fixed inset-0 z-50">
