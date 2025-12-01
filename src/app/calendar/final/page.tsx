@@ -1458,6 +1458,8 @@ export default function FinalCalendarPage() {
             lines.push("BEGIN:VCALENDAR");
             lines.push("VERSION:2.0");
             lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
+            lines.push("CALSCALE:GREGORIAN");
+            lines.push("METHOD:PUBLISH");
             const returnDetails = await computeReturnDetails();
             events.forEach((e, idx) => {
               const start = parseDT(e.date, e.time);
@@ -1514,8 +1516,9 @@ export default function FinalCalendarPage() {
               lines.push("END:VEVENT");
             });
             lines.push("END:VCALENDAR");
-            const blob = new Blob([lines.join("\n")], { type: "text/calendar;charset=utf-8" });
-            const file = new File([blob], "calentrip.ics", { type: "text/calendar" });
+            const crlf = lines.join("\r\n") + "\r\n";
+            const blob = new Blob([crlf], { type: "text/calendar;charset=utf-8" });
+            const file = new File([crlf], "calentrip.ics", { type: "text/calendar;charset=utf-8" });
             try {
               const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
               const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
