@@ -48,30 +48,33 @@ export default function FlightsSearchPage() {
   >(null);
 
   useEffect(() => {
-    try {
-      setTripSearch(null);
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("calentrip_trip_summary");
-        localStorage.removeItem("calentrip:entertainment:records");
-        localStorage.removeItem("calentrip:saved_calendar");
-        localStorage.removeItem("calentrip:open_calendar_help");
-        localStorage.removeItem("calentrip:arrivalNextDay_outbound");
-      }
-    } catch {}
-    setSame({ origin: "", destination: "", departDate: "", returnDate: "", passengers: { adults: 1, children: 0, infants: 0 } });
-    setOutbound({ origin: "", destination: "", date: "" });
-    setInbound({ origin: "", destination: "", date: "" });
-    setPassengers({ adults: 1, children: 0, infants: 0 });
-    setAttempted(false);
-    setGuideStep(null);
-  }, [setTripSearch]);
+    const id = setTimeout(() => {
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("calentrip_trip_summary");
+          localStorage.removeItem("calentrip:entertainment:records");
+          localStorage.removeItem("calentrip:saved_calendar");
+          localStorage.removeItem("calentrip:open_calendar_help");
+          localStorage.removeItem("calentrip:arrivalNextDay_outbound");
+        }
+      } catch {}
+      setSame({ origin: "", destination: "", departDate: "", returnDate: "", passengers: { adults: 1, children: 0, infants: 0 } });
+      setOutbound({ origin: "", destination: "", date: "" });
+      setInbound({ origin: "", destination: "", date: "" });
+      setPassengers({ adults: 1, children: 0, infants: 0 });
+      setAttempted(false);
+      setGuideStep(null);
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
 
-  function confirm() {
+  async function confirm() {
     const filledSame = Boolean(same.origin && same.destination && same.departDate && same.returnDate);
     const filledDiff = Boolean(outbound.origin && outbound.destination && outbound.date && inbound.origin && inbound.destination && inbound.date);
     if (mode === "different" || (filledDiff && !filledSame)) {
       setTripSearch({ mode: "different", outbound: { ...outbound }, inbound: { ...inbound }, passengers });
       show("Informações confirmadas");
+      await new Promise((r) => setTimeout(r, 500));
       router.push("/flights/book");
     } else if (filledSame) {
       setTripSearch({
@@ -83,6 +86,7 @@ export default function FlightsSearchPage() {
         passengers: same.passengers,
       });
       show("Informações confirmadas");
+      await new Promise((r) => setTimeout(r, 500));
       router.push("/flights/book");
     } else {
       setAttempted(true);

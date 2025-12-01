@@ -1,8 +1,8 @@
 "use client";
 import { ReactNode, useEffect } from "react";
 import { TripProvider } from "@/lib/trip-context";
-import { SessionProvider } from "next-auth/react";
 import { I18nProvider } from "@/lib/i18n";
+import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "@/components/ui/toast";
 
 export default function Providers({ children }: { children: ReactNode }) {
@@ -34,7 +34,7 @@ export default function Providers({ children }: { children: ReactNode }) {
     };
   }, []);
   return (
-    <SessionProvider>
+    <SessionProvider basePath="/api/auth" refetchInterval={0} refetchOnWindowFocus={false}>
       <I18nProvider>
         <TripProvider>
           <ToastProvider>{children}</ToastProvider>

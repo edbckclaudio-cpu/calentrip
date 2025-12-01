@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 export type Leg = {
   origin: string;
@@ -47,20 +47,34 @@ export function TripProvider({ children }: { children: ReactNode }) {
     _setTripSearch(t);
     try {
       if (typeof window !== "undefined") {
-        if (t) localStorage.setItem("calentrip:tripSearch", JSON.stringify(t));
-        else localStorage.removeItem("calentrip:tripSearch");
+        if (t) {
+          const s = JSON.stringify(t);
+          localStorage.setItem("calentrip:tripSearch", s);
+          try { sessionStorage.setItem("calentrip:tripSearch", s); } catch {}
+        } else {
+          localStorage.removeItem("calentrip:tripSearch");
+          try { sessionStorage.removeItem("calentrip:tripSearch"); } catch {}
+        }
       }
     } catch {}
   }
 
-  if (typeof window !== "undefined") {
-    if (tripSearch === null) {
-      try {
-        const raw = localStorage.getItem("calentrip:tripSearch");
-        if (raw) _setTripSearch(JSON.parse(raw));
-      } catch {}
-    }
-  }
+  useEffect(() => {
+    if (tripSearch !== null) return;
+    let id: number | undefined;
+    try {
+      if (typeof window !== "undefined") {
+        const rawS = sessionStorage.getItem("calentrip:tripSearch");
+        const rawL = !rawS ? localStorage.getItem("calentrip:tripSearch") : null;
+        const raw = rawS || rawL;
+        if (raw) {
+          const obj = JSON.parse(raw);
+          id = window.setTimeout(() => _setTripSearch(obj), 0);
+        }
+      }
+    } catch {}
+    return () => { if (id) { try { clearTimeout(id); } catch {} } };
+  }, [tripSearch]);
 
   return <TripContext.Provider value={{ tripSearch, setTripSearch }}>{children}</TripContext.Provider>;
 }

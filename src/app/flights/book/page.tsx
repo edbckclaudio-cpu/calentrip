@@ -41,11 +41,13 @@ function buildLinksSame(
   const kayak = `https://www.kayak.com/flights/${origin}-${destination}/${depart}/${destination}-${origin}/${ret}?adults=${adults}&children=${children}&infants=${infants}`;
   const booking = `https://www.booking.com/flights/${origin}-${destination}/${depart}?return=${ret}&adults=${adults}`;
   const viajanet = `https://www.viajanet.com.br/busca?origin=${origin}&destination=${destination}&depart=${depart}&ret=${ret}&adults=${adults}&children=${children}&infants=${infants}`;
+  const skyscannerDate = (d: string) => d.replace(/-/g, "");
+  const sky = `https://www.skyscanner.com.br/transporte/voos/${origin}/${destination}/${skyscannerDate(depart)}/${skyscannerDate(ret)}/?adults=${adults}&children=${children}&infants=${infants}`;
   return [
     { name: "Google Flights", href: google },
     { name: "Kayak", href: kayak },
     { name: "Booking", href: booking },
-    { name: "Viajanet", href: viajanet },
+    { name: "Skyscanner", href: sky },
   ];
 }
 
@@ -66,56 +68,17 @@ function buildLinksOne(
   const google = `https://${gDomain}/travel/flights?q=${q}&d=${depart}&cabin=ECONOMY&time=any&adults=${adults}`;
   const kayak = `https://www.kayak.com/flights/${origin}-${destination}/${depart}?adults=${adults}&children=${children}&infants=${infants}`;
   const booking = `https://www.booking.com/flights/${origin}-${destination}/${depart}?adults=${adults}`;
-  const viajanet = `https://www.viajanet.com.br/busca?origin=${origin}&destination=${destination}&depart=${depart}&adults=${adults}&children=${children}&infants=${infants}`;
+  const skyscannerDate = (d: string) => d.replace(/-/g, "");
+  const sky = `https://www.skyscanner.com.br/transporte/voos/${origin}/${destination}/${skyscannerDate(depart)}/?adults=${adults}&children=${children}&infants=${infants}`;
   return [
     { name: "Google Flights", href: google },
     { name: "Kayak", href: kayak },
     { name: "Booking", href: booking },
-    { name: "Viajanet", href: viajanet },
+    { name: "Skyscanner", href: sky },
   ];
 }
 
-function airlinesForCountries(a?: string, b?: string) {
-  const byCountry: Record<string, { name: string; base: string }[]> = {
-    Brazil: [
-      { name: "LATAM", base: "https://www.latamairlines.com" },
-      { name: "GOL", base: "https://www.voegol.com.br" },
-      { name: "Azul", base: "https://www.voeazul.com.br" },
-      { name: "TAP Air Portugal", base: "https://www.flytap.com" },
-    ],
-    Spain: [
-      { name: "Iberia", base: "https://www.iberia.com" },
-      { name: "Air Europa", base: "https://www.aireuropa.com" },
-      { name: "Vueling", base: "https://www.vueling.com" },
-    ],
-    UnitedKingdom: [
-      { name: "British Airways", base: "https://www.britishairways.com" },
-      { name: "Virgin Atlantic", base: "https://www.virginatlantic.com" },
-    ],
-    UnitedStates: [
-      { name: "Delta", base: "https://www.delta.com" },
-      { name: "American Airlines", base: "https://www.aa.com" },
-      { name: "United", base: "https://www.united.com" },
-    ],
-    France: [{ name: "Air France", base: "https://www.airfrance.com" }],
-    Portugal: [{ name: "TAP Air Portugal", base: "https://www.flytap.com" }],
-    Italy: [{ name: "ITA Airways", base: "https://www.ita-airways.com" }],
-    Germany: [{ name: "Lufthansa", base: "https://www.lufthansa.com" }],
-    Netherlands: [{ name: "KLM", base: "https://www.klm.com" }],
-    Turkey: [{ name: "Turkish Airlines", base: "https://www.turkishairlines.com" }],
-    UAE: [{ name: "Emirates", base: "https://www.emirates.com" }],
-    Qatar: [{ name: "Qatar Airways", base: "https://www.qatarairways.com" }],
-  };
-  const key = (s?: string) => (s ?? "").replace(/\s+/g, "");
-  const list = [...(byCountry[key(a)] ?? []), ...(byCountry[key(b)] ?? [])];
-  const seen = new Set<string>();
-  return list.filter((x) => {
-    const k = x.name.toLowerCase();
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-}
+ 
 
 function addQuery(base: string, origin: string, destination: string, depart: string, ret: string, adults: number) {
   const q = new URLSearchParams({ origin, destination, departureDate: depart, returnDate: ret, adults: String(adults) });
@@ -124,10 +87,12 @@ function addQuery(base: string, origin: string, destination: string, depart: str
 }
 
 export default function BookFlightsPage() {
-  const { tripSearch } = useTrip();
+  const { tripSearch, setTripSearch } = useTrip();
   const router = useRouter();
   const { t } = useI18n();
   const { show } = useToast();
+  const [hydrated, setHydrated] = useState(false);
+  const [loadingTrip, setLoadingTrip] = useState(true);
   const [guide, setGuide] = useState<"aggregators" | "notes" | null>("aggregators");
   const [countries, setCountries] = useState<{ origin?: string; destination?: string; originIn?: string; destinationIn?: string; userRegion?: string }>({});
   const [noteOpen, setNoteOpen] = useState(false);
@@ -183,6 +148,33 @@ export default function BookFlightsPage() {
     };
   }, [countries.destination]);
 
+  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => {
+    let stopped = false;
+    const tryOnce = () => {
+      try {
+        if (typeof window === "undefined") return false;
+        const rawS = sessionStorage.getItem("calentrip:tripSearch");
+        const rawL = !rawS ? localStorage.getItem("calentrip:tripSearch") : null;
+        const raw = rawS || rawL;
+        if (raw) { setTripSearch(JSON.parse(raw)); return true; }
+      } catch {}
+      return false;
+    };
+    if (!tripSearch) {
+      if (tryOnce()) { setLoadingTrip(false); return; }
+      let tries = 0;
+      const id = setInterval(() => {
+        if (stopped) { clearInterval(id); return; }
+        tries++;
+        if (tryOnce() || tries >= 8) { clearInterval(id); setLoadingTrip(false); }
+      }, 100);
+      return () => { stopped = true; try { clearInterval(id); } catch {} };
+    } else {
+      setLoadingTrip(false);
+    }
+  }, [tripSearch, setTripSearch]);
+
   const data = useMemo(() => {
     if (!tripSearch) return null;
     if (tripSearch.mode !== "same") return null;
@@ -196,7 +188,7 @@ export default function BookFlightsPage() {
     return { pax: totalPassengers(tripSearch.passengers), links };
   }, [tripSearch]);
 
-  const missing = !tripSearch;
+  const missing = hydrated && !loadingTrip && !tripSearch;
 
   useEffect(() => {
     (async () => {
@@ -219,56 +211,8 @@ export default function BookFlightsPage() {
     })();
   }, [tripSearch]);
 
-  const airlinesSame = useMemo(() => {
-    if (!tripSearch || tripSearch.mode !== "same") return [] as { name: string; href: string }[];
-    let list = airlinesForCountries(countries.origin, countries.destination);
-    if (!list.length && countries.userRegion === "BR") list = airlinesForCountries("Brazil", undefined);
-    const depart = tripSearch.departDate;
-    const ret = tripSearch.returnDate;
-    const pax = totalPassengers(tripSearch.passengers);
-    return list.map((a) => ({ name: a.name, href: addQuery(a.base, tripSearch.origin, tripSearch.destination, depart, ret, pax) }));
-  }, [countries, tripSearch]);
-
-  const airlinesOut = useMemo(() => {
-    if (!tripSearch || tripSearch.mode !== "different") return [] as { name: string; href: string }[];
-    let list = airlinesForCountries(countries.origin, countries.destination);
-    if (!list.length && countries.userRegion === "BR") list = airlinesForCountries("Brazil", undefined);
-    const depart = tripSearch.outbound.date;
-    const pax = totalPassengers(tripSearch.passengers);
-    return list.map((a) => ({ name: a.name, href: addQuery(a.base, tripSearch.outbound.origin, tripSearch.outbound.destination, depart, depart, pax) }));
-  }, [countries, tripSearch]);
-
-  const airlinesIn = useMemo(() => {
-    if (!tripSearch || tripSearch.mode !== "different") return [] as { name: string; href: string }[];
-    let list = airlinesForCountries(countries.originIn, countries.destinationIn);
-    if (!list.length && countries.userRegion === "BR") list = airlinesForCountries("Brazil", undefined);
-    const depart = tripSearch.inbound.date;
-    const pax = totalPassengers(tripSearch.passengers);
-    return list.map((a) => ({ name: a.name, href: addQuery(a.base, tripSearch.inbound.origin, tripSearch.inbound.destination, depart, depart, pax) }));
-  }, [countries, tripSearch]);
-
-  if (!tripSearch) {
-    return (
-      <div className="min-h-screen px-4 py-6">
-        <div className="container-page">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <span className="material-symbols-outlined text-base">flight</span>
-                <span>{t("bookFlightsTitle")}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-zinc-600">{t("noTrips")}</div>
-                <Button type="button" onClick={() => router.push("/flights/search")}>{t("searchFlights")}</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  
+  
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
@@ -286,12 +230,14 @@ export default function BookFlightsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-[11px] py-2">
-            {missing ? (
+            {!hydrated || loadingTrip ? (
+              <div className="text-sm text-zinc-600">Carregando busca…</div>
+            ) : missing ? (
               <div className="flex items-center justify-between">
                 <div className="text-sm text-zinc-600">{t("noTrips")}</div>
                 <Button type="button" onClick={() => router.push("/flights/search")}>{t("searchFlights")}</Button>
               </div>
-            ) : tripSearch.mode === "same" ? (
+            ) : (!missing && tripSearch?.mode === "same") ? (
               <Table className="w-full border-collapse text-[11px]">
                 <TableHeader>
                   <TableRow>
@@ -303,14 +249,14 @@ export default function BookFlightsPage() {
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="p-0.5">{tripSearch.origin}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch.destination}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch.departDate} → {tripSearch.returnDate}</TableCell>
-                    <TableCell className="p-0.5">{totalPassengers(tripSearch.passengers)}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.origin}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.destination}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.departDate} → {tripSearch!.returnDate}</TableCell>
+                    <TableCell className="p-0.5">{totalPassengers(tripSearch!.passengers)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
-            ) : (
+            ) : (!missing && tripSearch) ? (
               <Table className="w-full border-collapse text-[11px]">
                 <TableHeader>
                   <TableRow>
@@ -322,20 +268,20 @@ export default function BookFlightsPage() {
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="p-0.5">{tripSearch.outbound.origin}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch.outbound.destination}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch.outbound.date}</TableCell>
-                    <TableCell className="p-0.5">{totalPassengers(tripSearch.passengers)}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.outbound.origin}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.outbound.destination}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.outbound.date}</TableCell>
+                    <TableCell className="p-0.5">{totalPassengers(tripSearch!.passengers)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="p-0.5">{tripSearch.inbound.origin}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch.inbound.destination}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch.inbound.date}</TableCell>
-                    <TableCell className="p-0.5">{totalPassengers(tripSearch.passengers)}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.inbound.origin}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.inbound.destination}</TableCell>
+                    <TableCell className="p-0.5">{tripSearch!.inbound.date}</TableCell>
+                    <TableCell className="p-0.5">{totalPassengers(tripSearch!.passengers)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
-            )}
+            ) : null}
             <div className="mt-4 flex justify-end">
               <Button
                 type="button"
@@ -350,7 +296,7 @@ export default function BookFlightsPage() {
         </div>
       </div>
 
-      <div className="container-page grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="container-page">
         <Card className={guide === "aggregators" ? "ring-4 ring-amber-500 pulse-ring" : undefined}>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -462,59 +408,6 @@ export default function BookFlightsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-base">flight</span>
-              <span>{t("bookAirlinesSuggested")}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tripSearch && tripSearch.mode === "same" ? (
-              <ul className="space-y-2">
-                {airlinesSame.map((a) => (
-                  <li key={`same-${a.name}`}>
-                    <Link className="underline" href={a.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${a.name}`)}>
-                      {a.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
-                    <div className="mb-2 text-sm font-semibold">{ts.outbound.origin}/{ts.outbound.destination}</div>
-                  ); })()}
-                  <ul className="space-y-2">
-                    {airlinesOut.map((a) => (
-                      <li key={`out-${a.name}`}>
-                        <Link className="underline" href={a.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${a.name}`)}>
-                          {a.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
-                    <div className="mb-2 text-sm font-semibold">{ts.inbound.origin}/{ts.inbound.destination}</div>
-                  ); })()}
-                  <ul className="space-y-2">
-                    {airlinesIn.map((a) => (
-                      <li key={`in-${a.name}`}>
-                        <Link className="underline" href={a.href} target="_blank" rel="noopener noreferrer" onClick={() => show(`Abrindo ${a.name}`)}>
-                          {a.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-            <p className="mt-2 text-xs text-zinc-500">{t("bookAirlinesNote")}</p>
-          </CardContent>
-        </Card>
       </div>
       <div className="container-page">
         <Card>
@@ -522,7 +415,9 @@ export default function BookFlightsPage() {
             <CardTitle>{t("flightNotesTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {!tripSearch ? (
+            {!hydrated ? (
+              <div className="text-sm text-zinc-600">Carregando busca…</div>
+            ) : !tripSearch ? (
               <div className="flex items-center justify-between">
                 <div className="text-sm text-zinc-600">{t("noTrips")}</div>
                 <Button type="button" onClick={() => router.push("/flights/search")}>{t("searchFlights")}</Button>
