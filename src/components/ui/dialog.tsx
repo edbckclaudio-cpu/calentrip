@@ -2,7 +2,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-export function Dialog({ open, onOpenChange, children, placement = "center" }: { open: boolean; onOpenChange: (o: boolean) => void; children: ReactNode; placement?: "center" | "bottom" | "left" }) {
+export function Dialog({ open, onOpenChange, children, placement = "center", disableBackdropClose = false }: { open: boolean; onOpenChange: (o: boolean) => void; children: ReactNode; placement?: "center" | "bottom" | "left"; disableBackdropClose?: boolean }) {
   const [entered, setEntered] = useState(false);
   useEffect(() => {
     if (!open) return;
@@ -13,7 +13,7 @@ export function Dialog({ open, onOpenChange, children, placement = "center" }: {
 
   const container = (
     <div className="fixed inset-0 z-[1000]">
-      <div className="absolute inset-0 bg-black/40" onClick={() => onOpenChange(false)} />
+      <div className="absolute inset-0 bg-black/40" onClick={() => { if (!disableBackdropClose) onOpenChange(false); }} />
       {placement === "left" ? (
         <div
           role="dialog"

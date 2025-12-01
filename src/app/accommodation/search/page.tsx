@@ -54,6 +54,12 @@ export default function AccommodationSearchPage() {
   const [diffCityCountHighlight, setDiffCityCountHighlight] = useState(false);
   const [diffCheckHighlight, setDiffCheckHighlight] = useState(false);
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
+  const summaryComplete = useMemo(() => {
+    if (!cities.length) return false;
+    const allStays = cities.every((c) => Boolean(c.name && c.address && c.checked));
+    const allTransports = cities.length <= 1 || cities.slice(0, -1).every((c) => Boolean(c.transportToNext));
+    return allStays && allTransports;
+  }, [cities]);
   useEffect(() => {
     try {
       const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 480px)").matches;
@@ -912,22 +918,36 @@ export default function AccommodationSearchPage() {
             </div>
           </div>
         </Dialog>
-        <Card>
+          <Card className={summaryComplete ? "border-2 border-[#34c759]" : undefined}>
           <CardHeader>
-            <CardTitle>Resumo de hospedagens e transportes</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <span>Resumo de hospedagens e transportes</span>
+              {summaryComplete ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700">
+                  <span className="material-symbols-outlined text-[14px]">task_alt</span>
+                  Reservado
+                </span>
+              ) : null}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div ref={summaryRef} className={summaryHighlight ? "ring-4 ring-amber-500 animate-pulse rounded-lg" : undefined}>
+            <div ref={summaryRef} className={(summaryHighlight ? "ring-4 ring-amber-500 animate-pulse " : "") + "rounded-lg"}>
               <ul className="space-y-2 text-sm p-3">
                 {cities.map((c, i) => (
-                  <li key={`stay-${i}`}>
-                    Hospedagem: {c.name || `Cidade ${i + 1}`} • {c.checkin || "—"} → {c.checkout || "—"} • {c.address || "(endereço não informado)"}
+                  <li key={`stay-${i}`} className={c.checked && c.address ? "rounded border border-green-200 bg-green-50 p-2" : undefined}>
+                    <span className="inline-flex items-center gap-1">
+                      {c.checked && c.address ? <span className="material-symbols-outlined text-[16px] text-green-700">task_alt</span> : null}
+                      <span>Hospedagem: {c.name || `Cidade ${i + 1}`} • {c.checkin || "—"} → {c.checkout || "—"} • {c.address || "(endereço não informado)"}</span>
+                    </span>
                   </li>
                 ))}
                 {cities.map((c, i) => (
-                  i < cities.length - 1 && c.transportToNext ? (
-                    <li key={`tr-${i}`}>
-                      Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext.mode || "").toUpperCase()} • {c.transportToNext.depTime || "—"} → {c.transportToNext.arrTime || "—"} • Anexos: {(c.transportToNext.files || []).length}
+                  i < cities.length - 1 ? (
+                    <li key={`tr-${i}`} className={c.transportToNext ? "rounded border border-green-200 bg-green-50 p-2" : undefined}>
+                      <span className="inline-flex items-center gap-1">
+                        {c.transportToNext ? <span className="material-symbols-outlined text-[16px] text-green-700">task_alt</span> : null}
+                        <span>Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext?.mode || "").toUpperCase()} • {c.transportToNext?.depTime || "—"} → {c.transportToNext?.arrTime || "—"} • Anexos: {(c.transportToNext?.files || []).length}</span>
+                      </span>
                     </li>
                   ) : null
                 ))}

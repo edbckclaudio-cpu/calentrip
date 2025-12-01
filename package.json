@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "cap:copy": "npx cap copy android",
     "cap:open": "npx cap open android",
     "cap:update": "npx cap update android",

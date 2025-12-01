@@ -1,0 +1,9 @@
+node_modules/
+android/
+.next/
+out/
+build/
+dist/
+coverage/
+**/build/**
+**/dist/**
