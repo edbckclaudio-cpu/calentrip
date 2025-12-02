@@ -1465,8 +1465,8 @@ export default function FinalCalendarPage() {
             const tzHeader = (() => {
               try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"; } catch { return "Etc/UTC"; }
             })();
-            lines.push(`X-WR-TIMEZONE:${tzHeader}`);
-            {
+            if (!/Android/.test(typeof navigator !== "undefined" ? navigator.userAgent || "" : "")) {
+              lines.push(`X-WR-TIMEZONE:${tzHeader}`);
               const mins = -new Date().getTimezoneOffset();
               const sign = mins >= 0 ? "+" : "-";
               const abs = Math.abs(mins);
@@ -1533,7 +1533,8 @@ export default function FinalCalendarPage() {
               lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
               if (start) lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
               if (end) lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
-              lines.push(`SUMMARY:${escText(e.label)}`);
+              const title = isAndroid ? limit(e.label, 64) : limit(e.label, 120);
+              lines.push(`SUMMARY:${escText(title)}`);
               let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
               if (e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
                 const extra = returnDetails;
@@ -1547,18 +1548,28 @@ export default function FinalCalendarPage() {
                 if (extra?.trainMin) modes.push(`Trem/Metro: ${extra.trainMin} min (estimado)`);
                 if (extra?.drivingMin !== undefined) modes.push(`Uber/Táxi: ${extra.drivingMin} min${extra.priceEstimate !== undefined ? ` • R$${extra.priceEstimate}` : ""}`);
                 if (modes.length) info.push(modes.join(" | "));
-                if (extra?.gmapsUrl) info.push(`Google Maps: ${extra.gmapsUrl}`);
-                if (extra?.uberUrl) info.push(`Uber: ${extra.uberUrl}`);
+                const gmaps = extra?.gmapsUrl || null;
+                const uber = extra?.uberUrl || null;
+                if (!isAndroid) {
+                  if (gmaps) info.push(`Google Maps: ${gmaps}`);
+                  if (uber) info.push(`Uber: ${uber}`);
+                }
                 if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
                 if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
-                lines.push(`DESCRIPTION:${escText(limit(info.join("\n"), 480))}`);
+                const descBody = isAndroid ? limit(info.join("\n"), 240) : limit(info.join("\n"), 480);
+                lines.push(`DESCRIPTION:${escText(descBody)}`);
+                if (isAndroid) {
+                  const urlPref = gmaps || uber;
+                  if (urlPref) lines.push(`URL:${foldLine(escText(urlPref))}`);
+                }
                 if (extra?.callAtISO) {
                   const callAt = new Date(extra.callAtISO);
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
                   extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
                 }
               } else {
-                lines.push(`DESCRIPTION:${escText(limit(desc, 280))}`);
+                const baseDesc = isAndroid ? limit(desc, 160) : limit(desc, 280);
+                lines.push(`DESCRIPTION:${escText(baseDesc)}`);
               }
               lines.push("END:VEVENT");
               if (extraCall) {
@@ -1572,8 +1583,8 @@ export default function FinalCalendarPage() {
                 lines.push(`SUMMARY:Chamar Uber`);
                 const descParts = [`Chamar Uber às: ${callTime}`];
                 if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
-                if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
-                lines.push(`DESCRIPTION:${descParts.join("\\n")}`);
+                if (gmapsUrl && !isAndroid) descParts.push(`Google Maps: ${gmapsUrl}`);
+                lines.push(`DESCRIPTION:${escText(isAndroid ? limit(descParts.join("\n"), 160) : descParts.join("\\n"))}`);
                 // VALARM removido para compatibilidade com apps móveis
                 lines.push("END:VEVENT");
               }
