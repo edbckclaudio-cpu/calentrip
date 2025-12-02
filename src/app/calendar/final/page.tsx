@@ -670,7 +670,55 @@ export default function FinalCalendarPage() {
           lines.push("END:VEVENT");
         }
       } else {
-        lines.push(`DESCRIPTION:${desc}`);
+        const info: string[] = [];
+        info.push(desc);
+        if (e.type === "flight") {
+          const fn = e.meta as FlightNote | undefined;
+          if (fn?.leg === "outbound") {
+            const destName = `${fn?.origin || ""} airport`;
+            const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
+            const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
+            const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+            info.push(`Destino: ${destName}`);
+            info.push(`Google Maps: ${gmaps}`);
+            info.push(`Rome2Rio: ${r2r}`);
+            info.push(`Uber: ${uber}`);
+            info.push(`Chegar no aeroporto: 3h antes do voo.`);
+          }
+        } else if (e.type === "transport") {
+          const seg = e.meta as TransportSegmentMeta;
+          const originAddr = (seg?.originAddress || "").trim();
+          const depPoint = (seg?.dep || "").trim();
+          if (originAddr || depPoint) {
+            const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
+            const r2r = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+            const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+            info.push(`Origem: ${originAddr || "—"}`);
+            info.push(`Destino: ${depPoint || "—"}`);
+            info.push(`Google Maps: ${gmaps}`);
+            info.push(`Rome2Rio: ${r2r}`);
+            info.push(`Uber: ${uber}`);
+          }
+        } else if (e.type === "stay") {
+          const m = e.meta as { city?: string; address?: string; kind?: string } | undefined;
+          if (m?.kind === "checkin") {
+            const q = (m.address || m.city || "").trim();
+            const gmaps = q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : "";
+            const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+            info.push(`Destino: ${q || "—"}`);
+            if (gmaps) info.push(`Google Maps: ${gmaps}`);
+            info.push(`Uber: ${uber}`);
+          }
+        } else if (e.type === "activity" || e.type === "restaurant") {
+          const rec = e.meta as RecordItem;
+          const query = `${rec?.title || ""} ${rec?.cityName || ""}`.trim();
+          const gmaps = query ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}` : "";
+          const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+          info.push(`Destino: ${query || "—"}`);
+          if (gmaps) info.push(`Google Maps: ${gmaps}`);
+          info.push(`Uber: ${uber}`);
+        }
+        lines.push(`DESCRIPTION:${info.join("\\n")}`);
       }
       lines.push("END:VEVENT");
     });
