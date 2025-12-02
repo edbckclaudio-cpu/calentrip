@@ -264,7 +264,7 @@ export default function MonthCalendarPage() {
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário da viagem</h1>
         <div className="text-sm text-zinc-700 dark:text-zinc-300">{monthLabel}</div>
         <div className="mt-3 rounded-lg border border-[#007AFF]/30 bg-[#007AFF]/10 p-3 text-sm">
-          Para receber notificações antes de cada evento, salve esta viagem no calendário do seu dispositivo.
+          Para receber notificações antes de cada evento, salve esta viagem no google calendar no seu dispositivo.
           Use o botão abaixo. O mesmo botão está disponível no menu.
           <div className="mt-2">
             <Button
@@ -301,7 +301,7 @@ export default function MonthCalendarPage() {
                 } catch { show("Erro ao salvar", { variant: "error" }); }
               }}
             >
-              Salvar viagem no calendário
+              Salvar no google calendar
             </Button>
           </div>
         </div>

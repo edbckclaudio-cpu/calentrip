@@ -154,6 +154,28 @@ export default function FinalCalendarPage() {
     return sig;
   }, [events]);
 
+  function openGoogleCalendarInstall() {
+    try {
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+      const isAndroid = /Android/.test(ua);
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
+      const urlAndroidMarket = "market://details?id=com.google.android.calendar";
+      const urlAndroidWeb = "https://play.google.com/store/apps/details?id=com.google.android.calendar";
+      const urlIOS = "https://apps.apple.com/app/google-calendar/id909319292";
+      if (isAndroid) {
+        try { window.location.href = urlAndroidMarket; } catch {}
+        setTimeout(() => { try { window.open(urlAndroidWeb, "_blank"); } catch {} }, 600);
+        show("Abrindo Google Calendar na Play Store", { variant: "info" });
+      } else if (isIOS) {
+        try { window.open(urlIOS, "_blank"); } catch {}
+        show("Abrindo Google Calendar na App Store", { variant: "info" });
+      } else {
+        try { window.open(urlAndroidWeb, "_blank"); } catch {}
+        show("Abrindo Google Calendar na loja", { variant: "info" });
+      }
+    } catch {}
+  }
+
   async function saveCalendar() {
     function fmtICS(d: Date) {
       const y = String(d.getFullYear());
@@ -310,16 +332,23 @@ export default function FinalCalendarPage() {
     const file = new File([blob], "calentrip.ics", { type: "text/calendar" });
     try {
       const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+      const isAndroid = /Android/.test(ua);
       const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
+      if (isAndroid) {
+        try {
+          const intent = "intent://calendar.google.com/calendar/r#Intent;scheme=https;package=com.google.android.calendar;end";
+          window.location.href = intent;
+          setTimeout(() => { try { /* fallback: Play Store */ window.location.href = "market://details?id=com.google.android.calendar"; } catch {} }, 500);
+        } catch {}
+      }
       if (canShareFiles && typeof nav.share === "function") {
         await nav.share({ files: [file], title: "CalenTrip" });
-        const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
         const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
-        const isAndroid = /Android/.test(ua);
         if (isIOS) {
           show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
         } else if (isAndroid) {
-          show("Calendário enviado. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+          show("Calendário enviado. Escolha Google Calendar e confirme 'Salvar/Adicionar'.", { variant: "success" });
         } else {
           show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
         }
@@ -1172,6 +1201,32 @@ export default function FinalCalendarPage() {
           <button type="button" className="rounded-md p-2" onClick={() => setSideOpen((v) => !v)}>
             <span className="material-symbols-outlined text-[24px]">menu</span>
           </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+            try {
+              const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+              const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
+              const isAndroid = /Android/.test(ua);
+              const urlAndroidMarket = "market://details?id=com.google.android.calendar";
+              const urlAndroidWeb = "https://play.google.com/store/apps/details?id=com.google.android.calendar";
+              const urlIOS = "https://apps.apple.com/app/google-calendar/id909319292";
+              if (isAndroid) {
+                try { window.location.href = urlAndroidMarket; } catch {}
+                setTimeout(() => { try { window.open(urlAndroidWeb, "_blank"); } catch {} }, 600);
+                show("Abrindo Google Calendar na Play Store", { variant: "info" });
+              } else if (isIOS) {
+                try { window.open(urlIOS, "_blank"); } catch {}
+                show("Abrindo Google Calendar na App Store", { variant: "info" });
+              } else {
+                try { window.open(urlAndroidWeb, "_blank"); } catch {}
+                show("Abrindo Google Calendar na loja", { variant: "info" });
+              }
+            } catch {}
+          }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px]">download</span>
+            </span>
+            {sideOpen ? <span className="text-sm font-medium">Instalar Google Calendar</span> : null}
+          </button>
         </div>
         <div className="p-2 space-y-2">
           <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2">
@@ -1702,7 +1757,7 @@ export default function FinalCalendarPage() {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">Salvar no calendário do dispositivo</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Salvar no google calendar</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -1721,9 +1776,20 @@ export default function FinalCalendarPage() {
       </div>
 
       <div className="container-page">
+        {(() => { const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : ""; const isAndroid = /Android/.test(ua); return isAndroid; })() ? (
+          <div className="mb-3 rounded-lg border border-[#34c759]/30 bg-[#34c759]/10 p-3 text-sm">
+            Detectamos Android. Para evitar falhas ao salvar vários eventos, recomendamos usar o Google Calendar.
+            Toque em “Instalar Google Calendar” antes de “Salvar no google calendar”.
+            <div className="mt-2">
+              <Button type="button" variant="outline" onClick={() => { try { openGoogleCalendarInstall(); } catch {} }}>
+                Instalar Google Calendar
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <div className="mb-3 rounded-lg border border-[#007AFF]/30 bg-[#007AFF]/10 p-3 text-sm">
-          Para receber notificações antes de cada evento, salve esta viagem no calendário do seu dispositivo.
-          Use o botão abaixo. O mesmo botão está disponível no menu.
+          Para receber notificações antes de cada evento, salve esta viagem no google calendar no seu dispositivo.
+          Use o botão abaixo. O mesmo está disponível no menu.
           <div className="mt-2">
             <Button type="button" variant="outline" onClick={() => {
               try {
@@ -1754,7 +1820,7 @@ export default function FinalCalendarPage() {
               } catch { show("Erro ao salvar", { variant: "error" }); }
               setCalendarHelpOpen(true);
             }}>
-              Salvar viagem no calendário
+              Salvar no google calendar
             </Button>
           </div>
         </div>
@@ -1833,14 +1899,14 @@ export default function FinalCalendarPage() {
       </div>
 
       <Dialog open={calendarHelpOpen} onOpenChange={setCalendarHelpOpen} placement="bottom" disableBackdropClose>
-        <DialogHeader>Salvar no calendário do dispositivo</DialogHeader>
+        <DialogHeader>Salvar no google calendar</DialogHeader>
         <div className="space-y-2 text-sm">
           <div className="font-semibold">Android</div>
-          <div>• Toque em “Salvar no calendário do dispositivo”.</div>
-          <div>• Abra o .ics com o app “Calendário” (Google Calendar).</div>
-          <div>• Selecione o calendário (conta) e confirme “Salvar/Adicionar”.</div>
+          <div>• Verificamos o Google Calendar. Se não estiver instalado, abrimos a Play Store para instalar.</div>
+          <div>• Em seguida, geramos o arquivo .ics e abrimos o compartilhamento para carregar no Google Calendar.</div>
+          <div>• Escolha a conta e confirme em “Salvar/Adicionar”.</div>
           <div className="mt-3">
-            <Button type="button" onClick={() => { try { saveCalendar(); } catch {} }}>Salvar no calendário do dispositivo</Button>
+            <Button type="button" onClick={() => { try { saveCalendar(); } catch {} }}>Salvar no google calendar</Button>
           </div>
         </div>
         <DialogFooter>
