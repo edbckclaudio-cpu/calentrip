@@ -10,15 +10,22 @@ import { useTrip } from "@/lib/trip-context";
 import { findAirportByIata } from "@/lib/airports";
 
 export default function GlobalSidebar() {
+  type SavedCalendar = { name: string; events: Array<{ date: string; time?: string; label: string; type?: string; meta?: unknown }>; savedAt?: string };
   const [sideOpen, setSideOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [savedTrips, setSavedTrips] = useState<TripItem[]>([]);
+  const [savedCalendars, setSavedCalendars] = useState<SavedCalendar[]>([]);
   const { data: session, status } = useSession();
   const { lang, t } = useI18n();
   const { tripSearch, setTripSearch } = useTrip();
 
   function openSaved() {
     try { setSavedTrips(getTrips().filter((t) => t.reachedFinalCalendar)); } catch { setSavedTrips([]); }
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+      const list = raw ? (JSON.parse(raw) as SavedCalendar[]) : [];
+      setSavedCalendars(list);
+    } catch { setSavedCalendars([]); }
     setSavedOpen(true);
   }
 
@@ -114,9 +121,7 @@ export default function GlobalSidebar() {
                 if (typeof window !== "undefined") {
                   localStorage.removeItem("calentrip_trip_summary");
                   localStorage.removeItem("calentrip:entertainment:records");
-                  localStorage.removeItem("calentrip:saved_calendar");
                   localStorage.removeItem("calentrip:tripSearch");
-                  localStorage.removeItem("calentrip:trips");
                   localStorage.removeItem("calentrip:arrivalNextDay_outbound");
                   localStorage.removeItem("calentrip:arrivalNextDay_inbound");
                 }
@@ -143,37 +148,66 @@ export default function GlobalSidebar() {
       ) : null}
 
       <Dialog open={savedOpen} onOpenChange={setSavedOpen} placement="bottom">
-        <DialogHeader>Pesquisas salvas</DialogHeader>
-        <div className="p-4 md:p-6 space-y-4 text-sm max-h-[70vh] overflow-y-auto">
-          {savedTrips.length === 0 ? (
-            <div className="text-zinc-600">Nenhuma viagem salva.</div>
-          ) : (
-            <ul className="space-y-2">
-              {savedTrips.map((it) => (
-                <li key={it.id} className="flex items-center justify-between gap-3 rounded border p-2">
-                  <div>
-                    <div className="text-sm font-medium">{it.title}</div>
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400">{it.date} • {it.passengers} pax</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => {
+      <DialogHeader>Pesquisas salvas</DialogHeader>
+      <div className="p-4 md:p-6 space-y-4 text-sm max-h-[70vh] overflow-y-auto">
+          <div className="rounded border p-3">
+            <div className="font-semibold mb-1">Calendários salvos</div>
+            {savedCalendars.length ? (
+              <ul className="space-y-2">
+                {savedCalendars.map((c, idx) => (
+                  <li key={`${c.name}-${idx}`} className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-medium">{c.name}</div>
+                      <div className="text-xs text-zinc-600">{(c.events || []).length} eventos</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Carregar</Button>
+                      <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
+                        try {
+                          const ok1 = confirm(`Deseja excluir o calendário \"${c.name}\"?`);
+                          if (!ok1) return;
+                          const ok2 = confirm("Tem certeza? Esta ação não pode ser desfeita.");
+                          if (!ok2) return;
+                          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+                          const list = raw ? (JSON.parse(raw) as SavedCalendar[]) : [];
+                          const next = list.filter((x) => (x?.name || "") !== (c?.name || ""));
+                          localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(next));
+                          setSavedCalendars(next);
+                        } catch {}
+                      }}>Excluir</Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-zinc-600">Nenhum calendário salvo.</div>
+            )}
+          </div>
+          <div className="rounded border p-3">
+            <div className="font-semibold mb-1">Pesquisas salvas</div>
+            {savedTrips.length === 0 ? (
+              <div className="text-zinc-600">Nenhuma viagem salva.</div>
+            ) : (
+              <ul className="space-y-2">
+                {savedTrips.map((it) => (
+                  <li key={it.id} className="flex items-center justify-between gap-3 rounded border p-2">
+                    <div>
+                      <div className="text-sm font-medium">{it.title}</div>
+                      <div className="text-xs text-zinc-600 dark:text-zinc-400">{it.date} • {it.passengers} pax</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
+                      <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
+                      <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
                         try { removeTrip(it.id); } catch {}
                         try { setSavedTrips(getTrips().filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
-                      }}
-                    >
-                      Apagar
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                      }}>Apagar</Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" onClick={() => setSavedOpen(false)}>Fechar</Button>
           </DialogFooter>

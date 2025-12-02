@@ -1620,9 +1620,7 @@ export default function FinalCalendarPage() {
                 if (typeof window !== "undefined") {
                   localStorage.removeItem("calentrip_trip_summary");
                   localStorage.removeItem("calentrip:entertainment:records");
-                  localStorage.removeItem("calentrip:saved_calendar");
                   localStorage.removeItem("calentrip:tripSearch");
-                  localStorage.removeItem("calentrip:trips");
                   localStorage.removeItem("calentrip:arrivalNextDay_outbound");
                   localStorage.removeItem("calentrip:arrivalNextDay_inbound");
                 }
