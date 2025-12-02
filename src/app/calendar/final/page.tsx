@@ -149,6 +149,16 @@ export default function FinalCalendarPage() {
 
   useEffect(() => {
     try {
+      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_files_drawer") : null;
+      if (flag === "1") {
+        localStorage.removeItem("calentrip:open_files_drawer");
+        openFilesDrawer();
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
       const auto = typeof window !== "undefined" ? localStorage.getItem("calentrip:auto_load_saved") : null;
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (auto === "1" && raw) {
