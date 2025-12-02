@@ -1459,9 +1459,11 @@ export default function FinalCalendarPage() {
             lines.push("BEGIN:VCALENDAR");
             lines.push("VERSION:2.0");
             lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
-            lines.push("CALSCALE:GREGORIAN");
-            lines.push("METHOD:PUBLISH");
-            lines.push("X-WR-CALNAME:CalenTrip");
+            if (!isAndroid) {
+              lines.push("CALSCALE:GREGORIAN");
+              lines.push("METHOD:PUBLISH");
+              lines.push("X-WR-CALNAME:CalenTrip");
+            }
             const tzHeader = (() => {
               try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"; } catch { return "Etc/UTC"; }
             })();
