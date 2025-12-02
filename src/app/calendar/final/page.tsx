@@ -1506,7 +1506,7 @@ export default function FinalCalendarPage() {
             const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
             const isAndroid = /Android/.test(ua);
             const tzidHeader = tzHeader;
-            const useTZID = isAndroid;
+            const useTZID = !isAndroid;
             const androidUltraMin = isAndroid;
 
             if (isCapAndroid()) {
