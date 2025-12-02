@@ -1517,6 +1517,7 @@ export default function FinalCalendarPage() {
             const isAndroid = /Android/.test(ua);
             const tzidHeader = tzHeader;
             const useTZID = !isAndroid;
+            const minimalICS = true;
             const androidUltraMin = isAndroid;
 
             if (isCapAndroid()) {
@@ -1551,7 +1552,7 @@ export default function FinalCalendarPage() {
               lines.push("TRANSP:OPAQUE");
               lines.push("SEQUENCE:0");
               let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
-              if (!androidUltraMin && e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
+              if (!minimalICS && !androidUltraMin && e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
                 const extra = returnDetails;
                 const info: string[] = [];
                 info.push(desc);
@@ -1582,12 +1583,12 @@ export default function FinalCalendarPage() {
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
                   extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
                 }
-              } else if (!androidUltraMin) {
+              } else if (!minimalICS && !androidUltraMin) {
                 const baseDesc = isAndroid ? limit(desc, 160) : limit(desc, 280);
                 lines.push(`DESCRIPTION:${escText(baseDesc)}`);
               }
               lines.push("END:VEVENT");
-              if (extraCall) {
+              if (!minimalICS && extraCall) {
                 const { callAt, callEnd, callTime, uberUrl, gmapsUrl } = extraCall;
                 lines.push("BEGIN:VEVENT");
                 const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
@@ -1604,7 +1605,7 @@ export default function FinalCalendarPage() {
                 lines.push("STATUS:CONFIRMED");
                 lines.push("TRANSP:OPAQUE");
                 lines.push("SEQUENCE:0");
-                if (!androidUltraMin) {
+                if (!minimalICS && !androidUltraMin) {
                   const descParts = [`Chamar Uber às: ${callTime}`];
                   if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
                   if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
