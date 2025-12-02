@@ -64,6 +64,7 @@ export default function FinalCalendarPage() {
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
   const [savedCalendar, setSavedCalendar] = useState<{ events?: EventItem[] } | null>(null);
   const [savedTripsList, setSavedTripsList] = useState<TripItem[]>([]);
+  const [savedCalendarsList, setSavedCalendarsList] = useState<Array<{ name: string; events: EventItem[]; savedAt?: string }>>([]);
   const { data: session, status } = useSession();
   const { lang } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
@@ -115,6 +116,61 @@ export default function FinalCalendarPage() {
     setLocModalOpen(true);
     return false;
   }, [locConsent]);
+
+  function saveCalendarNamed() {
+    try {
+      const rawName = typeof window !== "undefined" ? (prompt("Nome do calendário (apenas letras, até 9)") || "") : "";
+      let name = (rawName || "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
+      if (!name) {
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const ts = raw ? JSON.parse(raw) : null;
+          if (ts) {
+            const isSame = ts.mode === "same";
+            const origin = (isSame ? ts.origin : ts.outbound?.origin) || "";
+            const destination = (isSame ? ts.destination : ts.outbound?.destination) || "";
+            const fallback = `${String(origin)}${String(destination)}`.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").toUpperCase().slice(0, 9);
+            name = fallback || "CALENDAR";
+          } else {
+            name = "CALENDAR";
+          }
+        } catch { name = "CALENDAR"; }
+      }
+      const payload = { name, events };
+      if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+      try {
+        const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+        const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+        const entry = { name, events, savedAt: new Date().toISOString() };
+        const idx = list.findIndex((c) => (c?.name || "") === name);
+        if (idx >= 0) list[idx] = entry; else list.push(entry);
+        localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(list));
+      } catch {}
+      try {
+        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+        const ts = raw ? JSON.parse(raw) : null;
+        if (ts) {
+          const isSame = ts.mode === "same";
+          const origin = isSame ? ts.origin : ts.outbound?.origin;
+          const destination = isSame ? ts.destination : ts.outbound?.destination;
+          const date = isSame ? ts.departDate : ts.outbound?.date;
+          const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+          if (origin && destination && date) {
+            const title = `${origin} → ${destination}`;
+            const trips: TripItem[] = getTrips();
+            const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+            if (idx >= 0) {
+              const next = [...trips];
+              next[idx] = { ...next[idx], reachedFinalCalendar: true };
+              localStorage.setItem("calentrip:trips", JSON.stringify(next));
+            }
+          }
+        }
+      } catch {}
+      show("Salvo em pesquisas salvas", { variant: "success" });
+      return true;
+    } catch { show("Erro ao salvar", { variant: "error" }); return false; }
+  }
 
   const sorted = useMemo(() => {
     const dateOnly = (d: string) => (d || "").replace(/\//g, "-");
@@ -1532,6 +1588,11 @@ export default function FinalCalendarPage() {
               const trips = getTrips();
               setSavedTripsList(trips);
             } catch { setSavedTripsList([]); }
+            try {
+              const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+              const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+              setSavedCalendarsList(list);
+            } catch { setSavedCalendarsList([]); }
             setSavedDrawerOpen(true);
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -1628,6 +1689,10 @@ export default function FinalCalendarPage() {
             {sideOpen ? <span className="text-sm font-medium">Enviar por e-mail</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+            try {
+              const ok = saveCalendarNamed();
+              if (ok) { setCalendarHelpOpen(true); return; }
+            } catch {}
             setCalendarHelpOpen(true);
             return;
             const text = events.map((e) => `${e.date} ${e.time || ""} • ${e.label}`).join("\n");
@@ -1889,8 +1954,56 @@ export default function FinalCalendarPage() {
                   extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
                 }
               } else if (!minimalICS && !androidUltraMin) {
-                const baseDesc = isAndroid ? limit(desc, 160) : limit(desc, 280);
-                lines.push(`DESCRIPTION:${escText(baseDesc)}`);
+                const info: string[] = [];
+                info.push(desc);
+                if (e.type === "flight") {
+                  const fn = e.meta as FlightNote | undefined;
+                  if (fn?.leg === "outbound") {
+                    const destName = `${fn?.origin || ""} airport`;
+                    const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
+                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
+                    const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                    info.push(`Destino: ${destName}`);
+                    info.push(`Google Maps: ${gmaps}`);
+                    info.push(`Rome2Rio: ${r2r}`);
+                    info.push(`Uber: ${uber}`);
+                    info.push(`Chegar no aeroporto: 3h antes do voo.`);
+                  }
+                } else if (e.type === "transport") {
+                  const seg = e.meta as TransportSegmentMeta;
+                  const originAddr = (seg?.originAddress || "").trim();
+                  const depPoint = (seg?.dep || "").trim();
+                  if (originAddr || depPoint) {
+                    const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
+                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+                    const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                    info.push(`Origem: ${originAddr || "—"}`);
+                    info.push(`Destino: ${depPoint || "—"}`);
+                    info.push(`Google Maps: ${gmaps}`);
+                    info.push(`Rome2Rio: ${r2r}`);
+                    info.push(`Uber: ${uber}`);
+                  }
+                } else if (e.type === "stay") {
+                  const m = e.meta as { city?: string; address?: string; kind?: string } | undefined;
+                  if (m?.kind === "checkin") {
+                    const q = (m.address || m.city || "").trim();
+                    const gmaps = q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : "";
+                    const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                    info.push(`Destino: ${q || "—"}`);
+                    if (gmaps) info.push(`Google Maps: ${gmaps}`);
+                    info.push(`Uber: ${uber}`);
+                  }
+                } else if (e.type === "activity" || e.type === "restaurant") {
+                  const rec = e.meta as RecordItem;
+                  const query = `${rec?.title || ""} ${rec?.cityName || ""}`.trim();
+                  const gmaps = query ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}` : "";
+                  const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                  info.push(`Destino: ${query || "—"}`);
+                  if (gmaps) info.push(`Google Maps: ${gmaps}`);
+                  info.push(`Uber: ${uber}`);
+                }
+                const rich = isAndroid ? limit(info.join("\n"), 320) : limit(info.join("\n"), 600);
+                lines.push(`DESCRIPTION:${escText(rich)}`);
               }
               lines.push("END:VEVENT");
               if (!minimalICS && extraCall) {
@@ -2045,34 +2158,8 @@ export default function FinalCalendarPage() {
         ) : null}
         <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-xs flex items-center justify-between">
           <span>Para alertas antes dos eventos, salve no Google Calendar.</span>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => {
-              try {
-                const payload = { events };
-                if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
-                try {
-                  const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-                  const ts = raw ? JSON.parse(raw) : null;
-                  if (ts) {
-                    const isSame = ts.mode === "same";
-                    const origin = isSame ? ts.origin : ts.outbound?.origin;
-                    const destination = isSame ? ts.destination : ts.outbound?.destination;
-                    const date = isSame ? ts.departDate : ts.outbound?.date;
-                    const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
-                    if (origin && destination && date) {
-                      const title = `${origin} → ${destination}`;
-                      const trips: TripItem[] = getTrips();
-                      const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-                      if (idx >= 0) {
-                        const next = [...trips];
-                        next[idx] = { ...next[idx], reachedFinalCalendar: true };
-                        localStorage.setItem("calentrip:trips", JSON.stringify(next));
-                      }
-                    }
-                  }
-                } catch {}
-                show("Salvo em pesquisas salvas", { variant: "success" });
-              } catch { show("Erro ao salvar", { variant: "error" }); }
-              setCalendarHelpOpen(true);
+            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => {
+              try { if (saveCalendarNamed()) setCalendarHelpOpen(true); } catch {}
             }}>
               Salvar no google calendar
             </Button>
@@ -2210,14 +2297,21 @@ export default function FinalCalendarPage() {
         <DialogHeader>Pesquisas e calendários salvos</DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="rounded border p-3">
-            <div className="font-semibold mb-1">Calendário salvo</div>
-            {savedCalendar?.events && savedCalendar.events.length ? (
-              <div className="space-y-2">
-                <div>{savedCalendar.events.length} eventos</div>
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant="outline" onClick={() => { setEvents(savedCalendar!.events!); setSavedDrawerOpen(false); }}>Carregar calendário</Button>
-                </div>
-              </div>
+            <div className="font-semibold mb-1">Calendários salvos</div>
+            {savedCalendarsList.length ? (
+              <ul className="space-y-2">
+                {savedCalendarsList.map((c, idx) => (
+                  <li key={`${c.name}-${idx}`} className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-medium">{c.name}</div>
+                      <div className="text-xs text-zinc-600">{(c.events || []).length} eventos</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" onClick={() => { setEvents(c.events); setSavedDrawerOpen(false); }}>Carregar</Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             ) : (
               <div className="text-zinc-600">Nenhum calendário salvo.</div>
             )}
