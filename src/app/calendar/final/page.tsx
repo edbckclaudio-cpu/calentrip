@@ -35,6 +35,14 @@ export default function FinalCalendarPage() {
   const [arrivalDrawerOpen, setArrivalDrawerOpen] = useState(false);
   const [arrivalInfo, setArrivalInfo] = useState<{ city?: string; address?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
   const { show } = useToast();
+  const toastOnce = useRef<Set<string>>(new Set());
+  const showOnce = (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) => {
+    if (toastOnce.current.has(message)) return 0;
+    toastOnce.current.add(message);
+    const id = show(message, opts);
+    try { setTimeout(() => { try { toastOnce.current.delete(message); } catch {} }, 15000); } catch {}
+    return id;
+  };
   const [locConsent, setLocConsent] = useState<"granted" | "denied" | "skipped" | "default">("default");
   const [locModalOpen, setLocModalOpen] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
@@ -801,7 +809,7 @@ export default function FinalCalendarPage() {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(dest)}`;
       setTransportInfo({ distanceKm: undefined, durationMin: undefined, durationWithTrafficMin: undefined, gmapsUrl, r2rUrl, airportName: dest });
-      try { show("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
+      try { showOnce("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setLoading(false);
     }
@@ -927,7 +935,7 @@ export default function FinalCalendarPage() {
       const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
       setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
-      try { show("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
+      try { showOnce("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
       return;
     }
     const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
@@ -943,7 +951,7 @@ export default function FinalCalendarPage() {
         const gmapsUrl = q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : undefined;
         const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(q)}`;
         setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
-        try { show("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
+        try { showOnce("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
         return;
       }
       const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
@@ -978,7 +986,7 @@ export default function FinalCalendarPage() {
       const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
       setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
-      try { show("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
+      try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     }
   }
 
@@ -1051,7 +1059,7 @@ export default function FinalCalendarPage() {
       const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
       setGoInfo({ destination: q, gmapsUrl, uberUrl });
-      try { show("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
+      try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setGoLoading(false);
     }
@@ -1190,14 +1198,14 @@ export default function FinalCalendarPage() {
       } else {
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
-        try { show("Destino não geocodificado. Usando links básicos.", { variant: "info" }); } catch {}
+        try { showOnce("Destino não geocodificado. Usando links básicos.", { variant: "info" }); } catch {}
       }
       setReturnInfo({ city: last.name, address: last.address, airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl, callTime, notifyAt });
     } catch {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("aeroporto")}`;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
       setReturnInfo({ city: summaryCities[summaryCities.length - 1]?.name, address: summaryCities[summaryCities.length - 1]?.address, gmapsUrl, uberUrl });
-      try { show("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
+      try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setReturnLoading(false);
     }
@@ -1253,7 +1261,7 @@ export default function FinalCalendarPage() {
               ];
               new Notification("Transporte até o aeroporto de volta", { body: lines.join("\n") });
             } catch {}
-            try { if (!transportToastShown.current.return) { show("Opções de deslocamento disponíveis", { variant: "info" }); transportToastShown.current.return = true; } } catch {}
+            try { if (!transportToastShown.current.return) { showOnce("Opções de deslocamento disponíveis", { variant: "info" }); transportToastShown.current.return = true; } } catch {}
           }, delay);
           returnTimer.current = id;
         }
@@ -1340,7 +1348,7 @@ export default function FinalCalendarPage() {
                 `Maps: ${gmapsUrl}`,
               ];
               try { new Notification(`Opções de deslocamento até a hospedagem`, { body: lines.join("\n") }); } catch {}
-              try { if (!transportToastShown.current.arrival) { show("Opções de deslocamento disponíveis", { variant: "info" }); transportToastShown.current.arrival = true; } } catch {}
+              try { if (!transportToastShown.current.arrival) { showOnce("Opções de deslocamento disponíveis", { variant: "info" }); transportToastShown.current.arrival = true; } } catch {}
             }
             setArrivalInfo({ city, address: addr || city, distanceKm: Math.round(d), walkingMin, drivingMin: driveWithTraffic ?? drivingMin, busMin, trainMin, uberUrl, gmapsUrl });
             setArrivalDrawerOpen(true);
