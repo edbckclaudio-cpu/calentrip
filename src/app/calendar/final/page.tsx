@@ -1480,32 +1480,7 @@ export default function FinalCalendarPage() {
           <button type="button" className="rounded-md p-2" onClick={() => setSideOpen((v) => !v)}>
             <span className="material-symbols-outlined text-[24px]">menu</span>
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
-            try {
-              const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-              const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
-              const isAndroid = /Android/.test(ua);
-              const urlAndroidMarket = "market://details?id=com.google.android.calendar";
-              const urlAndroidWeb = "https://play.google.com/store/apps/details?id=com.google.android.calendar";
-              const urlIOS = "https://apps.apple.com/app/google-calendar/id909319292";
-              if (isAndroid) {
-                try { window.location.href = urlAndroidMarket; } catch {}
-                setTimeout(() => { try { window.open(urlAndroidWeb, "_blank"); } catch {} }, 600);
-                show("Abrindo Google Calendar na Play Store", { variant: "info" });
-              } else if (isIOS) {
-                try { window.open(urlIOS, "_blank"); } catch {}
-                show("Abrindo Google Calendar na App Store", { variant: "info" });
-              } else {
-                try { window.open(urlAndroidWeb, "_blank"); } catch {}
-                show("Abrindo Google Calendar na loja", { variant: "info" });
-              }
-            } catch {}
-          }}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">download</span>
-            </span>
-            {sideOpen ? <span className="text-sm font-medium">Instalar Google Calendar</span> : null}
-          </button>
+          {/* botão de instalação removido conforme solicitação */}
         </div>
         <div className="p-2 space-y-2">
           <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2">
@@ -2061,21 +2036,16 @@ export default function FinalCalendarPage() {
 
       <div className="container-page">
         {(() => { const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : ""; const isAndroid = /Android/.test(ua); return isAndroid; })() ? (
-          <div className="mb-3 rounded-lg border border-[#34c759]/30 bg-[#34c759]/10 p-3 text-sm">
-            Detectamos Android. Para evitar falhas ao salvar vários eventos, recomendamos usar o Google Calendar.
-            Toque em “Instalar Google Calendar” antes de “Salvar no google calendar”.
-            <div className="mt-2">
-              <Button type="button" variant="outline" onClick={() => { try { openGoogleCalendarInstall(); } catch {} }}>
-                Instalar Google Calendar
-              </Button>
-            </div>
+          <div className="mb-2 rounded-md border border-[#34c759]/30 bg-[#34c759]/10 p-2 text-xs flex items-center justify-between">
+            <span>Android detectado. Use Google Calendar para salvar vários eventos.</span>
+            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { openGoogleCalendarInstall(); } catch {} }}>
+              Instalar
+            </Button>
           </div>
         ) : null}
-        <div className="mb-3 rounded-lg border border-[#007AFF]/30 bg-[#007AFF]/10 p-3 text-sm">
-          Para receber notificações antes de cada evento, salve esta viagem no google calendar no seu dispositivo.
-          Use o botão abaixo. O mesmo está disponível no menu.
-          <div className="mt-2">
-            <Button type="button" variant="outline" onClick={() => {
+        <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-xs flex items-center justify-between">
+          <span>Para alertas antes dos eventos, salve no Google Calendar.</span>
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => {
               try {
                 const payload = { events };
                 if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
@@ -2106,7 +2076,6 @@ export default function FinalCalendarPage() {
             }}>
               Salvar no google calendar
             </Button>
-          </div>
         </div>
         <Card>
           <CardHeader>
