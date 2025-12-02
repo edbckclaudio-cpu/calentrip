@@ -1507,6 +1507,7 @@ export default function FinalCalendarPage() {
             const isAndroid = /Android/.test(ua);
             const tzidHeader = tzHeader;
             const useTZID = isAndroid;
+            const androidUltraMin = isAndroid;
 
             if (isCapAndroid()) {
               const evs = events.map((e) => {
@@ -1536,7 +1537,7 @@ export default function FinalCalendarPage() {
               const title = isAndroid ? limit(e.label, 64) : limit(e.label, 120);
               lines.push(`SUMMARY:${escText(title)}`);
               let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
-              if (e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
+              if (!androidUltraMin && e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
                 const extra = returnDetails;
                 const info: string[] = [];
                 info.push(desc);
@@ -1567,7 +1568,7 @@ export default function FinalCalendarPage() {
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
                   extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
                 }
-              } else {
+              } else if (!androidUltraMin) {
                 const baseDesc = isAndroid ? limit(desc, 160) : limit(desc, 280);
                 lines.push(`DESCRIPTION:${escText(baseDesc)}`);
               }
@@ -1581,10 +1582,12 @@ export default function FinalCalendarPage() {
                 lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(callAt)}` : `DTSTART:${fmtUTC(callAt)}`);
                 lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(callEnd)}` : `DTEND:${fmtUTC(callEnd)}`);
                 lines.push(`SUMMARY:Chamar Uber`);
-                const descParts = [`Chamar Uber às: ${callTime}`];
-                if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
-                if (gmapsUrl && !isAndroid) descParts.push(`Google Maps: ${gmapsUrl}`);
-                lines.push(`DESCRIPTION:${escText(isAndroid ? limit(descParts.join("\n"), 160) : descParts.join("\\n"))}`);
+                if (!androidUltraMin) {
+                  const descParts = [`Chamar Uber às: ${callTime}`];
+                  if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
+                  if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
+                  lines.push(`DESCRIPTION:${escText(limit(descParts.join("\n"), 240))}`);
+                }
                 // VALARM removido para compatibilidade com apps móveis
                 lines.push("END:VEVENT");
               }
