@@ -190,6 +190,262 @@ export default function FinalCalendarPage() {
     } catch {}
   }
 
+  async function saveCalendarFull() {
+    const uaHeader = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+    const isAndroidHeader = /Android/.test(uaHeader);
+    function fmt(d: Date) {
+      const y = String(d.getFullYear());
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      const h = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+      const s = String(d.getSeconds()).padStart(2, "0");
+      return `${y}${m}${da}T${h}${mi}${s}`;
+    }
+    function fmtUTC(d: Date) {
+      const y = String(d.getUTCFullYear());
+      const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const da = String(d.getUTCDate()).padStart(2, "0");
+      const h = String(d.getUTCHours()).padStart(2, "0");
+      const mi = String(d.getUTCMinutes()).padStart(2, "0");
+      const s = String(d.getUTCSeconds()).padStart(2, "0");
+      return `${y}${m}${da}T${h}${mi}${s}Z`;
+    }
+    function parseDT(date: string, time?: string) {
+      const t = (time || "00:00").padStart(5, "0");
+      const s = `${(date || "").replace(/\//g, "-")}T${t}:00`;
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return null;
+      return d;
+    }
+    function escText(s: string) {
+      return s.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/;/g, "\\;").replace(/,/g, "\\,");
+    }
+    function toAscii(s: string) {
+      try {
+        const base = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return base.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+      } catch {
+        return s.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+      }
+    }
+    function limit(s: string, n = 320) {
+      if (!s) return s;
+      return s.length > n ? s.slice(0, n - 1) + "…" : s;
+    }
+    function foldLine(s: string) {
+      const max = 74;
+      if (s.length <= max) return s;
+      const parts: string[] = [];
+      for (let i = 0; i < s.length; i += max) parts.push(s.slice(i, i + max));
+      return parts.join("\r\n ");
+    }
+    async function geocode(q: string) {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+      return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
+    }
+    async function computeReturnDetails() {
+      if (!summaryCities.length) return null as null | { airportName: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; gmapsUrl?: string; uberUrl?: string; callTime?: string; notifyAt?: string; callAtISO?: string; notifyAtISO?: string };
+      const trips: TripItem[] = getTrips();
+      const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
+      if (!notes.length) return null;
+      const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
+      const airport = await findAirportByIata(fn.origin);
+      const last = summaryCities[summaryCities.length - 1];
+      if (!last?.address) return null;
+      const o = await geocode(last.address);
+      const d = await geocode(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`);
+      let walkingMin: number | undefined;
+      let drivingMin: number | undefined;
+      let busMin: number | undefined;
+      let trainMin: number | undefined;
+      let distanceKm: number | undefined;
+      let gmapsUrl: string | undefined;
+      let uberUrl: string | undefined;
+      let callTime: string | undefined;
+      let notifyAt: string | undefined;
+      let priceEstimate: number | undefined;
+      let callAtISO: string | undefined;
+      let notifyAtISO: string | undefined;
+      if (o && d) {
+        try {
+          const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
+          const resD = await fetch(osrmDrive);
+          const jsD = await resD.json();
+          const rD = jsD?.routes?.[0];
+          if (rD) {
+            drivingMin = Math.round((rD.duration ?? 0) / 60);
+            distanceKm = Math.round((rD.distance ?? 0) / 1000);
+            priceEstimate = Math.round((distanceKm || 0) * 6 + 3);
+          }
+        } catch {}
+        try {
+          const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
+          const resW = await fetch(osrmWalk);
+          const jsW = await resW.json();
+          const rW = jsW?.routes?.[0];
+          if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60);
+        } catch {}
+        const trafficFactor = 1.3;
+        const driveWithTraffic = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+        busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
+        trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(last.address)}&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        if (fn.departureTime && fn.date) {
+          const [h, m] = (fn.departureTime || "00:00").split(":");
+          const dt = new Date(`${fn.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
+          const mins = 240 + (driveWithTraffic ?? drivingMin ?? 60);
+          const callAt = new Date(dt.getTime() - mins * 60 * 1000);
+          const notifyAtDate = new Date(callAt.getTime() - 2 * 60 * 60 * 1000);
+          const fmtLocal = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+          callTime = fmtLocal(callAt);
+          notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmtLocal(notifyAtDate)}`;
+          callAtISO = callAt.toISOString();
+          notifyAtISO = notifyAtDate.toISOString();
+        }
+      }
+      return { airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, gmapsUrl, uberUrl, callTime, notifyAt, callAtISO, notifyAtISO };
+    }
+    const tzHeader = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"; } catch { return "Etc/UTC"; } })();
+    const useTZID = !isAndroidHeader;
+    const lines: string[] = [];
+    lines.push("BEGIN:VCALENDAR");
+    lines.push("VERSION:2.0");
+    lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
+    lines.push("CALSCALE:GREGORIAN");
+    lines.push("METHOD:PUBLISH");
+    lines.push("X-WR-CALNAME:CalenTrip");
+    if (useTZID) {
+      lines.push(`X-WR-TIMEZONE:${tzHeader}`);
+      const mins = -new Date().getTimezoneOffset();
+      const sign = mins >= 0 ? "+" : "-";
+      const abs = Math.abs(mins);
+      const hh = String(Math.floor(abs / 60)).padStart(2, "0");
+      const mm = String(abs % 60).padStart(2, "0");
+      const off = `${sign}${hh}${mm}`;
+      lines.push("BEGIN:VTIMEZONE");
+      lines.push(`TZID:${tzHeader}`);
+      lines.push("BEGIN:STANDARD");
+      lines.push("DTSTART:19700101T000000");
+      lines.push(`TZOFFSETFROM:${off}`);
+      lines.push(`TZOFFSETTO:${off}`);
+      lines.push("END:STANDARD");
+      lines.push("END:VTIMEZONE");
+    }
+    const returnDetails = await computeReturnDetails();
+    events.forEach((e, idx) => {
+      const start = parseDT(e.date, e.time);
+      const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
+      const desc = e.label;
+      const baseTitle = isAndroidHeader ? limit(e.label, 64) : limit(e.label, 120);
+      const title = isAndroidHeader ? toAscii(baseTitle) : baseTitle;
+      lines.push("BEGIN:VEVENT");
+      const uid = `ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`;
+      if (start) lines.push(useTZID ? `DTSTART;TZID=${tzHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
+      if (end) lines.push(useTZID ? `DTEND;TZID=${tzHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
+      lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
+      lines.push(`UID:${uid}`);
+      lines.push(`SUMMARY:${escText(title)}`);
+      lines.push("TRANSP:OPAQUE");
+      lines.push("SEQUENCE:0");
+      lines.push("STATUS:CONFIRMED");
+      let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
+      if (e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
+        const extra = returnDetails;
+        const info: string[] = [];
+        info.push(desc);
+        if (extra?.airportName) info.push(`Destino: ${extra.airportName}`);
+        if (extra?.distanceKm !== undefined) info.push(`Distância: ${extra.distanceKm} km`);
+        const modes: string[] = [];
+        if (extra?.walkingMin) modes.push(`A pé: ${extra.walkingMin} min`);
+        if (extra?.busMin) modes.push(`Ônibus: ${extra.busMin} min (estimado)`);
+        if (extra?.trainMin) modes.push(`Trem/Metro: ${extra.trainMin} min (estimado)`);
+        if (extra?.drivingMin !== undefined) modes.push(`Uber/Táxi: ${extra.drivingMin} min${extra.priceEstimate !== undefined ? ` • R$${extra.priceEstimate}` : ""}`);
+        if (modes.length) info.push(modes.join(" | "));
+        const gmaps = extra?.gmapsUrl || null;
+        const uber = extra?.uberUrl || null;
+        if (gmaps) info.push(`Google Maps: ${gmaps}`);
+        if (uber) info.push(`Uber: ${uber}`);
+        if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
+        if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
+        const descBody = limit(info.join("\n"), 480);
+        lines.push(`DESCRIPTION:${escText(descBody)}`);
+        if (extra?.callAtISO) {
+          const callAt = new Date(extra.callAtISO);
+          const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
+          extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
+        }
+      } else {
+        const baseDesc = isAndroidHeader ? limit(desc, 160) : limit(desc, 280);
+        lines.push(`DESCRIPTION:${escText(baseDesc)}`);
+      }
+      lines.push("END:VEVENT");
+      if (extraCall) {
+        const { callAt, callEnd, callTime, uberUrl, gmapsUrl } = extraCall;
+        lines.push("BEGIN:VEVENT");
+        const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
+        if (useTZID) {
+          lines.push(`DTSTART;TZID=${tzHeader}:${fmt(callAt)}`);
+          lines.push(`DTEND;TZID=${tzHeader}:${fmt(callEnd)}`);
+        } else {
+          lines.push(`DTSTART:${fmtUTC(callAt)}`);
+          lines.push(`DTEND:${fmtUTC(callEnd)}`);
+        }
+        lines.push(`SUMMARY:Chamar Uber`);
+        lines.push(`UID:${uid2}`);
+        lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
+        lines.push("STATUS:CONFIRMED");
+        lines.push("TRANSP:OPAQUE");
+        lines.push("SEQUENCE:0");
+        const descParts = [`Chamar Uber às: ${callTime}`];
+        if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
+        if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
+        lines.push(`DESCRIPTION:${escText(limit(descParts.join("\n"), 240))}`);
+        lines.push("BEGIN:VALARM");
+        lines.push("ACTION:DISPLAY");
+        lines.push("DESCRIPTION:Lembrete de transporte");
+        lines.push("TRIGGER:-PT120M");
+        lines.push("END:VALARM");
+        lines.push("END:VEVENT");
+      }
+    });
+    lines.push("END:VCALENDAR");
+    const crlf = lines.map(foldLine).join("\r\n") + "\r\n";
+    const blob = new Blob([crlf], { type: "text/calendar;charset=utf-8" });
+    const file = new File([crlf], "calentrip.ics", { type: "text/calendar;charset=utf-8" });
+    try {
+      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
+      const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
+      if (canShareFiles && typeof nav.share === "function") {
+        await nav.share({ files: [file], title: "CalenTrip" });
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
+        const isAndroid = /Android/.test(ua);
+        if (isIOS) {
+          show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+        } else if (isAndroid) {
+          show("Calendário enviado. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+        } else {
+          show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
+        }
+        return;
+      }
+    } catch {}
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "calentrip.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    try { openDownloads(); } catch {}
+    show("Arquivo .ics baixado. Abra o gerenciador de arquivos, vá em Download, toque em calentrip.ics e escolha salvar no Google Calendar.", { variant: "info" });
+  }
+
   async function saveCalendar() {
     function fmtICS(d: Date) {
       const y = String(d.getFullYear());
@@ -1926,7 +2182,7 @@ export default function FinalCalendarPage() {
           <div>• Abrimos o gerenciador de arquivos na pasta Download (quando possível).</div>
           <div>• Toque em calentrip.ics e escolha salvar no Google Calendar; selecione a conta e confirme.</div>
           <div className="mt-3">
-            <Button type="button" onClick={() => { try { saveCalendar(); } catch {} }}>Salvar no google calendar</Button>
+            <Button type="button" onClick={() => { try { saveCalendarFull(); } catch {} }}>Salvar no google calendar</Button>
             <Button type="button" variant="outline" className="ml-2" onClick={() => { try { openDownloads(); } catch {} }}>Abrir pasta Download</Button>
           </div>
         </div>
