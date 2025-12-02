@@ -1621,8 +1621,49 @@ export default function FinalCalendarPage() {
             const crlf = lines.map(foldLine).join("\r\n") + "\r\n";
             const blob = new Blob([crlf], { type: "text/calendar;charset=utf-8" });
             const file = new File([crlf], "calentrip.ics", { type: "text/calendar;charset=utf-8" });
+            async function buildPerEventFiles() {
+              const makeOne = (ev: typeof events[number], idx: number) => {
+                const start = parseDT(ev.date, ev.time);
+                const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
+                const baseTitle = isAndroid ? limit(ev.label, 64) : limit(ev.label, 120);
+                const title = isAndroid ? toAscii(baseTitle) : baseTitle;
+                const L: string[] = [];
+                L.push("BEGIN:VCALENDAR");
+                L.push("VERSION:2.0");
+                L.push("PRODID:-//CalenTrip//Calendar Export//PT");
+                L.push("BEGIN:VEVENT");
+                if (start) L.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
+                if (end) L.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
+                L.push(`SUMMARY:${escText(title)}`);
+                L.push(`UID:ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`);
+                L.push(`DTSTAMP:${fmtUTC(new Date())}`);
+                L.push("STATUS:CONFIRMED");
+                L.push("TRANSP:OPAQUE");
+                L.push("SEQUENCE:0");
+                L.push("END:VEVENT");
+                L.push("END:VCALENDAR");
+                const content = L.map(foldLine).join("\r\n") + "\r\n";
+                return new File([content], `calentrip-${String(idx + 1).padStart(2, "0")}.ics`, { type: "text/calendar;charset=utf-8" });
+              };
+              return events.map(makeOne);
+            }
             try {
               const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
+              if (isAndroid && typeof nav.share === "function") {
+                const perFiles = await buildPerEventFiles();
+                const canShareMany = typeof nav.canShare === "function" && nav.canShare({ files: perFiles });
+                if (canShareMany) {
+                  await nav.share({ files: perFiles, title: "CalenTrip — eventos (Android)" });
+                  show("Eventos enviados ao Calendário (Android)", { variant: "success" });
+                  return;
+                } else {
+                  for (const f of perFiles) {
+                    await nav.share({ files: [f], title: f.name });
+                  }
+                  show("Eventos enviados individualmente ao Calendário (Android)", { variant: "success" });
+                  return;
+                }
+              }
               const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
               if (canShareFiles && typeof nav.share === "function") {
                 await nav.share({ files: [file], title: "CalenTrip" });
