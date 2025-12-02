@@ -1536,6 +1536,9 @@ export default function FinalCalendarPage() {
               if (end) lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
               const title = isAndroid ? limit(e.label, 64) : limit(e.label, 120);
               lines.push(`SUMMARY:${escText(title)}`);
+              lines.push("STATUS:CONFIRMED");
+              lines.push("TRANSP:OPAQUE");
+              lines.push("SEQUENCE:0");
               let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
               if (!androidUltraMin && e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
                 const extra = returnDetails;
@@ -1582,6 +1585,9 @@ export default function FinalCalendarPage() {
                 lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(callAt)}` : `DTSTART:${fmtUTC(callAt)}`);
                 lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(callEnd)}` : `DTEND:${fmtUTC(callEnd)}`);
                 lines.push(`SUMMARY:Chamar Uber`);
+                lines.push("STATUS:CONFIRMED");
+                lines.push("TRANSP:OPAQUE");
+                lines.push("SEQUENCE:0");
                 if (!androidUltraMin) {
                   const descParts = [`Chamar Uber às: ${callTime}`];
                   if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
