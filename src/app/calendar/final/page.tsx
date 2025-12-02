@@ -1462,12 +1462,36 @@ export default function FinalCalendarPage() {
             lines.push("CALSCALE:GREGORIAN");
             lines.push("METHOD:PUBLISH");
             lines.push("X-WR-CALNAME:CalenTrip");
+            const tzHeader = (() => {
+              try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"; } catch { return "Etc/UTC"; }
+            })();
+            lines.push(`X-WR-TIMEZONE:${tzHeader}`);
+            {
+              const mins = -new Date().getTimezoneOffset();
+              const sign = mins >= 0 ? "+" : "-";
+              const abs = Math.abs(mins);
+              const hh = String(Math.floor(abs / 60)).padStart(2, "0");
+              const mm = String(abs % 60).padStart(2, "0");
+              const off = `${sign}${hh}${mm}`;
+              lines.push("BEGIN:VTIMEZONE");
+              lines.push(`TZID:${tzHeader}`);
+              lines.push("BEGIN:STANDARD");
+              lines.push("DTSTART:19700101T000000");
+              lines.push(`TZOFFSETFROM:${off}`);
+              lines.push(`TZOFFSETTO:${off}`);
+              lines.push("END:STANDARD");
+              lines.push("END:VTIMEZONE");
+            }
             function escText(s: string) {
               return s
                 .replace(/\\/g, "\\\\")
                 .replace(/\r?\n/g, "\\n")
                 .replace(/;/g, "\\;")
                 .replace(/,/g, "\\,");
+            }
+            function limit(s: string, n = 320) {
+              if (!s) return s;
+              return s.length > n ? s.slice(0, n - 1) + "…" : s;
             }
             function foldLine(s: string) {
               const max = 74; // RFC 5545 recommends 75 octets; using 74 chars approximation
@@ -1481,7 +1505,8 @@ export default function FinalCalendarPage() {
             const returnDetails = await computeReturnDetails();
             const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
             const isAndroid = /Android/.test(ua);
-            const useUTC = isAndroid;
+            const tzidHeader = tzHeader;
+            const useTZID = isAndroid;
 
             if (isCapAndroid()) {
               const evs = events.map((e) => {
@@ -1506,8 +1531,8 @@ export default function FinalCalendarPage() {
               const uid = `ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`;
               lines.push(`UID:${uid}`);
               lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-              if (start) lines.push(`DTSTART:${useUTC ? fmtUTC(start) : fmt(start)}`);
-              if (end) lines.push(`DTEND:${useUTC ? fmtUTC(end) : fmt(end)}`);
+              if (start) lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
+              if (end) lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
               lines.push(`SUMMARY:${escText(e.label)}`);
               let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
               if (e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
@@ -1526,14 +1551,14 @@ export default function FinalCalendarPage() {
                 if (extra?.uberUrl) info.push(`Uber: ${extra.uberUrl}`);
                 if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
                 if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
-                lines.push(`DESCRIPTION:${escText(info.join("\n"))}`);
+                lines.push(`DESCRIPTION:${escText(limit(info.join("\n"), 480))}`);
                 if (extra?.callAtISO) {
                   const callAt = new Date(extra.callAtISO);
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
                   extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
                 }
               } else {
-                lines.push(`DESCRIPTION:${escText(desc)}`);
+                lines.push(`DESCRIPTION:${escText(limit(desc, 280))}`);
               }
               lines.push("END:VEVENT");
               if (extraCall) {
@@ -1542,8 +1567,8 @@ export default function FinalCalendarPage() {
                 const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
                 lines.push(`UID:${uid2}`);
                 lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-                lines.push(`DTSTART:${useUTC ? fmtUTC(callAt) : fmt(callAt)}`);
-                lines.push(`DTEND:${useUTC ? fmtUTC(callEnd) : fmt(callEnd)}`);
+                lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(callAt)}` : `DTSTART:${fmtUTC(callAt)}`);
+                lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(callEnd)}` : `DTEND:${fmtUTC(callEnd)}`);
                 lines.push(`SUMMARY:Chamar Uber`);
                 const descParts = [`Chamar Uber às: ${callTime}`];
                 if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
