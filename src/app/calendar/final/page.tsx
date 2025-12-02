@@ -1489,6 +1489,14 @@ export default function FinalCalendarPage() {
                 .replace(/;/g, "\\;")
                 .replace(/,/g, "\\,");
             }
+            function toAscii(s: string) {
+              try {
+                const base = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return base.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+              } catch {
+                return s.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+              }
+            }
             function limit(s: string, n = 320) {
               if (!s) return s;
               return s.length > n ? s.slice(0, n - 1) + "…" : s;
@@ -1534,7 +1542,8 @@ export default function FinalCalendarPage() {
               lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
               if (start) lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
               if (end) lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
-              const title = isAndroid ? limit(e.label, 64) : limit(e.label, 120);
+              const baseTitle = isAndroid ? limit(e.label, 64) : limit(e.label, 120);
+              const title = isAndroid ? toAscii(baseTitle) : baseTitle;
               lines.push(`SUMMARY:${escText(title)}`);
               lines.push("STATUS:CONFIRMED");
               lines.push("TRANSP:OPAQUE");
