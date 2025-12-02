@@ -50,6 +50,7 @@ export default function FinalCalendarPage() {
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
+  const transportToastShown = useRef<{ arrival: boolean; return: boolean }>({ arrival: false, return: false });
   const [sideOpen, setSideOpen] = useState(false);
   const [calendarHelpOpen, setCalendarHelpOpen] = useState(false);
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
@@ -1252,7 +1253,7 @@ export default function FinalCalendarPage() {
               ];
               new Notification("Transporte até o aeroporto de volta", { body: lines.join("\n") });
             } catch {}
-            try { show("Opções de deslocamento disponíveis", { variant: "info" }); } catch {}
+            try { if (!transportToastShown.current.return) { show("Opções de deslocamento disponíveis", { variant: "info" }); transportToastShown.current.return = true; } } catch {}
           }, delay);
           returnTimer.current = id;
         }
@@ -1261,7 +1262,7 @@ export default function FinalCalendarPage() {
     return () => {
       if (returnTimer.current) { try { clearTimeout(returnTimer.current); } catch {} returnTimer.current = null; }
     };
-  }, [summaryCities, show, openReturnAirportDrawer]);
+  }, [summaryCities, openReturnAirportDrawer]);
 
   useEffect(() => {
     const checkins = events.filter((e) => {
@@ -1339,7 +1340,7 @@ export default function FinalCalendarPage() {
                 `Maps: ${gmapsUrl}`,
               ];
               try { new Notification(`Opções de deslocamento até a hospedagem`, { body: lines.join("\n") }); } catch {}
-              try { show("Opções de deslocamento disponíveis", { variant: "info" }); } catch {}
+              try { if (!transportToastShown.current.arrival) { show("Opções de deslocamento disponíveis", { variant: "info" }); transportToastShown.current.arrival = true; } } catch {}
             }
             setArrivalInfo({ city, address: addr || city, distanceKm: Math.round(d), walkingMin, drivingMin: driveWithTraffic ?? drivingMin, busMin, trainMin, uberUrl, gmapsUrl });
             setArrivalDrawerOpen(true);
@@ -1358,7 +1359,7 @@ export default function FinalCalendarPage() {
       });
       arrivalWatchIds.current = {};
     };
-  }, [events, show]);
+  }, [events]);
 
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
