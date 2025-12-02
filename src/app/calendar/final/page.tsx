@@ -105,6 +105,18 @@ export default function FinalCalendarPage() {
 
   useEffect(() => {
     try {
+      const auto = typeof window !== "undefined" ? localStorage.getItem("calentrip:auto_load_saved") : null;
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+      if (auto === "1" && raw) {
+        const sc = JSON.parse(raw) as { name?: string; events?: EventItem[] };
+        if (sc?.events && sc.events.length) setEvents(sc.events);
+        localStorage.removeItem("calentrip:auto_load_saved");
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
       const v = typeof window !== "undefined" ? localStorage.getItem("calentrip:locConsent") : null;
       if (v === "granted" || v === "denied" || v === "skipped") setLocConsent(v as typeof locConsent);
       else setLocConsent("default");
@@ -161,7 +173,7 @@ export default function FinalCalendarPage() {
             const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
             if (idx >= 0) {
               const next = [...trips];
-              next[idx] = { ...next[idx], reachedFinalCalendar: true };
+              next[idx] = { ...next[idx], reachedFinalCalendar: true, savedCalendarName: name, savedEvents: events };
               localStorage.setItem("calentrip:trips", JSON.stringify(next));
             }
           }

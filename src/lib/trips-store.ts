@@ -27,6 +27,8 @@ export type TripItem = {
   attachments?: AttachmentMeta[];
   stayAddress?: string;
   reachedFinalCalendar?: boolean;
+  savedCalendarName?: string;
+  savedEvents?: unknown[];
 };
 
 const KEY = "calentrip:trips";

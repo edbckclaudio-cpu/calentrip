@@ -161,7 +161,15 @@ export default function GlobalSidebar() {
                       <div className="text-xs text-zinc-600">{(c.events || []).length} eventos</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Carregar</Button>
+                      <Button type="button" variant="outline" onClick={() => {
+                        try {
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: c.name, events: c.events }));
+                            localStorage.setItem("calentrip:auto_load_saved", "1");
+                          }
+                          window.location.href = "/calendar/final";
+                        } catch {}
+                      }}>Carregar</Button>
                       <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
                         try {
                           const ok1 = confirm(`Deseja excluir o calendário \"${c.name}\"?`);
@@ -196,8 +204,24 @@ export default function GlobalSidebar() {
                       <div className="text-xs text-zinc-600 dark:text-zinc-400">{it.date} • {it.passengers} pax</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
-                      <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
+                      <Button type="button" variant="outline" onClick={() => {
+                        try {
+                          if (typeof window !== "undefined" && it.savedEvents) {
+                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events: it.savedEvents || [] }));
+                            localStorage.setItem("calentrip:auto_load_saved", "1");
+                          }
+                          window.location.href = "/calendar/final";
+                        } catch {}
+                      }}>{t("calendarList")}</Button>
+                      <Button type="button" variant="outline" onClick={() => {
+                        try {
+                          if (typeof window !== "undefined" && it.savedEvents) {
+                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events: it.savedEvents || [] }));
+                            localStorage.setItem("calentrip:auto_load_saved", "1");
+                          }
+                          window.location.href = "/calendar/month";
+                        } catch {}
+                      }}>{t("calendarMonth")}</Button>
                       <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
                         try { removeTrip(it.id); } catch {}
                         try { setSavedTrips(getTrips().filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
