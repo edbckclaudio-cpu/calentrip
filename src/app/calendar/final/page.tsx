@@ -176,6 +176,20 @@ export default function FinalCalendarPage() {
     } catch {}
   }
 
+  function openDownloads() {
+    try {
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+      const isAndroid = /Android/.test(ua);
+      if (isAndroid) {
+        try { window.location.href = "intent://com.android.providers.downloads.ui#Intent;scheme=content;end"; } catch {}
+        setTimeout(() => { try { window.open("file:///storage/emulated/0/Download/", "_blank"); } catch {} }, 600);
+        show("Abrindo pasta Download. Se não abrir, abra o gerenciador de arquivos e vá em Download.", { variant: "info" });
+      } else {
+        show("Abra sua pasta de Downloads e toque em calentrip.ics.", { variant: "info" });
+      }
+    } catch {}
+  }
+
   async function saveCalendar() {
     function fmtICS(d: Date) {
       const y = String(d.getFullYear());
@@ -1572,8 +1586,8 @@ export default function FinalCalendarPage() {
             const isAndroid = isAndroidHeader;
             const tzidHeader = tzHeader;
             const useTZID = !isAndroid;
-            const minimalICS = true;
-            const androidUltraMin = isAndroid;
+            const minimalICS = false;
+            const androidUltraMin = false;
 
             if (isCapAndroid()) {
               const evs = events.map((e) => {
@@ -1662,7 +1676,11 @@ export default function FinalCalendarPage() {
                   if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
                   lines.push(`DESCRIPTION:${escText(limit(descParts.join("\n"), 240))}`);
                 }
-                // VALARM removido para compatibilidade com apps móveis
+                lines.push("BEGIN:VALARM");
+                lines.push("ACTION:DISPLAY");
+                lines.push("DESCRIPTION:Lembrete de transporte");
+                lines.push("TRIGGER:-PT120M");
+                lines.push("END:VALARM");
                 lines.push("END:VEVENT");
               }
             });
@@ -1752,7 +1770,8 @@ export default function FinalCalendarPage() {
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
-            show("Arquivo .ics baixado. Abra com Google/Outlook/Apple Calendar para importar.", { variant: "info" });
+            try { openDownloads(); } catch {}
+            show("Arquivo .ics baixado. Abra o gerenciador de arquivos, vá em Download, toque em calentrip.ics e escolha salvar no Google Calendar.", { variant: "info" });
             }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
@@ -1903,10 +1922,12 @@ export default function FinalCalendarPage() {
         <div className="space-y-2 text-sm">
           <div className="font-semibold">Android</div>
           <div>• Verificamos o Google Calendar. Se não estiver instalado, abrimos a Play Store para instalar.</div>
-          <div>• Em seguida, geramos o arquivo .ics e abrimos o compartilhamento para carregar no Google Calendar.</div>
-          <div>• Escolha a conta e confirme em “Salvar/Adicionar”.</div>
+          <div>• Geramos e baixamos o arquivo .ics para a pasta Download.</div>
+          <div>• Abrimos o gerenciador de arquivos na pasta Download (quando possível).</div>
+          <div>• Toque em calentrip.ics e escolha salvar no Google Calendar; selecione a conta e confirme.</div>
           <div className="mt-3">
             <Button type="button" onClick={() => { try { saveCalendar(); } catch {} }}>Salvar no google calendar</Button>
+            <Button type="button" variant="outline" className="ml-2" onClick={() => { try { openDownloads(); } catch {} }}>Abrir pasta Download</Button>
           </div>
         </div>
         <DialogFooter>
