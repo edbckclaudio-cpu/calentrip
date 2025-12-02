@@ -1463,7 +1463,11 @@ export default function FinalCalendarPage() {
             lines.push("METHOD:PUBLISH");
             lines.push("X-WR-CALNAME:CalenTrip");
             function escText(s: string) {
-              return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,");
+              return s
+                .replace(/\\/g, "\\\\")
+                .replace(/\r?\n/g, "\\n")
+                .replace(/;/g, "\\;")
+                .replace(/,/g, "\\,");
             }
             function foldLine(s: string) {
               const max = 74; // RFC 5545 recommends 75 octets; using 74 chars approximation
@@ -1522,7 +1526,7 @@ export default function FinalCalendarPage() {
                 if (extra?.uberUrl) info.push(`Uber: ${extra.uberUrl}`);
                 if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
                 if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
-                lines.push(`DESCRIPTION:${escText(info.join("\\n"))}`);
+                lines.push(`DESCRIPTION:${escText(info.join("\n"))}`);
                 if (extra?.callAtISO) {
                   const callAt = new Date(extra.callAtISO);
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
