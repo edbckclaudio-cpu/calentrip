@@ -731,8 +731,25 @@ export default function FinalCalendarPage() {
   useEffect(() => {
     try {
       const all: TripItem[] = getTrips();
-      const actives = all.filter((t) => t.reachedFinalCalendar);
-      const trips: TripItem[] = actives.length ? [actives[actives.length - 1]] : (all.length ? [all[all.length - 1]] : []);
+      let trips: TripItem[] = [];
+      try {
+        const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+        const ts = rawTs ? JSON.parse(rawTs) : null;
+        if (ts) {
+          const isSame = ts.mode === "same";
+          const origin = isSame ? ts.origin : ts.outbound?.origin;
+          const destination = isSame ? ts.destination : ts.outbound?.destination;
+          const date = isSame ? ts.departDate : ts.outbound?.date;
+          const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+          const title = origin && destination ? `${origin} → ${destination}` : "";
+          const matchIdx = all.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+          if (matchIdx >= 0) trips = [all[matchIdx]];
+        }
+      } catch {}
+      if (!trips.length) {
+        const actives = all.filter((t) => t.reachedFinalCalendar);
+        trips = actives.length ? [actives[actives.length - 1]] : (all.length ? [all[all.length - 1]] : []);
+      }
       const list: EventItem[] = [];
       const seenFlights = new Set<string>();
       trips.forEach((t) => {
@@ -753,8 +770,6 @@ export default function FinalCalendarPage() {
             };
             // Removemos a criação de eventos de chegada para evitar duplicação visual
           });
-        } else {
-          list.push({ type: "flight", label: t.title, date: t.date });
         }
       });
       const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
