@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { Calendar, isCapAndroid } from "@/capacitor/calendar";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 import { findAirportByIata } from "@/lib/airports";
 
@@ -65,9 +66,52 @@ export default function FinalCalendarPage() {
   const [savedCalendar, setSavedCalendar] = useState<{ events?: EventItem[] } | null>(null);
   const [savedTripsList, setSavedTripsList] = useState<TripItem[]>([]);
   const [savedCalendarsList, setSavedCalendarsList] = useState<Array<{ name: string; events: EventItem[]; savedAt?: string }>>([]);
+  const [filesDrawerOpen, setFilesDrawerOpen] = useState(false);
+  const [filesList, setFilesList] = useState<Array<{ name: string; size?: number; modified?: number }>>([]);
   const { data: session, status } = useSession();
   const { lang } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
+
+  async function saveCalendarToFile() {
+    try {
+      if (Capacitor.getPlatform() !== "android") { show("Disponível no app Android", { variant: "info" }); return; }
+      const name = typeof window !== "undefined" ? prompt("Nome do arquivo (até 9 letras)") || "" : "";
+      const safe = name.replace(/[^A-Za-z]/g, "").slice(0, 9);
+      if (!safe) { show("Nome inválido", { variant: "error" }); return; }
+      const payload = { name: safe, version: 1, createdAt: new Date().toISOString(), events, summaryCities };
+      const json = JSON.stringify(payload);
+      const r = await StorageFiles.save({ name: safe, json });
+      if (r?.ok) { show("Arquivo salvo no dispositivo", { variant: "success" }); } else { show("Erro ao salvar arquivo", { variant: "error" }); }
+    } catch { show("Erro ao salvar arquivo", { variant: "error" }); }
+  }
+
+  async function openFilesDrawer() {
+    try {
+      if (Capacitor.getPlatform() !== "android") { show("Disponível no app Android", { variant: "info" }); return; }
+      const r = await StorageFiles.list();
+      setFilesList(r?.files || []);
+      setFilesDrawerOpen(true);
+    } catch { setFilesList([]); setFilesDrawerOpen(true); }
+  }
+
+  async function loadFile(name: string) {
+    try {
+      const r = await StorageFiles.read({ name });
+      if (!r?.ok || !r?.json) { show("Erro ao abrir arquivo", { variant: "error" }); return; }
+      const obj = JSON.parse(r.json) as { events?: EventItem[]; summaryCities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }> };
+      setEvents(obj.events || []);
+      setSummaryCities(obj.summaryCities || []);
+      setFilesDrawerOpen(false);
+      show("Calendário carregado", { variant: "success" });
+    } catch { show("Erro ao abrir arquivo", { variant: "error" }); }
+  }
+
+  async function deleteFile(name: string) {
+    try {
+      const r = await StorageFiles.delete({ name });
+      if (r?.ok) { const l = await StorageFiles.list(); setFilesList(l?.files || []); } else { show("Erro ao excluir", { variant: "error" }); }
+    } catch { show("Erro ao excluir", { variant: "error" }); }
+  }
 
   useEffect(() => {
     try {
@@ -1687,6 +1731,18 @@ export default function FinalCalendarPage() {
             </span>
             {sideOpen ? <span className="text-sm font-medium">Calendário mensal</span> : null}
           </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { saveCalendarToFile(); } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">save</span>
+            </span>
+            {sideOpen ? <span className="text-sm font-medium">Salvar como arquivo</span> : null}
+          </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { openFilesDrawer(); } catch {} }}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">description</span>
+            </span>
+            {sideOpen ? <span className="text-sm font-medium">Arquivos salvos</span> : null}
+          </button>
           <button
             type="button"
             className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
@@ -2524,6 +2580,37 @@ export default function FinalCalendarPage() {
       </div>
     </div>
   )}
+  {filesDrawerOpen && (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={() => setFilesDrawerOpen(false)} />
+      <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+        <DialogHeader>Arquivos salvos no dispositivo</DialogHeader>
+        <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
+          {filesList.length ? (
+            <ul className="space-y-2">
+              {filesList.map((f) => (
+                <li key={f.name} className="flex items-center justify-between gap-2 rounded border p-2">
+                  <div>
+                    <div className="font-medium">{f.name}</div>
+                    <div className="text-xs text-zinc-600">{f.size ? `${Math.round(f.size / 1024)} KB` : ""}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" onClick={() => loadFile(f.name)}>Carregar</Button>
+                    <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => deleteFile(f.name)}>Excluir</Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-zinc-600">Nenhum arquivo salvo.</div>
+          )}
+          <div className="mt-3 flex justify-end">
+            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setFilesDrawerOpen(false)}>Fechar</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
   {arrivalDrawerOpen && (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }} />
@@ -2765,3 +2852,10 @@ export default function FinalCalendarPage() {
     </div>
   );
 }
+  type StoragePlugin = {
+    save(args: { name: string; json: string }): Promise<{ ok?: boolean; error?: string }>; 
+    list(): Promise<{ files?: Array<{ name: string; size?: number; modified?: number }> }>; 
+    read(args: { name: string }): Promise<{ ok?: boolean; json?: string; error?: string }>; 
+    delete(args: { name: string }): Promise<{ ok?: boolean; error?: string }>; 
+  };
+  const StorageFiles = registerPlugin<StoragePlugin>("StorageFiles");
