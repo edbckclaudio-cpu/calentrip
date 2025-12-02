@@ -1472,6 +1472,7 @@ export default function FinalCalendarPage() {
               if (start) lines.push(`DTSTART:${fmt(start)}`);
               if (end) lines.push(`DTEND:${fmt(end)}`);
               lines.push(`SUMMARY:${e.label}`);
+              let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
               if (e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
                 const extra = returnDetails;
                 const info: string[] = [];
@@ -1492,28 +1493,32 @@ export default function FinalCalendarPage() {
                 if (extra?.callAtISO) {
                   const callAt = new Date(extra.callAtISO);
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
-                  lines.push("BEGIN:VEVENT");
-                  const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
-                  lines.push(`UID:${uid2}`);
-                  lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-                  lines.push(`DTSTART:${fmt(callAt)}`);
-                  lines.push(`DTEND:${fmt(callEnd)}`);
-                  lines.push(`SUMMARY:Chamar Uber`);
-                  const descParts = [`Chamar Uber às: ${extra.callTime}`];
-                  if (extra.uberUrl) descParts.push(`Uber: ${extra.uberUrl}`);
-                  if (extra.gmapsUrl) descParts.push(`Google Maps: ${extra.gmapsUrl}`);
-                  lines.push(`DESCRIPTION:${descParts.join("\\n")}`);
-                  lines.push("BEGIN:VALARM");
-                  lines.push("ACTION:DISPLAY");
-                  lines.push("DESCRIPTION:Lembrete de transporte");
-                  lines.push("TRIGGER:-PT120M");
-                  lines.push("END:VALARM");
-                  lines.push("END:VEVENT");
+                  extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
                 }
               } else {
                 lines.push(`DESCRIPTION:${desc}`);
               }
               lines.push("END:VEVENT");
+              if (extraCall) {
+                const { callAt, callEnd, callTime, uberUrl, gmapsUrl } = extraCall;
+                lines.push("BEGIN:VEVENT");
+                const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
+                lines.push(`UID:${uid2}`);
+                lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
+                lines.push(`DTSTART:${fmt(callAt)}`);
+                lines.push(`DTEND:${fmt(callEnd)}`);
+                lines.push(`SUMMARY:Chamar Uber`);
+                const descParts = [`Chamar Uber às: ${callTime}`];
+                if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
+                if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
+                lines.push(`DESCRIPTION:${descParts.join("\\n")}`);
+                lines.push("BEGIN:VALARM");
+                lines.push("ACTION:DISPLAY");
+                lines.push("DESCRIPTION:Lembrete de transporte");
+                lines.push("TRIGGER:-PT120M");
+                lines.push("END:VALARM");
+                lines.push("END:VEVENT");
+              }
             });
             lines.push("END:VCALENDAR");
             const crlf = lines.join("\r\n") + "\r\n";
