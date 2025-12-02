@@ -1578,7 +1578,7 @@ export default function FinalCalendarPage() {
             )}
           </div>
           
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+          {false && (<button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             try {
               const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
               const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
@@ -1599,7 +1599,7 @@ export default function FinalCalendarPage() {
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Pesquisas salvas</span> : null}
-          </button>
+          </button>)}
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
@@ -1688,7 +1688,7 @@ export default function FinalCalendarPage() {
             </span>
             {sideOpen ? <span className="text-sm font-medium">Enviar por e-mail</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+          {false && (<button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             try {
               const ok = saveCalendarNamed();
               if (ok) { setCalendarHelpOpen(true); return; }
@@ -1706,7 +1706,7 @@ export default function FinalCalendarPage() {
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">share</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Compartilhar calendário</span> : null}
-          </button>
+          </button>)}
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             function fmt(d: Date) {
               const y = String(d.getFullYear());
@@ -1922,6 +1922,23 @@ export default function FinalCalendarPage() {
               lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
               lines.push(`UID:${uid}`);
               lines.push(`SUMMARY:${escText(title)}`);
+              let locationText: string | null = null;
+              if (e.type === "flight") {
+                const fn = e.meta as FlightNote | undefined;
+                if (fn?.leg === "outbound") locationText = `${fn?.origin || ""} airport`;
+              } else if (e.type === "transport") {
+                const seg = e.meta as TransportSegmentMeta;
+                const originAddr = (seg?.originAddress || "").trim();
+                const depPoint = (seg?.dep || "").trim();
+                if (originAddr || depPoint) locationText = `${originAddr || ""}${originAddr || depPoint ? " → " : ""}${depPoint || ""}`.trim();
+              } else if (e.type === "stay") {
+                const m = e.meta as { city?: string; address?: string; kind?: string } | undefined;
+                if (m?.kind === "checkin") locationText = (m.address || m.city || "").trim();
+              } else if (e.type === "activity" || e.type === "restaurant") {
+                const rec = e.meta as RecordItem;
+                locationText = `${rec?.title || ""} ${rec?.cityName || ""}`.trim();
+              }
+              if (locationText) lines.push(`LOCATION:${escText(locationText)}`);
               lines.push("TRANSP:OPAQUE");
               lines.push("SEQUENCE:0");
               lines.push("STATUS:CONFIRMED");
@@ -2029,11 +2046,13 @@ export default function FinalCalendarPage() {
                   if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
                   lines.push(`DESCRIPTION:${escText(limit(descParts.join("\n"), 240))}`);
                 }
-                lines.push("BEGIN:VALARM");
-                lines.push("ACTION:DISPLAY");
-                lines.push("DESCRIPTION:Lembrete de transporte");
-                lines.push("TRIGGER:-PT120M");
-                lines.push("END:VALARM");
+                if (!isAndroid) {
+                  lines.push("BEGIN:VALARM");
+                  lines.push("ACTION:DISPLAY");
+                  lines.push("DESCRIPTION:Lembrete de transporte");
+                  lines.push("TRIGGER:-PT120M");
+                  lines.push("END:VALARM");
+                }
                 lines.push("END:VEVENT");
               }
             });
@@ -2055,11 +2074,78 @@ export default function FinalCalendarPage() {
                 if (start) L.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
                 if (end) L.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
                 L.push(`SUMMARY:${escText(title)}`);
+                let loc: string | null = null;
+                if (ev.type === "flight") {
+                  const fn = ev.meta as FlightNote | undefined;
+                  if (fn?.leg === "outbound") loc = `${fn?.origin || ""} airport`;
+                } else if (ev.type === "transport") {
+                  const seg = ev.meta as TransportSegmentMeta;
+                  const o = (seg?.originAddress || "").trim();
+                  const d = (seg?.dep || "").trim();
+                  if (o || d) loc = `${o || ""}${o || d ? " → " : ""}${d || ""}`.trim();
+                } else if (ev.type === "stay") {
+                  const m = ev.meta as { city?: string; address?: string; kind?: string } | undefined;
+                  if (m?.kind === "checkin") loc = (m.address || m.city || "").trim();
+                } else if (ev.type === "activity" || ev.type === "restaurant") {
+                  const rec = ev.meta as RecordItem;
+                  loc = `${rec?.title || ""} ${rec?.cityName || ""}`.trim();
+                }
+                if (loc) L.push(`LOCATION:${escText(loc)}`);
                 L.push(`UID:ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`);
                 L.push(`DTSTAMP:${fmtUTC(new Date())}`);
                 L.push("STATUS:CONFIRMED");
                 L.push("TRANSP:OPAQUE");
                 L.push("SEQUENCE:0");
+                const info: string[] = [];
+                info.push(ev.label);
+                if (ev.type === "flight") {
+                  const fn = ev.meta as FlightNote | undefined;
+                  if (fn?.leg === "outbound") {
+                    const destName = `${fn?.origin || ""} airport`;
+                    const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
+                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
+                    const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                    info.push(`Destino: ${destName}`);
+                    info.push(`Google Maps: ${gmaps}`);
+                    info.push(`Rome2Rio: ${r2r}`);
+                    info.push(`Uber: ${uber}`);
+                    if (!isAndroid) info.push(`Chegar no aeroporto: 3h antes do voo.`);
+                  }
+                } else if (ev.type === "transport") {
+                  const seg = ev.meta as TransportSegmentMeta;
+                  const originAddr = (seg?.originAddress || "").trim();
+                  const depPoint = (seg?.dep || "").trim();
+                  if (originAddr || depPoint) {
+                    const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
+                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+                    const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                    info.push(`Origem: ${originAddr || "—"}`);
+                    info.push(`Destino: ${depPoint || "—"}`);
+                    info.push(`Google Maps: ${gmaps}`);
+                    info.push(`Rome2Rio: ${r2r}`);
+                    info.push(`Uber: ${uber}`);
+                  }
+                } else if (ev.type === "stay") {
+                  const m = ev.meta as { city?: string; address?: string; kind?: string } | undefined;
+                  if (m?.kind === "checkin") {
+                    const q = (m.address || m.city || "").trim();
+                    const gmaps = q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : "";
+                    const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                    info.push(`Destino: ${q || "—"}`);
+                    if (gmaps) info.push(`Google Maps: ${gmaps}`);
+                    info.push(`Uber: ${uber}`);
+                  }
+                } else if (ev.type === "activity" || ev.type === "restaurant") {
+                  const rec = ev.meta as RecordItem;
+                  const query = `${rec?.title || ""} ${rec?.cityName || ""}`.trim();
+                  const gmaps = query ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}` : "";
+                  const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+                  info.push(`Destino: ${query || "—"}`);
+                  if (gmaps) info.push(`Google Maps: ${gmaps}`);
+                  info.push(`Uber: ${uber}`);
+                }
+                const rich = isAndroid ? limit(info.join("\n"), 280) : limit(info.join("\n"), 600);
+                L.push(`DESCRIPTION:${escText(rich)}`);
                 L.push("END:VEVENT");
                 L.push("END:VCALENDAR");
                 const content = L.map(foldLine).join("\r\n") + "\r\n";
@@ -2308,6 +2394,25 @@ export default function FinalCalendarPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Button type="button" variant="outline" onClick={() => { setEvents(c.events); setSavedDrawerOpen(false); }}>Carregar</Button>
+                      <Button type="button" variant="outline" onClick={() => {
+                        try {
+                          const ok1 = confirm(`Deseja excluir o calendário "${c.name}"?`);
+                          if (!ok1) return;
+                          const ok2 = confirm("Tem certeza? Esta ação não pode ser desfeita.");
+                          if (!ok2) return;
+                          const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+                          const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+                          const next = list.filter((x) => (x?.name || "") !== (c?.name || ""));
+                          localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(next));
+                          setSavedCalendarsList(next);
+                          try {
+                            const rawOne = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+                            const one = rawOne ? JSON.parse(rawOne) as { name?: string; events?: EventItem[] } : null;
+                            if ((one?.name || "") === (c?.name || "")) localStorage.removeItem("calentrip:saved_calendar");
+                          } catch {}
+                          show("Calendário excluído", { variant: "success" });
+                        } catch { show("Erro ao excluir", { variant: "error" }); }
+                      }}>Excluir</Button>
                     </div>
                   </li>
                 ))}
