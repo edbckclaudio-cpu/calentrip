@@ -2399,13 +2399,21 @@ export default function FinalCalendarPage() {
             </Button>
           </div>
         ) : null}
-        <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-xs flex items-center justify-between">
-          <span>Para alertas antes dos eventos, salve no Google Calendar.</span>
-            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => {
-              try { if (saveCalendarNamed()) setCalendarHelpOpen(true); } catch {}
-            }}>
-              Salvar no google calendar
-            </Button>
+        <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-[11px] flex items-center justify-between">
+          <span>Salve no app para consultar durante a viagem. Salve no Google para alertas.</span>
+          <Button
+            type="button"
+            variant="outline"
+            className="px-2 py-1 text-xs rounded-md"
+            onClick={async () => {
+              try {
+                if (saveCalendarNamed()) setCalendarHelpOpen(true);
+                await saveCalendarToFile();
+              } catch {}
+            }}
+          >
+            Salvar no app e no Google
+          </Button>
         </div>
         <Card>
           <CardHeader>
