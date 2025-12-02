@@ -1538,13 +1538,13 @@ export default function FinalCalendarPage() {
               const desc = e.label;
               lines.push("BEGIN:VEVENT");
               const uid = `ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`;
-              lines.push(`UID:${uid}`);
-              lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-              if (start) lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
-              if (end) lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
               const baseTitle = isAndroid ? limit(e.label, 64) : limit(e.label, 120);
               const title = isAndroid ? toAscii(baseTitle) : baseTitle;
+              if (start) lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
+              if (end) lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
               lines.push(`SUMMARY:${escText(title)}`);
+              lines.push(`UID:${uid}`);
+              lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
               lines.push("STATUS:CONFIRMED");
               lines.push("TRANSP:OPAQUE");
               lines.push("SEQUENCE:0");
@@ -1589,11 +1589,16 @@ export default function FinalCalendarPage() {
                 const { callAt, callEnd, callTime, uberUrl, gmapsUrl } = extraCall;
                 lines.push("BEGIN:VEVENT");
                 const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
+                if (useTZID) {
+                  lines.push(`DTSTART;TZID=${tzidHeader}:${fmt(callAt)}`);
+                  lines.push(`DTEND;TZID=${tzidHeader}:${fmt(callEnd)}`);
+                } else {
+                  lines.push(`DTSTART:${fmtUTC(callAt)}`);
+                  lines.push(`DTEND:${fmtUTC(callEnd)}`);
+                }
+                lines.push(`SUMMARY:Chamar Uber`);
                 lines.push(`UID:${uid2}`);
                 lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-                lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(callAt)}` : `DTSTART:${fmtUTC(callAt)}`);
-                lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(callEnd)}` : `DTEND:${fmtUTC(callEnd)}`);
-                lines.push(`SUMMARY:Chamar Uber`);
                 lines.push("STATUS:CONFIRMED");
                 lines.push("TRANSP:OPAQUE");
                 lines.push("SEQUENCE:0");
