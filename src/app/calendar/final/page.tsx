@@ -159,6 +159,30 @@ export default function FinalCalendarPage() {
 
   useEffect(() => {
     try {
+      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_saved_drawer") : null;
+      if (flag === "1") {
+        localStorage.removeItem("calentrip:open_saved_drawer");
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+          const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
+          setSavedCalendar(sc);
+        } catch { setSavedCalendar(null); }
+        try {
+          const trips = getTrips();
+          setSavedTripsList(trips);
+        } catch { setSavedTripsList([]); }
+        try {
+          const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+          const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+          setSavedCalendarsList(list);
+        } catch { setSavedCalendarsList([]); }
+        setSavedDrawerOpen(true);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
       const auto = typeof window !== "undefined" ? localStorage.getItem("calentrip:auto_load_saved") : null;
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (auto === "1" && raw) {
@@ -1746,12 +1770,6 @@ export default function FinalCalendarPage() {
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">save</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Salvar como arquivo</span> : null}
-          </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { openFilesDrawer(); } catch {} }}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">description</span>
-            </span>
-            {sideOpen ? <span className="text-sm font-medium">Arquivos salvos</span> : null}
           </button>
           <button
             type="button"
