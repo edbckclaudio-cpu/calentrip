@@ -1653,7 +1653,7 @@ export default function FinalCalendarPage() {
             )}
           </div>
           
-          {false && (<button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             try {
               const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
               const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
@@ -1674,7 +1674,7 @@ export default function FinalCalendarPage() {
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">Pesquisas salvas</span> : null}
-          </button>)}
+          </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
@@ -1730,7 +1730,7 @@ export default function FinalCalendarPage() {
                     const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
                     if (idx >= 0) {
                       const next = [...trips];
-                      next[idx] = { ...next[idx], reachedFinalCalendar: true };
+                      next[idx] = { ...next[idx], reachedFinalCalendar: true, savedCalendarName: title, savedEvents: events };
                       localStorage.setItem("calentrip:trips", JSON.stringify(next));
                     }
                   }
