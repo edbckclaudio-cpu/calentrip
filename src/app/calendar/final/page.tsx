@@ -1461,11 +1461,9 @@ export default function FinalCalendarPage() {
             lines.push("BEGIN:VCALENDAR");
             lines.push("VERSION:2.0");
             lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
-            if (!isAndroidHeader) {
-              lines.push("CALSCALE:GREGORIAN");
-              lines.push("METHOD:PUBLISH");
-              lines.push("X-WR-CALNAME:CalenTrip");
-            }
+            lines.push("CALSCALE:GREGORIAN");
+            lines.push("METHOD:PUBLISH");
+            lines.push("X-WR-CALNAME:CalenTrip");
             const tzHeader = (() => {
               try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"; } catch { return "Etc/UTC"; }
             })();
@@ -1547,12 +1545,12 @@ export default function FinalCalendarPage() {
               const title = isAndroid ? toAscii(baseTitle) : baseTitle;
               if (start) lines.push(useTZID ? `DTSTART;TZID=${tzidHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
               if (end) lines.push(useTZID ? `DTEND;TZID=${tzidHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
-              lines.push(`SUMMARY:${escText(title)}`);
-              lines.push(`UID:${uid}`);
               lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-              lines.push("STATUS:CONFIRMED");
+              lines.push(`UID:${uid}`);
+              lines.push(`SUMMARY:${escText(title)}`);
               lines.push("TRANSP:OPAQUE");
               lines.push("SEQUENCE:0");
+              lines.push("STATUS:CONFIRMED");
               let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
               if (!minimalICS && !androidUltraMin && e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
                 const extra = returnDetails;
@@ -1568,17 +1566,13 @@ export default function FinalCalendarPage() {
                 if (modes.length) info.push(modes.join(" | "));
                 const gmaps = extra?.gmapsUrl || null;
                 const uber = extra?.uberUrl || null;
-                if (!isAndroid) {
+                if (!minimalICS) {
                   if (gmaps) info.push(`Google Maps: ${gmaps}`);
                   if (uber) info.push(`Uber: ${uber}`);
-                }
-                if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
-                if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
-                const descBody = isAndroid ? limit(info.join("\n"), 240) : limit(info.join("\n"), 480);
-                lines.push(`DESCRIPTION:${escText(descBody)}`);
-                if (isAndroid) {
-                  const urlPref = gmaps || uber;
-                  if (urlPref) lines.push(`URL:${foldLine(escText(urlPref))}`);
+                  if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
+                  if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
+                  const descBody = limit(info.join("\n"), 480);
+                  lines.push(`DESCRIPTION:${escText(descBody)}`);
                 }
                 if (extra?.callAtISO) {
                   const callAt = new Date(extra.callAtISO);
