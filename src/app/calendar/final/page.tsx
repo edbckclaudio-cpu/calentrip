@@ -1456,10 +1456,12 @@ export default function FinalCalendarPage() {
               return { airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, gmapsUrl, uberUrl, callTime, notifyAt, callAtISO, notifyAtISO };
             }
             const lines: string[] = [];
+            const uaHeader = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+            const isAndroidHeader = /Android/.test(uaHeader);
             lines.push("BEGIN:VCALENDAR");
             lines.push("VERSION:2.0");
             lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
-            if (!isAndroid) {
+            if (!isAndroidHeader) {
               lines.push("CALSCALE:GREGORIAN");
               lines.push("METHOD:PUBLISH");
               lines.push("X-WR-CALNAME:CalenTrip");
@@ -1513,8 +1515,8 @@ export default function FinalCalendarPage() {
               return parts.join("\r\n ");
             }
             const returnDetails = await computeReturnDetails();
-            const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-            const isAndroid = /Android/.test(ua);
+            const ua = uaHeader;
+            const isAndroid = isAndroidHeader;
             const tzidHeader = tzHeader;
             const useTZID = !isAndroid;
             const minimalICS = true;
