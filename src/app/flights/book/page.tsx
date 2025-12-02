@@ -364,10 +364,22 @@ export default function BookFlightsPage() {
             {tripSearch && tripSearch.mode === "same" && data ? (
               <ul className="space-y-2">
                 {data.links.map((item) => (
-                  <li key={item.name}>
+                  <li key={item.name} className="flex items-center gap-1">
                     <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                       {item.name}
                     </Link>
+                    {item.name === "Google Flights" ? (
+                      <button
+                        type="button"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                        title={t("googleFlightsDateNoteShort")}
+                        aria-label={t("googleFlightsDateNoteShort")}
+                        onClick={() => show(t("googleFlightsDateNote"), { variant: "info" })}
+                        onTouchStart={() => show(t("googleFlightsDateNote"), { variant: "info" })}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">info</span>
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -379,10 +391,22 @@ export default function BookFlightsPage() {
                   ); })()}
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
-                      <li key={`out-${item.name}`}>
+                      <li key={`out-${item.name}`} className="flex items-center gap-1">
                         <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
+                        {item.name === "Google Flights" ? (
+                          <button
+                            type="button"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                            title={t("googleFlightsDateNoteShort")}
+                            aria-label={t("googleFlightsDateNoteShort")}
+                            onClick={() => show(t("googleFlightsDateNote"), { variant: "info" })}
+                            onTouchStart={() => show(t("googleFlightsDateNote"), { variant: "info" })}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">info</span>
+                          </button>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -393,10 +417,22 @@ export default function BookFlightsPage() {
                   ); })()}
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
-                      <li key={`in-${item.name}`}>
+                      <li key={`in-${item.name}`} className="flex items-center gap-1">
                         <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
+                        {item.name === "Google Flights" ? (
+                          <button
+                            type="button"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                            title={t("googleFlightsDateNoteShort")}
+                            aria-label={t("googleFlightsDateNoteShort")}
+                            onClick={() => show(t("googleFlightsDateNote"), { variant: "info" })}
+                            onTouchStart={() => show(t("googleFlightsDateNote"), { variant: "info" })}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">info</span>
+                          </button>
+                        ) : null}
                       </li>
                     ))}
                   </ul>

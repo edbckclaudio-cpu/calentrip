@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 import { findAirportByIata } from "@/lib/airports";
 
@@ -1460,7 +1461,39 @@ export default function FinalCalendarPage() {
             lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
             lines.push("CALSCALE:GREGORIAN");
             lines.push("METHOD:PUBLISH");
+            lines.push("X-WR-CALNAME:CalenTrip");
+            function escText(s: string) {
+              return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,");
+            }
+            function foldLine(s: string) {
+              const max = 74; // RFC 5545 recommends 75 octets; using 74 chars approximation
+              if (s.length <= max) return s;
+              const parts: string[] = [];
+              for (let i = 0; i < s.length; i += max) {
+                parts.push(s.slice(i, i + max));
+              }
+              return parts.join("\r\n ");
+            }
             const returnDetails = await computeReturnDetails();
+            const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+            const isAndroid = /Android/.test(ua);
+            const useUTC = isAndroid;
+
+            if (isCapAndroid()) {
+              const evs = events.map((e) => {
+                const start = parseDT(e.date, e.time);
+                const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
+                const toISO = (d: Date) => d.toISOString();
+                return { startISO: start ? toISO(start) : new Date().toISOString(), endISO: end ? toISO(end) : undefined, title: e.label, description: e.label };
+              });
+              try {
+                const perm = await Calendar.requestPermissions();
+                if (perm?.granted) {
+                  const res = await Calendar.addEvents({ events: evs });
+                  if (res.ok && res.added > 0) { show("Eventos adicionados ao Calendário", { variant: "success" }); return; }
+                }
+              } catch {}
+            }
             events.forEach((e, idx) => {
               const start = parseDT(e.date, e.time);
               const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
@@ -1469,9 +1502,9 @@ export default function FinalCalendarPage() {
               const uid = `ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`;
               lines.push(`UID:${uid}`);
               lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-              if (start) lines.push(`DTSTART:${fmt(start)}`);
-              if (end) lines.push(`DTEND:${fmt(end)}`);
-              lines.push(`SUMMARY:${e.label}`);
+              if (start) lines.push(`DTSTART:${useUTC ? fmtUTC(start) : fmt(start)}`);
+              if (end) lines.push(`DTEND:${useUTC ? fmtUTC(end) : fmt(end)}`);
+              lines.push(`SUMMARY:${escText(e.label)}`);
               let extraCall: { callAt: Date; callEnd: Date; callTime?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
               if (e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
                 const extra = returnDetails;
@@ -1489,14 +1522,14 @@ export default function FinalCalendarPage() {
                 if (extra?.uberUrl) info.push(`Uber: ${extra.uberUrl}`);
                 if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
                 if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
-                lines.push(`DESCRIPTION:${info.join("\\n")}`);
+                lines.push(`DESCRIPTION:${escText(info.join("\\n"))}`);
                 if (extra?.callAtISO) {
                   const callAt = new Date(extra.callAtISO);
                   const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
                   extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
                 }
               } else {
-                lines.push(`DESCRIPTION:${desc}`);
+                lines.push(`DESCRIPTION:${escText(desc)}`);
               }
               lines.push("END:VEVENT");
               if (extraCall) {
@@ -1505,23 +1538,19 @@ export default function FinalCalendarPage() {
                 const uid2 = `call-${idx}-${fmt(callAt)}@calentrip`;
                 lines.push(`UID:${uid2}`);
                 lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
-                lines.push(`DTSTART:${fmt(callAt)}`);
-                lines.push(`DTEND:${fmt(callEnd)}`);
+                lines.push(`DTSTART:${useUTC ? fmtUTC(callAt) : fmt(callAt)}`);
+                lines.push(`DTEND:${useUTC ? fmtUTC(callEnd) : fmt(callEnd)}`);
                 lines.push(`SUMMARY:Chamar Uber`);
                 const descParts = [`Chamar Uber às: ${callTime}`];
                 if (uberUrl) descParts.push(`Uber: ${uberUrl}`);
                 if (gmapsUrl) descParts.push(`Google Maps: ${gmapsUrl}`);
                 lines.push(`DESCRIPTION:${descParts.join("\\n")}`);
-                lines.push("BEGIN:VALARM");
-                lines.push("ACTION:DISPLAY");
-                lines.push("DESCRIPTION:Lembrete de transporte");
-                lines.push("TRIGGER:-PT120M");
-                lines.push("END:VALARM");
+                // VALARM removido para compatibilidade com apps móveis
                 lines.push("END:VEVENT");
               }
             });
             lines.push("END:VCALENDAR");
-            const crlf = lines.join("\r\n") + "\r\n";
+            const crlf = lines.map(foldLine).join("\r\n") + "\r\n";
             const blob = new Blob([crlf], { type: "text/calendar;charset=utf-8" });
             const file = new File([crlf], "calentrip.ics", { type: "text/calendar;charset=utf-8" });
             try {

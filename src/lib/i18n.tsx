@@ -93,6 +93,8 @@ const dict: Record<Lang, Record<string, string>> = {
     calendarList: "Calendário em lista",
     calendarMonth: "Calendário mensal",
     stayCheckinNextDayNote: "ATENÇÃO: seu voo chega ao destino no dia seguinte. Avalie se deseja manter a hospedagem a partir do dia da saída (com check-in no dia seguinte em qualquer horário permitido) ou ajustar a busca para iniciar a hospedagem no dia seguinte à partida. Essa opção pode economizar uma diária. Lembre-se: o check-in normalmente começa às 14:00; confirme as regras da hospedagem escolhida.",
+    googleFlightsDateNoteShort: "Verifique a data",
+    googleFlightsDateNote: "No Google Flights, confirme as datas de ida e volta. Em alguns casos elas não são preenchidas automaticamente pelo link.",
   },
   en: {
     appName: "CalenTrip",
@@ -183,6 +185,8 @@ const dict: Record<Lang, Record<string, string>> = {
     calendarList: "List calendar",
     calendarMonth: "Monthly calendar",
     stayCheckinNextDayNote: "As the flight arrives the day after departure, the accommodation check-in is set to the day after the flight’s departure date.",
+    googleFlightsDateNoteShort: "Check the date",
+    googleFlightsDateNote: "On Google Flights, please confirm the outbound and return dates. In some cases they are not auto-filled by the link.",
   },
   es: {
     appName: "CalenTrip",
@@ -273,6 +277,8 @@ const dict: Record<Lang, Record<string, string>> = {
     stayRouteToAddressLabel: "Destino",
     calendarList: "Calendario en lista",
     calendarMonth: "Calendario mensual",
+    googleFlightsDateNoteShort: "Verificar fecha",
+    googleFlightsDateNote: "En Google Flights, confirma las fechas de ida y vuelta. En algunos casos no se completan automáticamente desde el enlace.",
   },
 };
 
