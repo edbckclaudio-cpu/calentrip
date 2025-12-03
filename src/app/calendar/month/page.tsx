@@ -30,6 +30,15 @@ export default function MonthCalendarPage() {
         setEvents(saved.events as EventItem[]);
         return;
       }
+      try {
+        const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+        const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+        if (list.length) {
+          const sorted = list.slice().sort((a, b) => ((a.savedAt || "").localeCompare(b.savedAt || "")));
+          const last = sorted[sorted.length - 1];
+          if (last?.events?.length) { setEvents(last.events as EventItem[]); return; }
+        }
+      } catch {}
       const list: EventItem[] = [];
       const trips: TripItem[] = getTrips();
       const current = trips.length ? trips[0] : null;
