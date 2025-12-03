@@ -470,7 +470,7 @@ export default function AccommodationSearchPage() {
         setTransportArrOpts([]);
       }
     })();
-  }, [transportOpenIdx, cities, transportMode, show]);
+  }, [transportOpenIdx, cities, transportMode]);
 
   if (!tripSearch) {
     return (
