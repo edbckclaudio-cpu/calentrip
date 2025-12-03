@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useState, ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number; key?: string };
 
@@ -32,36 +33,43 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.filter((t) => t.id !== id));
   }
 
+  const portal = (
+    <div
+      className="fixed top-0 left-0 right-0 z-[9999] w-full px-2 space-y-2 flex flex-col items-center pointer-events-none"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+    >
+      {items.map((t) => (
+        <div
+          key={t.id}
+          className={
+            `relative min-w-[220px] max-w-[92vw] sm:max-w-[560px] lg:max-w-[640px] rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-[13px] sm:text-sm font-semibold leading-snug break-words shadow-2xl ring-2 pointer-events-auto ` +
+            (t.variant === "success"
+              ? "bg-emerald-600 text-white ring-emerald-700"
+              : t.variant === "error"
+              ? "bg-red-600 text-white ring-red-700"
+              : "bg-[#007AFF] text-white ring-[#005bbb]")
+          }
+        >
+          {t.message}
+          {((typeof t.duration !== "number") || (t.message || "").length > 80) ? (
+            <button
+              type="button"
+              className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md/2 bg-white/10 hover:bg-white/20 text-white"
+              onClick={() => dismiss(t.id)}
+              aria-label="Fechar"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <ToastContext.Provider value={{ show, dismiss }}>
       {children}
-      <div className="fixed top-0 left-0 right-0 z-[9999] w-full px-2 pt-2 sm:pt-3 space-y-2 flex flex-col items-center pointer-events-none">
-        {items.map((t) => (
-          <div
-            key={t.id}
-            className={
-              `relative min-w-[220px] max-w-[90vw] sm:max-w-[560px] lg:max-w-[640px] rounded-lg border px-2.5 py-1.5 sm:px-3 sm:py-2 text-[12px] sm:text-sm leading-snug break-words shadow-lg pointer-events-auto ` +
-              (t.variant === "success"
-                ? "bg-green-50 border-green-200 text-green-800"
-                : t.variant === "error"
-                ? "bg-red-50 border-red-200 text-red-800"
-                : "bg-white border-zinc-200 text-zinc-900 dark:bg-black dark:border-zinc-800 dark:text-zinc-100")
-            }
-          >
-            {t.message}
-            {((typeof t.duration !== "number") || (t.message || "").length > 80) ? (
-              <button
-                type="button"
-                className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                onClick={() => dismiss(t.id)}
-                aria-label="Fechar"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            ) : null}
-          </div>
-        ))}
-      </div>
+      {typeof document !== "undefined" ? createPortal(portal, document.body) : null}
     </ToastContext.Provider>
   );
 }
