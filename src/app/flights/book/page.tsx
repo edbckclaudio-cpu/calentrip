@@ -194,19 +194,19 @@ export default function BookFlightsPage() {
     if (!tripSearch) return;
     if (tripSearch.mode === "same") {
       const id = show(
-        "Agora é a hora de escolher e comprar o voo. No quadro Plataformas de busca, clique nos links para encontrar o melhor preço e horário. As buscas já estão preenchidas, mas as plataformas podem não entender algum dado — sempre confira as informações e a quantidade de passageiros. Depois de comprar, preencha os horários dos voos, anexe ou fotografe as passagens e salve o código de reserva/localizador.",
+        "Hora de escolher e comprar o voo. Em \"Plataformas de busca\", use os links para comparar preço e horários. As buscas já vêm preenchidas, mas valide os dados e a quantidade de passageiros. Após a compra, registre os horários dos voos, anexe ou fotografe as passagens e salve o localizador/código de reserva.",
         { variant: "info", sticky: true, key: "book-intro" }
       );
       setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     } else {
       const id = show(
-        "Agora é a hora de escolher e comprar o voo. As buscas estão separadas nas plataformas. Como as plataformas podem não entender algum dado, confira e garanta que a opção 'somente ida' esteja selecionada em cada trecho, e verifique a quantidade de passageiros. Depois de comprar, preencha os horários dos voos, anexe ou fotografe as passagens e salve o código de reserva/localizador.",
+        "Hora de escolher e comprar o voo. As buscas estão separadas nas plataformas. Valide os dados e garanta que a opção \"somente ida\" esteja ativa em cada trecho; confira também a quantidade de passageiros. Após a compra, registre os horários dos voos, anexe ou fotografe as passagens e salve o localizador/código de reserva.",
         { variant: "info", sticky: true, key: "book-intro" }
       );
       setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     }
     setIntroShown(true);
-  }, [hydrated, loadingTrip, tripSearch, introShown, show]);
+  }, [hydrated, loadingTrip, tripSearch, introShown, show, minimize]);
 
   const missing = hydrated && !loadingTrip && !tripSearch;
 

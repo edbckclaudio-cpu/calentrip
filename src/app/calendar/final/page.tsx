@@ -627,6 +627,7 @@ export default function FinalCalendarPage() {
   }
 
   async function saveCalendar() {
+    try { saveCalendarNamed(true); } catch {}
     function fmtICS(d: Date) {
       const y = String(d.getFullYear());
       const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -1832,35 +1833,8 @@ export default function FinalCalendarPage() {
           </button>
           
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
-            try {
-              const payload = { events };
-              if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
-              try {
-                const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-                const ts = raw ? JSON.parse(raw) : null;
-                if (ts) {
-                  const isSame = ts.mode === "same";
-                  const origin = isSame ? ts.origin : ts.outbound?.origin;
-                  const destination = isSame ? ts.destination : ts.outbound?.destination;
-                  const date = isSame ? ts.departDate : ts.outbound?.date;
-                  const pax = (() => {
-                    const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
-                  })();
-                  if (origin && destination && date) {
-                    const title = `${origin} → ${destination}`;
-                    const trips: TripItem[] = getTrips();
-                    const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-                    if (idx >= 0) {
-                      const next = [...trips];
-                      next[idx] = { ...next[idx], reachedFinalCalendar: true, savedCalendarName: title, savedEvents: events };
-                      localStorage.setItem("calentrip:trips", JSON.stringify(next));
-                    }
-                  }
-                }
-              } catch {}
-              show("Salvo em pesquisas salvas", { variant: "success" });
-              setCalendarHelpOpen(true);
-            } catch { show("Erro ao salvar", { variant: "error" }); }
+            const ok = saveCalendarNamed(false);
+            if (ok) { setCalendarHelpOpen(true); }
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
