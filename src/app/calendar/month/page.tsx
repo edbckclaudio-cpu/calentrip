@@ -191,7 +191,7 @@ export default function MonthCalendarPage() {
                 </div>
               ) : (
                 <div>
-                  Assinatura única de R$ 15 por viagem. Válida até o último dia; depois, você continua consultando o calendário. Para nova viagem, é necessário assinar novamente.
+                  Assinatura mensal (R$ 15): durante 30 dias você pode criar e salvar quantas viagens quiser e editar atividades. Após expirar, o acesso às viagens salvas continua pelo botão "Pesquisas salvas" (lista e calendário, botões, links e documentos). Para criar novas viagens ou salvar alterações, renove a assinatura.
                 </div>
               )}
             </div>
@@ -202,7 +202,7 @@ export default function MonthCalendarPage() {
                   <button type="button" className="btn" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/month" })}>Entrar Demo</button>
                 </>
               ) : (
-                <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Assinar agora</button>
+                <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Assinar agora (R$ 15/mês)</button>
               )}
             </div>
           </div>

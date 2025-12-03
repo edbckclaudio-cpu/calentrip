@@ -1667,7 +1667,7 @@ export default function FinalCalendarPage() {
                 </div>
               ) : (
                 <div>
-                  Assinatura única de R$ 15 por viagem. Válida até o último dia da viagem; depois, você continua consultando o calendário. Para nova viagem, é necessário assinar novamente.
+                  Assinatura mensal (R$ 15): durante 30 dias você pode criar e salvar quantas viagens quiser e editar atividades. Depois de expirar, você continua com acesso integral às viagens já salvas pelo botão "Pesquisas salvas" (lista e calendário, botões, links e documentos). Para criar novas viagens ou salvar alterações, renove a assinatura.
                 </div>
               )}
             </div>
@@ -1698,7 +1698,7 @@ export default function FinalCalendarPage() {
                     }
                   }}
                 >
-                  Assinar agora (R$ 15)
+                  Assinar agora (R$ 15/mês)
                 </Button>
               )}
             </div>
