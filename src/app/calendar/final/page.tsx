@@ -1735,7 +1735,7 @@ export default function FinalCalendarPage() {
                             if (r?.ok) { setPremiumFlag(true); show(t("purchaseSuccess"), { variant: "success" }); }
                             else { show(t("purchaseFail"), { variant: "error" }); }
                           } catch { show(t("purchaseError"), { variant: "error" }); }
-                        }}>Ativar Premium</Button>
+                        }}>{t("activatePremiumButton")}</Button>
                       </div>
                     ) : null}
                     <div className="mt-2 flex items-center gap-2">
@@ -1847,7 +1847,7 @@ export default function FinalCalendarPage() {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">Salvar calendário</span> : null}
+          {sideOpen ? <span className="text-sm font-medium">{t("saveCalendarButton")}</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             const subject = encodeURIComponent("Calendário da viagem");
@@ -2392,7 +2392,7 @@ export default function FinalCalendarPage() {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">Salvar no google calendar</span> : null}
+          {sideOpen ? <span className="text-sm font-medium">{t("saveToGoogleCalendarButton")}</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -2431,7 +2431,7 @@ export default function FinalCalendarPage() {
             }}
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
-            <span className="hidden sm:inline">Salvar</span>
+            <span className="hidden sm:inline">{t("saveLabel")}</span>
           </Button>
           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
@@ -2524,7 +2524,7 @@ export default function FinalCalendarPage() {
       </div>
 
       <Dialog open={calendarHelpOpen} onOpenChange={setCalendarHelpOpen} placement="bottom" disableBackdropClose>
-        <DialogHeader>Salvar no google calendar</DialogHeader>
+        <DialogHeader>{t("saveToGoogleCalendarButton")}</DialogHeader>
         <div className="space-y-2 text-sm">
           <div className="font-semibold">Android</div>
           <div>• Verificamos o Google Calendar. Se não estiver instalado, abrimos a Play Store para instalar.</div>
@@ -2532,7 +2532,7 @@ export default function FinalCalendarPage() {
           <div>• Abrimos o gerenciador de arquivos na pasta Download (quando possível).</div>
           <div>• Toque em calentrip.ics e escolha salvar no Google Calendar; selecione a conta e confirme.</div>
           <div className="mt-3">
-            <Button type="button" disabled={!premiumFlag} onClick={() => { try { saveCalendarFull(); } catch {} }}>Salvar no google calendar</Button>
+            <Button type="button" disabled={!premiumFlag} onClick={() => { try { saveCalendarFull(); } catch {} }}>{t("saveToGoogleCalendarButton")}</Button>
             <Button type="button" variant="outline" className="ml-2" onClick={() => { try { openDownloads(); } catch {} }}>Abrir pasta Download</Button>
           </div>
         </div>
@@ -2575,7 +2575,7 @@ export default function FinalCalendarPage() {
                 setEditIdx(null);
                 show("Atividade atualizada", { variant: "success" });
               } catch { show("Erro ao salvar", { variant: "error" }); }
-            }}>Salvar</Button>
+            }}>{t("saveLabel")}</Button>
           </div>
         </div>
         <DialogFooter>

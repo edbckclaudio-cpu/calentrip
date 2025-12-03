@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { CalendarInput } from "@/components/ui/calendar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { useI18n } from "@/lib/i18n";
 
 type CityStay = { name?: string; checkin?: string; checkout?: string; address?: string };
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
@@ -16,6 +17,7 @@ type RestaurantSuggestion = { name: string; cuisine?: string[]; price?: string |
 
 export default function EntertainmentReservationsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { show, dismiss } = useToast();
   const [cities, setCities] = useState<CityStay[]>(() => {
     try {
@@ -461,7 +463,7 @@ export default function EntertainmentReservationsPage() {
                 setOpenKind(null);
                 setAddress("");
                 show(openKind === "restaurant" ? "Restaurante adicionado" : "Atividade adicionada", { variant: "success" });
-              }}>Salvar</Button>
+              }}>{t("saveLabel")}</Button>
             </div>
             <div className="text-xs text-zinc-600">Para encontrar mais opções, use o botão &quot;Sugestões por IA&quot;.</div>
           </div>
@@ -768,7 +770,7 @@ export default function EntertainmentReservationsPage() {
                 setEditIdx(null);
                 setEditAddress("");
                 show("Item atualizado", { variant: "success" });
-              }}>Salvar</Button>
+              }}>{t("saveLabel")}</Button>
             </div>
             <div className="text-xs text-zinc-600">Para encontrar mais opções, use o botão &quot;Sugestões por IA&quot;.</div>
           </div>

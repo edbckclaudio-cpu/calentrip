@@ -190,6 +190,10 @@ const dict: Record<Lang, Record<string, string>> = {
     premiumWord: "Premium",
     freeWord: "Grátis",
     untilWord: "até",
+    activatePremiumButton: "Ativar Premium",
+    saveCalendarButton: "Salvar calendário",
+    saveLabel: "Salvar",
+    saveToGoogleCalendarButton: "Salvar no Google Calendar",
   },
   en: {
     appName: "CalenTrip",
@@ -377,6 +381,10 @@ const dict: Record<Lang, Record<string, string>> = {
     premiumWord: "Premium",
     freeWord: "Free",
     untilWord: "until",
+    activatePremiumButton: "Activate Premium",
+    saveCalendarButton: "Save calendar",
+    saveLabel: "Save",
+    saveToGoogleCalendarButton: "Save to Google Calendar",
   },
   es: {
     appName: "CalenTrip",
@@ -564,6 +572,10 @@ const dict: Record<Lang, Record<string, string>> = {
     premiumWord: "Premium",
     freeWord: "Gratis",
     untilWord: "hasta",
+    activatePremiumButton: "Activar Premium",
+    saveCalendarButton: "Guardar calendario",
+    saveLabel: "Guardar",
+    saveToGoogleCalendarButton: "Guardar en Google Calendar",
   },
 };
 

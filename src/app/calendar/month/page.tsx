@@ -286,7 +286,7 @@ export default function MonthCalendarPage() {
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
             <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
           </span>
-          {sideOpen ? <span className="text-sm font-medium">Salvar calendário</span> : null}
+          {sideOpen ? <span className="text-sm font-medium">{t("saveCalendarButton")}</span> : null}
         </button>
       </div>
     </div>
@@ -450,7 +450,7 @@ export default function MonthCalendarPage() {
                         setEditIdx(null);
                         show("Atividade atualizada", { variant: "success" });
                       } catch { show("Erro ao salvar", { variant: "error" }); }
-                    }}>Salvar</Button>
+                    }}>{t("saveLabel")}</Button>
                   </div>
                 </div>
                 <div className="mt-3 flex justify-end">
