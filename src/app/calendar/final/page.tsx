@@ -71,6 +71,8 @@ export default function FinalCalendarPage() {
   const { data: session, status } = useSession();
   const { lang } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
+  const [premiumFlag, setPremiumFlag] = useState<boolean>(false);
 
   async function saveCalendarToFile() {
     try {
@@ -290,6 +292,8 @@ export default function FinalCalendarPage() {
       const current = trips.length ? trips[0] : null;
       if (!current) return;
       const premium = isTripPremium(current.id);
+      setCurrentTripId(current.id);
+      setPremiumFlag(premium);
       if (status !== "authenticated") setGating({ show: true, reason: "anon", tripId: current.id });
       else if (!premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
       else setGating(null);
@@ -1659,22 +1663,22 @@ export default function FinalCalendarPage() {
               ) : (
                 <Button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     try {
-                      const trips: TripItem[] = getTrips();
-                      const current = trips.find((t) => t.id === gating?.tripId);
-                      const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-                      const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: { checkout?: string }[] }) : null;
-                      const lastCheckout = Array.isArray(summary?.cities) ? (summary!.cities!.map((c) => c.checkout).filter(Boolean).slice(-1)[0] || undefined) : undefined;
-                      const returnDate = (() => {
-                        const notes = current?.flightNotes || [];
-                        const ret = notes.filter((n) => n.leg === "inbound").map((n) => n.date).filter(Boolean).slice(-1)[0];
-                        return ret;
-                      })();
-                      const expiresAt = computeExpiryFromData({ tripDate: current?.date, returnDate, lastCheckout });
-                      if (current) setTripPremium(current.id, expiresAt);
-                      setGating(null);
-                    } catch {}
+                      if (!gating?.tripId) return;
+                      const userId = session?.user?.email || session?.user?.name || undefined;
+                      const mod = await import("@/lib/billing");
+                      const r = await mod.completePurchaseForTrip(gating.tripId, userId);
+                      if (r?.ok) {
+                        setPremiumFlag(true);
+                        setGating(null);
+                        show("Assinatura ativada", { variant: "success" });
+                      } else {
+                        show("Falha na compra", { variant: "error" });
+                      }
+                    } catch {
+                      show("Erro na compra", { variant: "error" });
+                    }
                   }}
                 >
                   Assinar agora (R$ 15)
@@ -1707,6 +1711,20 @@ export default function FinalCalendarPage() {
                     <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
+                    <div className="mt-1 text-[10px] text-zinc-500">Plano: {premiumFlag ? "Premium" : "Grátis"}</div>
+                    {!premiumFlag && currentTripId ? (
+                      <div className="mt-2">
+                        <Button type="button" onClick={async () => {
+                          try {
+                            const userId = session?.user?.email || session?.user?.name || undefined;
+                            const mod = await import("@/lib/billing");
+                            const r = await mod.completePurchaseForTrip(currentTripId, userId);
+                            if (r?.ok) { setPremiumFlag(true); show("Assinatura ativada", { variant: "success" }); }
+                            else { show("Falha na compra", { variant: "error" }); }
+                          } catch { show("Erro na compra", { variant: "error" }); }
+                        }}>Ativar Premium</Button>
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex items-center gap-2">
                       <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Ver perfil</button>
                       <button type="button" className="text-xs" onClick={() => signOut()}>Sair</button>
