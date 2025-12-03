@@ -24,7 +24,7 @@ export default function AccommodationSearchPage() {
   }, [tripSearch, show]);
   const [city, setCity] = useState(initialCity);
   const lastToastId = useRef<number | null>(null);
-  function showToast(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) {
+  function showToast(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) {
     if (lastToastId.current) dismiss(lastToastId.current);
     const id = show(message, opts);
     lastToastId.current = id;
@@ -809,9 +809,21 @@ export default function AccommodationSearchPage() {
                 <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">Rentalcars</a></li>
                 <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={transportRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
               </ul>
-              <div className="mb-2">
+                <div className="mb-2">
                 <label className="mb-1 block text-sm">{t("transportModeLabel")}</label>
-                <select className="w-full rounded-md border px-2 py-1 text-sm" value={transportMode} onChange={(e) => setTransportMode(e.target.value as "air" | "train" | "bus" | "car")}>
+                <select
+                  className="w-full rounded-md border px-2 py-1 text-sm"
+                  value={transportMode}
+                  onChange={(e) => {
+                    const mv = e.target.value as "air" | "train" | "bus" | "car";
+                    setTransportMode(mv);
+                    if (mv === "car") {
+                      setTransportDepOpts([]);
+                      setTransportArrOpts([]);
+                      showToast("Você selecionou transporte próprio (carro). Não é necessário preencher origem, destino ou horários. Siga as regras de check-out da hospedagem e, quando estiver pronto, clique em Salvar transporte para avançar para a próxima cidade.", { duration: 9000, key: "transport-info" });
+                    }
+                  }}
+                >
                   <option value="air">{t("modeAir")}</option>
                   <option value="train">{t("modeTrain")}</option>
                   <option value="bus">{t("modeBus")}</option>
@@ -991,7 +1003,11 @@ export default function AccommodationSearchPage() {
                     >
                       <span className="inline-flex items-center gap-1">
                         {c.transportToNext ? <span className="material-symbols-outlined text-[16px] text-green-700 dark:text-green-300">task_alt</span> : null}
-                        <span>Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext?.mode || "").toUpperCase()} • {c.transportToNext?.depTime || "—"} → {c.transportToNext?.arrTime || "—"} • Anexos: {(c.transportToNext?.files || []).length}</span>
+                      <span>
+                        Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext?.mode || "").toUpperCase()}
+                        {c.transportToNext?.mode === "car" ? "" : ` • ${c.transportToNext?.depTime || "—"} → ${c.transportToNext?.arrTime || "—"}`}
+                        {` • Anexos: ${(c.transportToNext?.files || []).length}`}
+                      </span>
                       </span>
                     </li>
                   ) : null
