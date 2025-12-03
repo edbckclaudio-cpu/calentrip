@@ -223,7 +223,7 @@ export default function MonthCalendarPage() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
-                    <div className="mt-1 text-[10px] text-zinc-500">Plano: {premiumFlag ? `Premium${premiumUntil ? ` até ${premiumUntil}` : ""}` : "Grátis"}</div>
+                    <div className="mt-1 text-[10px] text-zinc-500">{t("planWord")}: {premiumFlag ? `${t("premiumWord")}${premiumUntil ? ` ${t("untilWord")} ${premiumUntil}` : ""}` : t("freeWord")}</div>
                   </div>
                 ) : null}
               </div>

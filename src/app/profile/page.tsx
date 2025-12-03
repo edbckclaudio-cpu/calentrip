@@ -78,7 +78,7 @@ export default function ProfilePage() {
             {currentTrip ? (
               <>
                 <div>{t("currentTripLabel")}: {currentTrip.title} • {currentTrip.date}</div>
-                <div>{t("statusLabel")}: {premiumActive ? `${t("activeStatus")}${premiumUntil ? ` (até ${premiumUntil})` : ""}` : t("inactiveStatus")}</div>
+                <div>{t("statusLabel")}: {premiumActive ? `${t("activeStatus")}${premiumUntil ? ` (${t("untilWord")} ${premiumUntil})` : ""}` : t("inactiveStatus")}</div>
                 <div className="space-y-2">
                   <div className="text-zinc-600">{t("subMonthlyText")}</div>
                   {!premiumActive ? (
@@ -90,9 +90,9 @@ export default function ProfilePage() {
                           const mod = await import("@/lib/billing");
                           const userId = session?.user?.email || session?.user?.name || undefined;
                           const r = await mod.completePurchaseForTrip("global", userId);
-                          if (r?.ok) { show("Assinatura ativada", { variant: "success" }); window.location.href = "/calendar/final"; }
-                          else show("Falha na compra", { variant: "error" });
-                        } catch { show("Erro na compra", { variant: "error" }); }
+                          if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); window.location.href = "/calendar/final"; }
+                          else show(t("purchaseFail"), { variant: "error" });
+                        } catch { show(t("purchaseError"), { variant: "error" }); }
                       }}
                     >
                       {t("subscribeMonthlyButton")}
@@ -133,9 +133,9 @@ export default function ProfilePage() {
               try {
                 const r = await fetch("/api/account/delete", { method: "POST" });
                 const js = await r.json();
-                if (js?.ok) show("Solicitação registrada. Dados removidos.", { variant: "success" });
-                else show("Não foi possível processar a solicitação.", { variant: "error" });
-              } catch { show("Erro na solicitação.", { variant: "error" }); }
+                if (js?.ok) show(t("deleteSuccess"), { variant: "success" });
+                else show(t("deleteFail"), { variant: "error" });
+              } catch { show(t("deleteError"), { variant: "error" }); }
             }}>{t("deleteDataButton")}</Button>
           </CardContent>
         </Card>

@@ -1724,7 +1724,7 @@ export default function FinalCalendarPage() {
                     <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
-                    <div className="mt-1 text-[10px] text-zinc-500">Plano: {premiumFlag ? `Premium${premiumUntil ? ` até ${premiumUntil}` : ""}` : "Grátis"}</div>
+                    <div className="mt-1 text-[10px] text-zinc-500">{t("planWord")}: {premiumFlag ? `${t("premiumWord")}${premiumUntil ? ` ${t("untilWord")} ${premiumUntil}` : ""}` : t("freeWord")}</div>
                     {!premiumFlag && currentTripId ? (
                       <div className="mt-2">
                         <Button type="button" onClick={async () => {
@@ -1732,9 +1732,9 @@ export default function FinalCalendarPage() {
                             const userId = session?.user?.email || session?.user?.name || undefined;
                             const mod = await import("@/lib/billing");
                             const r = await mod.completePurchaseForTrip(currentTripId, userId);
-                            if (r?.ok) { setPremiumFlag(true); show("Assinatura ativada", { variant: "success" }); }
-                            else { show("Falha na compra", { variant: "error" }); }
-                          } catch { show("Erro na compra", { variant: "error" }); }
+                            if (r?.ok) { setPremiumFlag(true); show(t("purchaseSuccess"), { variant: "success" }); }
+                            else { show(t("purchaseFail"), { variant: "error" }); }
+                          } catch { show(t("purchaseError"), { variant: "error" }); }
                         }}>Ativar Premium</Button>
                       </div>
                     ) : null}
