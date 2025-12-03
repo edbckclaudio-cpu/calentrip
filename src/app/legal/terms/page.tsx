@@ -1,10 +1,18 @@
+"use client";
+import { useI18n } from "@/lib/i18n";
+
 export default function TermsPage() {
+  const { t } = useI18n();
   return (
     <div className="container-page py-6 space-y-4">
-      <h1 className="text-2xl font-semibold text-[var(--brand)]">Termos de Uso</h1>
-      <p className="text-sm text-zinc-700">O aplicativo auxilia no planejamento de viagens. Informações de terceiros podem variar; confirme com fornecedores antes de comprar ou viajar.</p>
-      <p className="text-sm text-zinc-700">Assinaturas por viagem liberam recursos premium durante o período da viagem. Após o término, o acesso permanece para consulta.</p>
-      <p className="text-sm text-zinc-700">Ao usar o app, você concorda com o uso de dados descrito na Política de Privacidade.</p>
+      <h1 className="text-2xl font-semibold text-[var(--brand)]">{t("termsTitle")}</h1>
+      <div className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <p>{t("termsIntro")}</p>
+        <p>{t("termsResponsibilities")}</p>
+        <p>{t("termsSubscriptionPayment")}</p>
+        <p>{t("termsDataPrivacyLink")}</p>
+        <p>{t("termsSupportContact")}</p>
+      </div>
     </div>
   );
 }

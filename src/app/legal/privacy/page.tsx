@@ -1,10 +1,25 @@
+"use client";
+import { useI18n } from "@/lib/i18n";
+
 export default function PrivacyPage() {
+  const { t } = useI18n();
   return (
     <div className="container-page py-6 space-y-4">
-      <h1 className="text-2xl font-semibold text-[var(--brand)]">Política de Privacidade</h1>
-      <p className="text-sm text-zinc-700">Coletamos dados mínimos para funcionamento: localização em primeiro plano para gerar rotas e links de transporte, dados de compras via Google Play e preferências salvas no dispositivo.</p>
-      <p className="text-sm text-zinc-700">Não armazenamos senhas. Autenticação ocorre por provedores externos. Dados de viagens e anexos ficam no dispositivo do usuário.</p>
-      <p className="text-sm text-zinc-700">Em Android, compras são processadas pelo Google Play. Em caso de dúvidas ou solicitações, utilize a página de Suporte.</p>
+      <h1 className="text-2xl font-semibold text-[var(--brand)]">{t("privacyTitle")}</h1>
+      <div className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <p>{t("privacyIntro")}</p>
+        <p>{t("privacyDataCategories")}</p>
+        <ul className="list-disc pl-5">
+          <li>{t("privacyDataLocation")}</li>
+          <li>{t("privacyDataPurchases")}</li>
+          <li>{t("privacyDataPrefs")}</li>
+          <li>{t("privacyDataAttachments")}</li>
+        </ul>
+        <p>{t("privacySharing")}</p>
+        <p>{t("privacyRetention")}</p>
+        <p>{t("privacyUserRights")}</p>
+        <p>{t("privacyContact")}</p>
+      </div>
     </div>
   );
 }
