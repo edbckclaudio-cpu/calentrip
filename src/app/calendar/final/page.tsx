@@ -2417,7 +2417,7 @@ export default function FinalCalendarPage() {
         </div>
         <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-[11px] flex items-center justify-between">
           <span>Visualize em formato calendário.</span>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
             <span className="material-symbols-outlined text-[18px] mr-1">calendar_month</span>
             Calendário
           </Button>

@@ -260,7 +260,19 @@ export default function MonthCalendarPage() {
     </div>
       {sideOpen ? (<div className="fixed top-0 right-0 bottom-0 left-56 z-30 bg-black/10" onClick={() => setSideOpen(false)} />) : null}
 
-      <div className="container-page">
+  <div className="container-page">
+        <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-[11px] flex items-center justify-between">
+          <span>Voltar para lista de eventos.</span>
+          <Button
+            type="button"
+            variant="outline"
+            className="px-2 py-1 text-xs rounded-md"
+            onClick={() => { try { window.close(); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}
+          >
+            <span className="material-symbols-outlined text-[18px] mr-1">list_alt</span>
+            Voltar para lista
+          </Button>
+        </div>
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário da viagem</h1>
         <div className="text-sm text-zinc-700 dark:text-zinc-300">{monthLabel}</div>
         <div className="mt-3 rounded-lg border border-[#007AFF]/30 bg-[#007AFF]/10 p-3 text-sm">
