@@ -2387,7 +2387,7 @@ export default function FinalCalendarPage() {
       ) : null}
       <div className="container-page">
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário final</h1>
-        <p className="text-sm text-zinc-600">Veja todas as atividades em ordem cronológica. Configure o transporte para o aeroporto.</p>
+        <p className="text-sm text-zinc-600">Veja todas as atividades em ordem cronológica.</p>
       </div>
 
       <div className="container-page">
@@ -2413,6 +2413,13 @@ export default function FinalCalendarPage() {
             }}
           >
             Salvar no app e no Google
+          </Button>
+        </div>
+        <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-[11px] flex items-center justify-between">
+          <span>Visualize em formato calendário.</span>
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
+            <span className="material-symbols-outlined text-[18px] mr-1">calendar_month</span>
+            Calendário
           </Button>
         </div>
         <Card>
