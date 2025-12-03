@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { isTripPremium } from "@/lib/premium";
 import { useToast } from "@/components/ui/toast";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -19,6 +20,7 @@ export default function ProfilePage() {
   const premiumActive = useMemo(() => (currentTrip ? isTripPremium(currentTrip.id) : false), [currentTrip]);
   const [premiumUntil, setPremiumUntil] = useState("");
   const { show } = useToast();
+  const { t } = useI18n();
 
   useEffect(() => {
     setTrips(getTrips());
@@ -38,8 +40,8 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page">
-        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Perfil</h1>
-        <p className="text-sm text-zinc-600">Gerencie sua conta e assinatura mensal.</p>
+        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">{t("profileTitle")}</h1>
+        <p className="text-sm text-zinc-600">{t("profileSubtitleMonthly")}</p>
       </div>
 
       <div className="container-page grid gap-4 md:grid-cols-2">
@@ -58,10 +60,10 @@ export default function ProfilePage() {
               </>
             ) : (
               <>
-                <div>Você está navegando como convidado.</div>
+                <div>{t("loginUnlockText")}</div>
                 <div className="flex gap-2 mt-2">
-                  <Button type="button" onClick={() => signIn("google")}>Entrar com Google</Button>
-                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile" })}>Entrar Demo</Button>
+                  <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
+                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile" })}>{t("signInDemo")}</Button>
                 </div>
               </>
             )}
@@ -70,15 +72,15 @@ export default function ProfilePage() {
 
         <Card className="rounded-xl shadow-md">
           <CardHeader>
-            <CardTitle>Assinatura mensal</CardTitle>
+            <CardTitle>{t("subscriptionMonthlyTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {currentTrip ? (
               <>
-                <div>Viagem atual: {currentTrip.title} • Data: {currentTrip.date}</div>
-                <div>Status: {premiumActive ? `Ativa${premiumUntil ? ` (até ${premiumUntil})` : ""}` : "Inativa"}</div>
+                <div>{t("currentTripLabel")}: {currentTrip.title} • {currentTrip.date}</div>
+                <div>{t("statusLabel")}: {premiumActive ? `${t("activeStatus")}${premiumUntil ? ` (até ${premiumUntil})` : ""}` : t("inactiveStatus")}</div>
                 <div className="space-y-2">
-                  <div className="text-zinc-600">Plano mensal de R$ 15: desbloqueia edição de atividades, salvar calendário e recursos premium durante 30 dias para todas as viagens.</div>
+                  <div className="text-zinc-600">{t("subMonthlyText")}</div>
                   {!premiumActive ? (
                     <Button
                       type="button"
@@ -93,7 +95,7 @@ export default function ProfilePage() {
                         } catch { show("Erro na compra", { variant: "error" }); }
                       }}
                     >
-                      Assinar agora (R$ 15/mês)
+                      {t("subscribeMonthlyButton")}
                     </Button>
                   ) : null}
                 </div>
@@ -111,11 +113,11 @@ export default function ProfilePage() {
             <CardTitle>Informações</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div>• Grátis: busca de voos, definição de destino, hospedagem e planejamento básico.</div>
-            <div>• Pago (mensal): edição de atividades/restaurantes, salvar calendário, exportações avançadas e recursos premium.</div>
-            <div>• Validade: 30 dias após a compra; após expirar, você continua consultando calendários salvos.</div>
-            <div>• Compras: processadas pelo Google Play. Reembolsos seguem as regras do Google Play.</div>
-            <div>• Privacidade e termos: consulte as páginas de Política de Privacidade e Termos de Uso.</div>
+            <div>{t("planFreeBullet")}</div>
+            <div>{t("planPaidBullet")}</div>
+            <div>{t("validityBullet")}</div>
+            <div>{t("billingBullet")}</div>
+            <div>{t("legalBullet")}</div>
           </CardContent>
         </Card>
       </div>
@@ -123,10 +125,10 @@ export default function ProfilePage() {
       <div className="container-page">
         <Card className="rounded-xl shadow-md">
           <CardHeader>
-            <CardTitle>Exclusão de conta e dados</CardTitle>
+            <CardTitle>{t("deleteDataTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div>Você pode solicitar a exclusão dos seus dados e entitlements vinculados à conta.</div>
+            <div>{t("deleteDataDesc")}</div>
             <Button type="button" variant="outline" onClick={async () => {
               try {
                 const r = await fetch("/api/account/delete", { method: "POST" });
@@ -134,7 +136,7 @@ export default function ProfilePage() {
                 if (js?.ok) show("Solicitação registrada. Dados removidos.", { variant: "success" });
                 else show("Não foi possível processar a solicitação.", { variant: "error" });
               } catch { show("Erro na solicitação.", { variant: "error" }); }
-            }}>Excluir conta e dados</Button>
+            }}>{t("deleteDataButton")}</Button>
           </CardContent>
         </Card>
       </div>
