@@ -1064,17 +1064,25 @@ export default function FinalCalendarPage() {
         const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
         return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
       };
-      const o = await geocode(originAddr);
-      const d = await geocode(depPoint + (seg.originCity ? ` ${seg.originCity}` : ""));
-      let distanceKm: number | undefined;
-      let drivingMin: number | undefined;
-      let walkingMin: number | undefined;
+    const o = await geocode(originAddr);
+    const d = await geocode(depPoint + (seg.originCity ? ` ${seg.originCity}` : ""));
+    let distanceKm: number | undefined;
+    let drivingMin: number | undefined;
+    let walkingMin: number | undefined;
       let uberUrl: string | undefined;
       let gmapsUrl: string | undefined;
       let r2rUrl: string | undefined;
       let mapUrl: string | undefined;
-      if (o && d) {
-        const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
+    if (d) {
+      const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+        try {
+          if (!ensureLocationConsent()) { resolve(null); return; }
+          navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+        } catch { resolve(null); }
+      });
+      if (pos) {
+        const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${d.lon},${d.lat}?overview=false`;
         const resD = await fetch(osrmDrive);
         const jsD = await resD.json();
         const rD = jsD?.routes?.[0];
@@ -1082,31 +1090,26 @@ export default function FinalCalendarPage() {
           distanceKm = Math.round((rD.distance ?? 0) / 1000);
           drivingMin = Math.round((rD.duration ?? 0) / 60);
         }
-        const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
         try {
+          const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${d.lon},${d.lat}?overview=false`;
           const resW = await fetch(osrmWalk);
           const jsW = await resW.json();
           const rW = jsW?.routes?.[0];
           if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60);
         } catch {}
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(depPoint)}`;
+      } else {
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(depPoint)}`;
+      }
+      if (o && d) {
         const bbox = [Math.min(o.lon, d.lon), Math.min(o.lat, d.lat), Math.max(o.lon, d.lon), Math.max(o.lat, d.lat)];
         mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox.join("%2C")}&layer=mapnik`;
-        const pos = await new Promise<GeolocationPosition | null>((resolve) => {
-          try {
-            if (!ensureLocationConsent()) { resolve(null); return; }
-            navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
-          } catch { resolve(null); }
-        });
-        if (pos) {
-          const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-          uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
-        } else {
-          uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
-        }
-        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
-        r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
       }
-      if (!gmapsUrl) gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
+      r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+    }
+    if (!gmapsUrl) gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(depPoint)}`;
       if (!r2rUrl) r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
       if (!uberUrl) uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
       const trafficFactor = 1.3;
@@ -2789,13 +2792,10 @@ export default function FinalCalendarPage() {
           ) : (
             <>
               <div>Destino: {goInfo?.destination || "—"}</div>
-              <div>Distância: {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>A pé: {goInfo?.walkingMin ? `${goInfo.walkingMin} min` : "—"}</div>
-                <div>Ônibus: {goInfo?.busMin ? `${goInfo.busMin} min (estimado)` : "—"}</div>
-                <div>Trem/Metro: {goInfo?.trainMin ? `${goInfo.trainMin} min (estimado)` : "—"}</div>
-                <div>Uber/Táxi: {goInfo?.drivingMin ? `${goInfo.drivingMin} min` : "—"}{goInfo?.priceEstimate !== undefined ? ` • R$${goInfo.priceEstimate}` : ""}</div>
-              </div>
+              <div>Distância (a partir da sua localização): {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
+              {!goInfo?.distanceKm && locConsent !== "granted" ? (
+                <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+              ) : null}
               <div>
                 <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
               </div>
@@ -2840,13 +2840,10 @@ export default function FinalCalendarPage() {
             <>
               <div>Destino: {returnInfo?.airportName || "—"}</div>
               <div>Origem: {returnInfo?.address || returnInfo?.city || "—"}</div>
-              <div>Distância: {returnInfo?.distanceKm ? `${returnInfo.distanceKm} km` : "—"}</div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>A pé: {returnInfo?.walkingMin ? `${returnInfo.walkingMin} min` : "—"}</div>
-                <div>Ônibus: {returnInfo?.busMin ? `${returnInfo.busMin} min (estimado)` : "—"}</div>
-                <div>Trem/Metro: {returnInfo?.trainMin ? `${returnInfo.trainMin} min (estimado)` : "—"}</div>
-                <div>Uber/Táxi: {returnInfo?.drivingMin ? `${returnInfo.drivingMin} min` : "—"}{returnInfo?.priceEstimate !== undefined ? ` • R$${returnInfo.priceEstimate}` : ""}</div>
-              </div>
+              <div>Distância (a partir da sua localização): {returnInfo?.distanceKm ? `${returnInfo.distanceKm} km` : "—"}</div>
+              {!returnInfo?.distanceKm && locConsent !== "granted" ? (
+                <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+              ) : null}
               <div>
                 <a className="underline" href={returnInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
               </div>
@@ -2893,13 +2890,10 @@ export default function FinalCalendarPage() {
                 <>
                   <div>Origem: {stayInfo?.origin || "—"}</div>
                   <div>Destino: {stayInfo?.destination || "—"}</div>
-                  <div>Distância: {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>A pé: {stayInfo?.walkingMin ? `${stayInfo.walkingMin} min` : "—"}</div>
-                    <div>Ônibus: {stayInfo?.busMin ? `${stayInfo.busMin} min (estimado)` : "—"}</div>
-                    <div>Trem/Metro: {stayInfo?.trainMin ? `${stayInfo.trainMin} min (estimado)` : "—"}</div>
-                    <div>Uber/Táxi: {stayInfo?.drivingMin ? `${stayInfo.drivingMin} min` : "—"}</div>
-                  </div>
+                  <div>Distância (a partir da sua localização): {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
+                  {!stayInfo?.distanceKm && locConsent !== "granted" ? (
+                    <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+                  ) : null}
                   {stayInfo?.mapUrl ? (
                     <iframe title="map" src={stayInfo.mapUrl} className="mt-2 h-40 w-full rounded-md border" />
                   ) : null}
