@@ -320,6 +320,11 @@ export default function MonthCalendarPage() {
       </div>
 
       <div className="container-page">
+        <div className="mb-2 flex items-center gap-3 text-xs">
+          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#007AFF]"></span><span>Voo</span></div>
+          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#febb02]"></span><span>Hospedagem</span></div>
+          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#34c759]"></span><span>Atividades</span></div>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle>Mesma viagem</CardTitle>
@@ -333,9 +338,18 @@ export default function MonthCalendarPage() {
                 const ring = hasEvent ? " border-2 border-[#febb02]" : " border border-zinc-200 dark:border-zinc-800";
                 const bg = isTravel ? " bg-[#007AFF] text-white" : hasEvent ? " hover:bg-zinc-50 dark:hover:bg-zinc-900" : " text-zinc-400";
                 const cls = !d.date ? "h-10 rounded border border-transparent" : `${base}${ring}${bg}`;
+                const types = d.date && grouped[d.date] ? Array.from(new Set(grouped[d.date].map((e) => e.type))) : [];
                 return (
                   <button key={`d-${i}`} type="button" disabled={!d.date || !hasEvent} className={cls} onClick={() => setDayOpen(d.date)}>
                     {d.label}
+                    {types.length ? (
+                      <div className="absolute right-1 bottom-1 flex gap-1">
+                        {types.includes("flight") ? <span className="inline-block w-2 h-2 rounded-full bg-[#007AFF]"></span> : null}
+                        {types.includes("stay") ? <span className="inline-block w-2 h-2 rounded-full bg-[#febb02]"></span> : null}
+                        {(types.includes("activity") || types.includes("restaurant")) ? <span className="inline-block w-2 h-2 rounded-full bg-[#34c759]"></span> : null}
+                        {types.includes("transport") ? <span className="inline-block w-2 h-2 rounded-full bg-[#007AFF]"></span> : null}
+                      </div>
+                    ) : null}
                   </button>
                 );
               })}
