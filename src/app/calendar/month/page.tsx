@@ -19,7 +19,7 @@ export default function MonthCalendarPage() {
   const [sideOpen, setSideOpen] = useState(false);
   const [dayOpen, setDayOpen] = useState<string | null>(null);
   const { data: session, status } = useSession();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium" } | null>(null);
   const { show } = useToast();
   const [premiumFlag, setPremiumFlag] = useState(false);
@@ -186,13 +186,9 @@ export default function MonthCalendarPage() {
             <div className="text-lg font-semibold">{gating.reason === "anon" ? "Faça login para desbloquear" : "Assinatura necessária"}</div>
             <div className="text-sm text-zinc-700">
               {gating.reason === "anon" ? (
-                <div>
-                  Entre para continuar e desbloquear recursos premium.
-                </div>
+                <div>{t("loginUnlockText")}</div>
               ) : (
-                <div>
-                  Assinatura mensal (R$ 15): durante 30 dias você pode criar e salvar quantas viagens quiser e editar atividades. Após expirar, o acesso às viagens salvas continua pelo botão "Pesquisas salvas" (lista e calendário, botões, links e documentos). Para criar novas viagens ou salvar alterações, renove a assinatura.
-                </div>
+                <div>{t("subMonthlyText")}</div>
               )}
             </div>
             <div className="flex gap-2 mt-2">
@@ -202,7 +198,7 @@ export default function MonthCalendarPage() {
                   <button type="button" className="btn" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/month" })}>Entrar Demo</button>
                 </>
               ) : (
-                <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Assinar agora (R$ 15/mês)</button>
+                <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("subscribeMonthlyButton")}</button>
               )}
             </div>
           </div>

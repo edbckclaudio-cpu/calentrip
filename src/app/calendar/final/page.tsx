@@ -70,7 +70,7 @@ export default function FinalCalendarPage() {
   const [filesDrawerOpen, setFilesDrawerOpen] = useState(false);
   const [filesList, setFilesList] = useState<Array<{ name: string; size?: number; modified?: number }>>([]);
   const { data: session, status } = useSession();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [premiumFlag, setPremiumFlag] = useState<boolean>(false);
@@ -1659,23 +1659,19 @@ export default function FinalCalendarPage() {
       {gating?.show ? (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
           <div className="max-w-md w-full bg-white rounded-xl p-5 space-y-3">
-            <DialogHeader>{gating.reason === "anon" ? "Faça login para desbloquear" : "Assinatura necessária"}</DialogHeader>
+            <DialogHeader>{gating.reason === "anon" ? t("loginUnlockTitle") : t("subscriptionNeededTitle")}</DialogHeader>
             <div className="text-sm text-zinc-700">
               {gating.reason === "anon" ? (
-                <div>
-                  Entre para continuar e desbloquear recursos premium. Você pode usar Google ou conta demo.
-                </div>
+                <div>{t("loginUnlockText")}</div>
               ) : (
-                <div>
-                  Assinatura mensal (R$ 15): durante 30 dias você pode criar e salvar quantas viagens quiser e editar atividades. Depois de expirar, você continua com acesso integral às viagens já salvas pelo botão "Pesquisas salvas" (lista e calendário, botões, links e documentos). Para criar novas viagens ou salvar alterações, renove a assinatura.
-                </div>
+                <div>{t("subMonthlyText")}</div>
               )}
             </div>
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
                 <>
-                  <Button type="button" onClick={() => signIn("google")}>Entrar com Google</Button>
-                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/final" })}>Entrar Demo</Button>
+                  <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
+                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/final" })}>{t("signInDemo")}</Button>
                 </>
               ) : (
                 <Button
@@ -1698,7 +1694,7 @@ export default function FinalCalendarPage() {
                     }
                   }}
                 >
-                  Assinar agora (R$ 15/mês)
+                  {t("subscribeMonthlyButton")}
                 </Button>
               )}
             </div>
