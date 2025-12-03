@@ -74,6 +74,7 @@ export default function FinalCalendarPage() {
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [premiumFlag, setPremiumFlag] = useState<boolean>(false);
+  const [premiumUntil, setPremiumUntil] = useState<string>("");
   const [editOpen, setEditOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
@@ -299,6 +300,17 @@ export default function FinalCalendarPage() {
       const premium = isTripPremium(current.id);
       setCurrentTripId(current.id);
       setPremiumFlag(premium);
+      try {
+        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
+        const list: Array<{ tripId: string; expiresAt: number }> = raw ? JSON.parse(raw) : [];
+        const rec = list.find((r) => r.tripId === "global" && r.expiresAt > Date.now());
+        if (rec) {
+          const d = new Date(rec.expiresAt);
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          setPremiumUntil(`${dd}/${mm}`);
+        } else setPremiumUntil("");
+      } catch { setPremiumUntil(""); }
       if (status !== "authenticated") setGating({ show: true, reason: "anon", tripId: current.id });
       else if (!premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
       else setGating(null);
@@ -1716,7 +1728,7 @@ export default function FinalCalendarPage() {
                     <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
-                    <div className="mt-1 text-[10px] text-zinc-500">Plano: {premiumFlag ? "Premium" : "Grátis"}</div>
+                    <div className="mt-1 text-[10px] text-zinc-500">Plano: {premiumFlag ? `Premium${premiumUntil ? ` até ${premiumUntil}` : ""}` : "Grátis"}</div>
                     {!premiumFlag && currentTripId ? (
                       <div className="mt-2">
                         <Button type="button" onClick={async () => {

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DialogHeader } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
@@ -21,6 +22,11 @@ export default function MonthCalendarPage() {
   const { lang } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium" } | null>(null);
   const { show } = useToast();
+  const [premiumFlag, setPremiumFlag] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editDate, setEditDate] = useState<string>("");
+  const [editTime, setEditTime] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -44,6 +50,7 @@ export default function MonthCalendarPage() {
       const current = trips.length ? trips[0] : null;
       if (current) {
         const premium = isTripPremium(current.id);
+        setPremiumFlag(premium);
         if (status !== "authenticated") setGating({ show: true, reason: "anon" });
         else if (!premium) setGating({ show: true, reason: "noPremium" });
         else setGating(null);
@@ -265,6 +272,7 @@ export default function MonthCalendarPage() {
               try { window.location.href = "/calendar/final"; } catch {}
             } catch { show("Erro ao salvar", { variant: "error" }); }
           }}
+          disabled={!premiumFlag}
         >
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
             <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
@@ -352,6 +360,25 @@ export default function MonthCalendarPage() {
                           </div>
                           <div className="mt-1 text-sm">{e.label}</div>
                         </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(e.type === "activity" || e.type === "restaurant") ? (
+                            <>
+                              <Button type="button" variant="outline" disabled={!premiumFlag} className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
+                                setEditIdx(idx);
+                                setEditDate(e.date);
+                                setEditTime(e.time || "");
+                                setEditOpen(true);
+                              }}>
+                                <span className="material-symbols-outlined text-[16px]">edit</span>
+                                <span>Editar</span>
+                              </Button>
+                              <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
+                                <span className="material-symbols-outlined text-[16px]">map</span>
+                                <span>Ir</span>
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
                       </li>
                     );
                   })}
@@ -367,6 +394,64 @@ export default function MonthCalendarPage() {
           </div>
         </div>
       )}
+      <div>
+        <div>
+          {/* Edit dialog */}
+          {editOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setEditOpen(false)} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>Editar atividade</DialogHeader>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <label className="mb-1 block text-sm">Data</label>
+                    <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm">Hora</label>
+                    <Input type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+                  </div>
+                  <div className="flex justify-between">
+                    <Button type="button" variant="outline" onClick={() => {
+                      try {
+                        if (editIdx === null) return;
+                        const day = dayOpen!;
+                        const indices = grouped[day].map((_, i) => i);
+                        setEvents((prev) => prev.filter((e) => !(e.date === day && indices.includes(prev.indexOf(e)) && indices.indexOf(prev.indexOf(e)) === editIdx)));
+                        setEditOpen(false);
+                        setEditIdx(null);
+                        show("Atividade excluída", { variant: "success" });
+                      } catch { show("Erro ao excluir", { variant: "error" }); }
+                    }}>Excluir</Button>
+                    <Button type="button" onClick={() => {
+                      try {
+                        if (editIdx === null) return;
+                        const target = grouped[dayOpen!][editIdx];
+                        let found = false;
+                        setEvents((prev) => prev.map((e) => {
+                          if (!found && e.type === target.type && e.label === target.label && e.date === target.date && (e.time || "") === (target.time || "")) {
+                            found = true;
+                            const meta = e.meta as any;
+                            const nextMeta = meta && typeof meta === "object" ? { ...meta, date: editDate, time: editTime } : meta;
+                            return { ...e, date: editDate, time: editTime, meta: nextMeta };
+                          }
+                          return e;
+                        }));
+                        setEditOpen(false);
+                        setEditIdx(null);
+                        show("Atividade atualizada", { variant: "success" });
+                      } catch { show("Erro ao salvar", { variant: "error" }); }
+                    }}>Salvar</Button>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setEditOpen(false)}>Fechar</Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
