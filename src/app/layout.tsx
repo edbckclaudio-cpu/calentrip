@@ -17,9 +17,50 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CalenTrip",
-  description: "Aplicativo de gerenciamento de viagens",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital"),
+  title: {
+    default: "CalenTrip — Calendário de viagens e alertas",
+    template: "%s — CalenTrip",
+  },
+  description: "Veja voos, hospedagens e atividades em ordem cronológica. Salve no Google Calendar e receba alertas.",
+  applicationName: "CalenTrip",
+  keywords: [
+    "calendário de viagem",
+    "voos",
+    "hospedagem",
+    "itinerário",
+    "alertas",
+    "Google Calendar",
+  ],
   manifest: "/manifest.webmanifest",
+  alternates: {
+    canonical: "/",
+    languages: {
+      "pt-BR": "/",
+      en: "/?lang=en",
+      es: "/?lang=es",
+    },
+  },
+  openGraph: {
+    type: "website",
+    siteName: "CalenTrip",
+    title: "CalenTrip — Calendário de viagens e alertas",
+    description: "Planeje e acompanhe voos, hospedagens e atividades com notificações.",
+    url: "/",
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "CalenTrip" }],
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary",
+    title: "CalenTrip",
+    description: "Calendário de viagens com alertas e integração com Google Calendar",
+    images: ["/icon-512.png"],
+  },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon-192.png",
+    apple: "/icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -42,6 +83,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "CalenTrip",
+          url: (process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital"),
+          logo: "/icon-512.png"
+        }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "CalenTrip",
+          url: (process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital"),
+          potentialAction: {
+            "@type": "SearchAction",
+            target: (process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital") + "/flights/search?query={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }) }} />
         <Providers>
           <SWRegister />
           <Header />
