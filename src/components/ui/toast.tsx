@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number; key?: string };
@@ -11,6 +11,30 @@ const ToastContext = createContext<{
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  const [vvTop, setVvTop] = useState(0);
+  const [vvLeft, setVvLeft] = useState(0);
+  useEffect(() => {
+    try {
+      const vv = (typeof window !== "undefined" ? window.visualViewport : null);
+      const update = () => {
+        const top = vv ? Math.round(vv.offsetTop) : 0;
+        const left = vv ? Math.round(vv.offsetLeft) : 0;
+        setVvTop(top);
+        setVvLeft(left);
+      };
+      update();
+      vv?.addEventListener("scroll", update);
+      vv?.addEventListener("resize", update);
+      window.addEventListener("scroll", update, { passive: true });
+      window.addEventListener("resize", update);
+      return () => {
+        vv?.removeEventListener("scroll", update);
+        vv?.removeEventListener("resize", update);
+        window.removeEventListener("scroll", update);
+        window.removeEventListener("resize", update);
+      };
+    } catch {}
+  }, []);
 
   function show(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) {
     const id = Date.now() + Math.random();
@@ -36,7 +60,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const portal = (
     <div
       className="fixed top-0 left-0 right-0 z-[9999] w-full px-2 space-y-2 flex flex-col items-center pointer-events-none"
-      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)", transform: `translate3d(${vvLeft}px, ${vvTop}px, 0)` }}
     >
       {items.map((t) => (
         <div
