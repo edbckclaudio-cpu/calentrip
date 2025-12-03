@@ -21,7 +21,7 @@ export default function AccommodationSearchPage() {
     if (!tripSearch) return "";
     if (tripSearch.mode === "same") return tripSearch.destination ?? "";
     return "";
-  }, [tripSearch]);
+  }, [tripSearch, show]);
   const [city, setCity] = useState(initialCity);
   
   const [cityCount, setCityCount] = useState(0);
@@ -79,6 +79,14 @@ export default function AccommodationSearchPage() {
       };
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!tripSearch) return;
+    if (tripSearch.mode === "different") {
+      setDiffCityCountHighlight(true);
+      show("Informe quantas cidades precisarão de hospedagem e clique em Check.", { duration: 6000 });
+    }
+  }, [tripSearch]);
 
   function totalPassengers(p: { adults?: number; children?: number; infants?: number } | number | undefined) {
     if (typeof p === "number") return p;
@@ -163,6 +171,7 @@ export default function AccommodationSearchPage() {
   show(t("citiesConfigured"));
     setGuideIdx(0);
     setGuideStep("name");
+    show("Preencha o nome da cidade 1 e selecione na barra de rolagem.", { duration: 6000 });
   }
 
   async function searchCities(q: string) {
@@ -225,12 +234,28 @@ export default function AccommodationSearchPage() {
     }
   }
 
+  useEffect(() => {
+    if (guideIdx === null) return;
+    if (guideStep === "checkout") {
+      show("Escolha a data de check-out desta cidade.", { duration: 5000 });
+    } else if (guideStep === "stay") {
+      show("Clique em Comprar hospedagem.", { duration: 5000 });
+    } else if (guideStep === "name") {
+      show("Digite o nome da cidade e selecione na barra de rolagem.", { duration: 6000 });
+    }
+  }, [guideIdx, guideStep, show]);
+
+  useEffect(() => {
+    if (cityDetailIdx === null) return;
+    show("Use os links para buscar hospedagem. Salve prints ou arquivos em 'Escolher arquivos' para consultar durante a viagem.", { duration: 8000 });
+  }, [cityDetailIdx, show]);
+
   function onPickCity(idx: number, c: string) {
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, name: c } : x)));
     setCitySearchIdx(null);
     if (idx === cities.length - 1) {
   setGuideStep("stay");
-  show(t("lastCitySelectedGoToPurchase"), { duration: 5000 });
+  show("Como é a última cidade, o check-out é a data final da viagem. Clique em Comprar hospedagem.", { duration: 7000 });
     }
   }
 
@@ -242,9 +267,9 @@ export default function AccommodationSearchPage() {
       const next = idx + 1;
       const isLastNext = next === cities.length - 1;
       if (idx === 0) {
-        show(isLastNext ? `Escolha a cidade 2 e compre a hospedagem (sem checkout)` : `Escolha a cidade 2 e a data de checkout`, { duration: 6000 });
+        show(isLastNext ? `Preencha o nome da cidade 2 e selecione na barra de rolagem. Depois, compre a hospedagem.` : `Preencha o nome da cidade 2, selecione na barra de rolagem e escolha a data de check-out.`, { duration: 7000 });
       } else {
-        show(isLastNext ? `Complete o nome da cidade ${idx + 2} e compre a hospedagem (sem checkout)` : `Complete o nome da cidade ${idx + 2} e busque a acomodação`);
+        show(isLastNext ? `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e compre a hospedagem.` : `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e escolha o check-out.`, { duration: 7000 });
       }
     }
     const allChecked = cities.every((c, i) => (i === idx ? true : c.checked));
@@ -253,7 +278,7 @@ export default function AccommodationSearchPage() {
     }
     if (allChecked && cities.length > 1) {
       setTransportOpenIdx(0);
-      show(t("chooseTransportFirstSecondCity"));
+      show("Agora escolha como ir de uma cidade para a outra. Anote os horários e salve foto/arquivo das passagens para consulta no calendário.", { duration: 8000 });
     }
     const next = idx + 1;
     if (next < cities.length) {
@@ -360,6 +385,7 @@ export default function AccommodationSearchPage() {
   useEffect(() => {
     (async () => {
       if (transportOpenIdx === null) return;
+      show("Escolha o transporte entre as cidades, preenchendo origem, destino e horários. Você pode anexar a passagem.", { duration: 8000 });
       setTransportDep("");
       setTransportArr("");
       setTransportDepTime("");
@@ -437,7 +463,7 @@ export default function AccommodationSearchPage() {
         setTransportArrOpts([]);
       }
     })();
-  }, [transportOpenIdx, cities, transportMode]);
+  }, [transportOpenIdx, cities, transportMode, show]);
 
   if (!tripSearch) {
     return (
@@ -578,7 +604,6 @@ export default function AccommodationSearchPage() {
                                   if (guideIdx === idx && v.trim()) setGuideStep(idx === cities.length - 1 ? "stay" : "checkout");
                                 }}
                               />
-                              <Button type="button" variant="outline" disabled={!enabled} onClick={() => setCitySearchIdx(idx)}>Buscar</Button>
                             </div>
                           </div>
                           <div>

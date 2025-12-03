@@ -21,6 +21,8 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
   const [dropdownH, setDropdownH] = useState<number>(240);
   const [dropdownMaxH, setDropdownMaxH] = useState<number>(240);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [kbOffset, setKbOffset] = useState<number>(0);
+  const [mobileVh, setMobileVh] = useState<number>(typeof window !== "undefined" ? window.innerHeight : 600);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -65,6 +67,25 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
     window.addEventListener("resize", set);
     return () => window.removeEventListener("resize", set);
   }, []);
+
+  useEffect(() => {
+    if (!open || !isMobile) return;
+    const vv = window.visualViewport;
+    const update = () => {
+      const h = vv ? Math.max(0, Math.round(window.innerHeight - vv.height)) : 0;
+      setKbOffset(h);
+      setMobileVh(vv ? Math.round(vv.height) : window.innerHeight);
+    };
+    update();
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [open, isMobile]);
 
   useEffect(() => {
     if (!open) return;
@@ -115,12 +136,12 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
       {open && isMobile && items.length > 0 && createPortal(
         <div ref={portalRef} className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border-2 border-[var(--brand)] bg-white p-5 md:p-6 shadow-xl dark:border-[var(--brand)] dark:bg-black">
+          <div className="absolute left-0 right-0 z-10 w-full rounded-t-2xl border-2 border-[var(--brand)] bg-white p-5 md:p-6 shadow-xl dark:border-[var(--brand)] dark:bg-black" style={{ bottom: kbOffset, paddingBottom: "env(safe-area-inset-bottom)" }}>
             <div className="h-1.5 w-16 rounded-full bg-[var(--brand)] mx-auto mb-3" />
             <DialogHeader>Escolher aeroporto</DialogHeader>
             <div className="space-y-3 text-sm">
               <Input autoFocus value={q} onChange={(e) => onChangeInput(e.target.value)} placeholder={placeholder ?? t("typeCityAirport")} />
-              <div className="rounded border max-h-[50vh] overflow-auto">
+              <div className="rounded border overflow-auto" style={{ maxHeight: Math.round(mobileVh * 0.5) }}>
                 <ul className="divide-y">
                   {items.map((a) => (
                     <li key={a.iata}>

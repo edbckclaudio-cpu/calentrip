@@ -31,12 +31,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ show, dismiss }}>
       {children}
-      <div className="fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-[480px] md:max-w-[560px] lg:max-w-[640px] px-2 space-y-2 flex flex-col items-center">
+      <div className="fixed top-0 left-0 right-0 z-[9999] w-full px-2 pt-2 sm:pt-3 space-y-2 flex flex-col items-center pointer-events-none">
         {items.map((t) => (
           <div
             key={t.id}
             className={
-              `min-w-[240px] max-w-[360px] rounded-lg border px-3 py-2 text-sm shadow-lg ` +
+              `relative min-w-[220px] max-w-[90vw] sm:max-w-[560px] lg:max-w-[640px] rounded-lg border px-2.5 py-1.5 sm:px-3 sm:py-2 text-[12px] sm:text-sm leading-snug break-words shadow-lg pointer-events-auto ` +
               (t.variant === "success"
                 ? "bg-green-50 border-green-200 text-green-800"
                 : t.variant === "error"
@@ -45,6 +45,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             }
           >
             {t.message}
+            {((typeof t.duration !== "number") || (t.message || "").length > 80) ? (
+              <button
+                type="button"
+                className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                onClick={() => dismiss(t.id)}
+                aria-label="Fechar"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            ) : null}
           </div>
         ))}
       </div>
