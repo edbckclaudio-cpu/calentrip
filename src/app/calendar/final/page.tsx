@@ -2391,20 +2391,17 @@ export default function FinalCalendarPage() {
       </div>
 
       <div className="container-page">
-        {(() => { const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : ""; const isAndroid = /Android/.test(ua); return isAndroid; })() ? (
-          <div className="mb-2 rounded-md border border-[#34c759]/30 bg-[#34c759]/10 p-2 text-xs flex items-center justify-between">
-            <span>Android detectado. Use Google Calendar para salvar vários eventos.</span>
-            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { openGoogleCalendarInstall(); } catch {} }}>
-              Instalar
+        <div className="mb-2 flex items-center gap-2 flex-wrap">
+          {(() => { const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : ""; const isAndroid = /Android/.test(ua); return isAndroid; })() ? (
+            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { openGoogleCalendarInstall(); } catch {} }}>
+              <span className="material-symbols-outlined text-[16px]">android</span>
+              <span>Instalar GC</span>
             </Button>
-          </div>
-        ) : null}
-        <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-[11px] flex items-center justify-between">
-          <span>Salve no app para consultar durante a viagem. Salve no Google para alertas.</span>
+          ) : null}
           <Button
             type="button"
             variant="outline"
-            className="px-2 py-1 text-xs rounded-md"
+            className="px-2 py-1 text-xs rounded-md gap-1"
             onClick={async () => {
               try {
                 if (saveCalendarNamed()) setCalendarHelpOpen(true);
@@ -2412,14 +2409,12 @@ export default function FinalCalendarPage() {
               } catch {}
             }}
           >
-            Salvar no app e no Google
+            <span className="material-symbols-outlined text-[16px]">save</span>
+            <span>Salvar</span>
           </Button>
-        </div>
-        <div className="mb-2 rounded-md border border-[#007AFF]/30 bg-[#007AFF]/10 p-2 text-[11px] flex items-center justify-between">
-          <span>Visualize em formato calendário.</span>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
-            <span className="material-symbols-outlined text-[18px] mr-1">calendar_month</span>
-            Calendário
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
+            <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+            <span>Calendário</span>
           </Button>
         </div>
         <Card>
