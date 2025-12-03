@@ -767,6 +767,7 @@ export default function AccommodationSearchPage() {
             </div>
             <div className="px-4 pb-2 flex-1 overflow-y-auto text-sm">
               <div className="mb-2">{t("stayRouteDistance")}: {transportRoute?.distanceKm ? `${transportRoute.distanceKm} km` : "—"}</div>
+              <div className="-mt-1 mb-2 text-xs text-zinc-500">Distância estimada entre as cidades selecionadas (não usa sua localização).</div>
               <div className="mb-2">{t("stayRouteDuration")}: {transportRoute?.durationMin ? `${transportRoute.durationMin} min` : "—"}</div>
               {transportRoute?.osmUrl ? (
                 <iframe title="map" src={transportRoute.osmUrl} className="mb-3 h-32 md:h-40 w-full rounded-md border" />
