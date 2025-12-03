@@ -91,7 +91,18 @@ export default function ProfilePage() {
                           const userId = session?.user?.email || session?.user?.name || undefined;
                           const r = await mod.completePurchaseForTrip("global", userId);
                           if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); window.location.href = "/calendar/final"; }
-                          else show(t("purchaseFail"), { variant: "error" });
+                          else {
+                            const msg = r?.error === "billing"
+                              ? "Disponível no app Android. Instale via Google Play."
+                              : r?.error === "product" ? "Produto não encontrado no Google Play."
+                              : r?.error === "purchase" ? "Compra cancelada ou falhou."
+                              : r?.error === "token" ? "Token de compra não recebido."
+                              : r?.error === "verify" ? "Falha ao verificar a compra."
+                              : r?.error === "ack" ? "Falha ao confirmar a compra."
+                              : r?.error === "store" ? "Falha ao salvar assinatura."
+                              : t("purchaseFail");
+                            show(msg, { variant: "error" });
+                          }
                         } catch { show(t("purchaseError"), { variant: "error" }); }
                       }}
                     >

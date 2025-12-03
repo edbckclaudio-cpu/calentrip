@@ -1694,7 +1694,17 @@ export default function FinalCalendarPage() {
                         setGating(null);
                         show("Assinatura ativada", { variant: "success" });
                       } else {
-                        show("Falha na compra", { variant: "error" });
+                        const msg = r?.error === "billing"
+                          ? "Disponível no app Android. Instale via Google Play."
+                          : r?.error === "product" ? "Produto não encontrado no Google Play."
+                          : r?.error === "purchase" ? "Compra cancelada ou falhou."
+                          : r?.error === "token" ? "Token de compra não recebido."
+                          : r?.error === "verify" ? "Falha ao verificar a compra."
+                          : r?.error === "ack" ? "Falha ao confirmar a compra."
+                          : r?.error === "store" ? "Falha ao salvar assinatura."
+                          : "Falha na compra";
+                        show(msg, { variant: "error" });
+                        if (r?.error === "billing") { try { window.location.href = "/profile"; } catch {} }
                       }
                     } catch {
                       show("Erro na compra", { variant: "error" });
