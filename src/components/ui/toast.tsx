@@ -66,7 +66,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         <div
           key={t.id}
           className={
-            `relative min-w-[220px] max-w-[92vw] sm:max-w-[560px] lg:max-w-[640px] rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-[13px] sm:text-sm font-semibold leading-snug break-words shadow-2xl ring-2 pointer-events-auto ` +
+            `relative min-w-[220px] max-w-[92vw] sm:max-w-[560px] lg:max-w-[640px] rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-[14px] sm:text-sm font-semibold leading-snug break-words shadow-2xl ring-2 pointer-events-auto ` +
             (t.variant === "success"
               ? "bg-emerald-600 text-white ring-emerald-700"
               : t.variant === "error"

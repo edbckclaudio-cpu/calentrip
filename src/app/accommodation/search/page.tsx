@@ -837,6 +837,7 @@ export default function AccommodationSearchPage() {
                     <Input
                       placeholder={t("transportOriginPlaceholder")}
                       value={transportDep}
+                      disabled={transportMode === "car"}
                       onFocus={() => {
                         const cityName = cities[transportOpenIdx || 0]?.name || "";
                         if (!cityName) return;
@@ -878,6 +879,7 @@ export default function AccommodationSearchPage() {
                     <Input
                       placeholder={t("transportDestinationPlaceholder")}
                       value={transportArr}
+                      disabled={transportMode === "car"}
                       onFocus={() => {
                         const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
                         if (!cityName) return;
@@ -917,10 +919,11 @@ export default function AccommodationSearchPage() {
                   <div>
                     <label className="mb-1 block text-sm">{t("departureTime")}</label>
                     <Input placeholder="14:30" value={transportDepTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportDepTime(formatTimeInput(e.target.value))} />
+                    
                   </div>
                   <div>
                     <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
-                    <Input placeholder="17:05" value={transportArrTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
+                    <Input placeholder="17:05" value={transportArrTime} type="tel" inputMode="numeric" pattern="[0-9]*" disabled={transportMode === "car"} onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
                   </div>
                 </div>
                 <div className="mt-2">
