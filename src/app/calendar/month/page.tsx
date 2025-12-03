@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { DialogHeader } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
+import { alarmForEvent } from "@/lib/ics";
 
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | { city?: string; address?: string; kind: "checkin" | "checkout" } };
@@ -28,6 +29,136 @@ export default function MonthCalendarPage() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
+
+  async function exportICS() {
+    function fmtUTC(d: Date) {
+      const y = String(d.getUTCFullYear());
+      const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const da = String(d.getUTCDate()).padStart(2, "0");
+      const h = String(d.getUTCHours()).padStart(2, "0");
+      const mi = String(d.getUTCMinutes()).padStart(2, "0");
+      const s = "00";
+      return `${y}${m}${da}T${h}${mi}${s}Z`;
+    }
+    function fmt(d: Date) {
+      const y = String(d.getFullYear());
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      const h = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+      const s = "00";
+      return `${y}${m}${da}T${h}${mi}${s}`;
+    }
+    function parseDT(date: string, time?: string) {
+      const t = (time || "00:00").padStart(5, "0");
+      const s = `${(date || "").replace(/\//g, "-")}T${t}:00`;
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return null;
+      return d;
+    }
+    function escText(s: string) {
+      return s.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/;/g, "\\;").replace(/,/g, "\\,");
+    }
+    function toAscii(s: string) {
+      try {
+        const base = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return base.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+      } catch {
+        return s.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+      }
+    }
+    function limit(s: string, n = 320) {
+      if (!s) return s;
+      return s.length > n ? s.slice(0, n - 1) + "…" : s;
+    }
+    function foldLine(s: string) {
+      const max = 74;
+      if (s.length <= max) return s;
+      const parts: string[] = [];
+      for (let i = 0; i < s.length; i += max) parts.push(s.slice(i, i + max));
+      return parts.join("\r\n ");
+    }
+    const tzHeader = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"; } catch { return "Etc/UTC"; } })();
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+    const isAndroidHeader = /Android/.test(ua);
+    const useTZID = !isAndroidHeader;
+    const lines: string[] = [];
+    lines.push("BEGIN:VCALENDAR");
+    lines.push("VERSION:2.0");
+    lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
+    lines.push("CALSCALE:GREGORIAN");
+    lines.push("METHOD:PUBLISH");
+    lines.push("X-WR-CALNAME:CalenTrip");
+    if (useTZID) {
+      lines.push(`X-WR-TIMEZONE:${tzHeader}`);
+      const mins = -new Date().getTimezoneOffset();
+      const sign = mins >= 0 ? "+" : "-";
+      const abs = Math.abs(mins);
+      const hh = String(Math.floor(abs / 60)).padStart(2, "0");
+      const mm = String(abs % 60).padStart(2, "0");
+      const off = `${sign}${hh}${mm}`;
+      lines.push("BEGIN:VTIMEZONE");
+      lines.push(`TZID:${tzHeader}`);
+      lines.push("BEGIN:STANDARD");
+      lines.push("DTSTART:19700101T000000");
+      lines.push(`TZOFFSETFROM:${off}`);
+      lines.push(`TZOFFSETTO:${off}`);
+      lines.push("END:STANDARD");
+      lines.push("END:VTIMEZONE");
+    }
+    events.forEach((e, idx) => {
+      const start = parseDT(e.date, e.time);
+      const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
+      const baseTitle = isAndroidHeader ? limit(e.label, 64) : limit(e.label, 120);
+      const title = isAndroidHeader ? toAscii(baseTitle) : baseTitle;
+      const desc = isAndroidHeader ? limit(e.label, 160) : limit(e.label, 280);
+      lines.push("BEGIN:VEVENT");
+      const uid = `month-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`;
+      if (start) lines.push(useTZID ? `DTSTART;TZID=${tzHeader}:${fmt(start)}` : `DTSTART:${fmtUTC(start)}`);
+      if (end) lines.push(useTZID ? `DTEND;TZID=${tzHeader}:${fmt(end)}` : `DTEND:${fmtUTC(end)}`);
+      lines.push(`DTSTAMP:${fmtUTC(new Date())}`);
+      lines.push(`UID:${uid}`);
+      lines.push(`SUMMARY:${escText(title)}`);
+      lines.push("TRANSP:OPAQUE");
+      lines.push("SEQUENCE:0");
+      lines.push("STATUS:CONFIRMED");
+      lines.push(`DESCRIPTION:${escText(desc)}`);
+      const alarmLines = alarmForEvent(e.type, !!(e.time && e.time.trim()), start);
+      for (const L of alarmLines) lines.push(L);
+      lines.push("END:VEVENT");
+    });
+    lines.push("END:VCALENDAR");
+    const crlf = lines.map(foldLine).join("\r\n") + "\r\n";
+    const blob = new Blob([crlf], { type: "text/calendar;charset=utf-8" });
+    const file = new File([crlf], "calentrip.ics", { type: "text/calendar;charset=utf-8" });
+    try {
+      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
+      const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
+      if (canShareFiles && typeof nav.share === "function") {
+        await nav.share({ files: [file], title: "CalenTrip" });
+        const ua2 = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+        const isIOS = /iPad|iPhone|iPod/.test(ua2) || (ua2.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
+        const isAndroid = /Android/.test(ua2);
+        if (isIOS) {
+          show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+        } else if (isAndroid) {
+          show("Calendário enviado. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+        } else {
+          show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
+        }
+        return;
+      }
+    } catch {}
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "calentrip.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    show("Arquivo .ics baixado. Abra com Google/Outlook/Apple Calendar para importar.", { variant: "info" });
+  }
 
   useEffect(() => {
     try {
@@ -293,10 +424,14 @@ export default function MonthCalendarPage() {
       {sideOpen ? (<div className="fixed top-0 right-0 bottom-0 left-56 z-30 bg-black/10" onClick={() => setSideOpen(false)} />) : null}
 
   <div className="container-page">
-        <div className="sticky top-0 z-30 -mt-4 mb-2 px-3 py-2 bg-white/80 dark:bg-black/60 backdrop-blur border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-end">
+        <div className="sticky top-0 z-30 -mt-4 mb-2 px-3 py-2 bg-white/80 dark:bg-black/60 backdrop-blur border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-end gap-2">
           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { window.close(); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>
             <span className="material-symbols-outlined text-[18px] mr-1">list_alt</span>
             Voltar para lista
+          </Button>
+          <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={exportICS}>
+            <span className="material-symbols-outlined text-[18px] mr-1">download</span>
+            Exportar .ics
           </Button>
         </div>
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário da viagem</h1>
@@ -383,7 +518,7 @@ export default function MonthCalendarPage() {
                               </Button>
                               <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
                                 <span className="material-symbols-outlined text-[16px]">map</span>
-                                <span>Ir</span>
+                                <span>{t("goButton")}</span>
                               </Button>
                             </>
                           ) : null}
@@ -397,7 +532,7 @@ export default function MonthCalendarPage() {
               )}
               <div className="mt-3 flex items-center justify-between">
                 <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Calendário em lista</Button>
-                <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setDayOpen(null)}>Fechar</Button>
+                <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setDayOpen(null)}>{t("close")}</Button>
               </div>
             </div>
           </div>
@@ -440,8 +575,7 @@ export default function MonthCalendarPage() {
                         setEvents((prev) => prev.map((e) => {
                           if (!found && e.type === target.type && e.label === target.label && e.date === target.date && (e.time || "") === (target.time || "")) {
                             found = true;
-                            const meta = e.meta as any;
-                            const nextMeta = meta && typeof meta === "object" ? { ...meta, date: editDate, time: editTime } : meta;
+                            const nextMeta = e.meta;
                             return { ...e, date: editDate, time: editTime, meta: nextMeta };
                           }
                           return e;
@@ -454,7 +588,7 @@ export default function MonthCalendarPage() {
                   </div>
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setEditOpen(false)}>Fechar</Button>
+                  <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setEditOpen(false)}>{t("close")}</Button>
                 </div>
               </div>
             </div>

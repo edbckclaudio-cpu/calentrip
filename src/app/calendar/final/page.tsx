@@ -14,6 +14,7 @@ import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 import { findAirportByIata } from "@/lib/airports";
+import { alarmForEvent } from "@/lib/ics";
 
 type SavedFile = { name: string; type: string; size: number; id?: string; dataUrl?: string };
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: SavedFile[] };
@@ -557,6 +558,8 @@ export default function FinalCalendarPage() {
       } else {
         const baseDesc = isAndroidHeader ? limit(desc, 160) : limit(desc, 280);
         lines.push(`DESCRIPTION:${escText(baseDesc)}`);
+        const alarmLines = alarmForEvent(e.type, !!(e.time && e.time.trim()), start);
+        for (const L of alarmLines) lines.push(L);
       }
       lines.push("END:VEVENT");
       if (extraCall) {
@@ -1038,7 +1041,8 @@ export default function FinalCalendarPage() {
       const dest = drawerData?.originIata ? `${drawerData.originIata} airport` : "aeroporto";
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(dest)}`;
-      setTransportInfo({ distanceKm: undefined, durationMin: undefined, durationWithTrafficMin: undefined, gmapsUrl, r2rUrl, airportName: dest });
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(dest)}`;
+      setTransportInfo({ distanceKm: undefined, durationMin: undefined, durationWithTrafficMin: undefined, gmapsUrl, r2rUrl, uberUrl, airportName: dest });
       try { showOnce("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setLoading(false);
@@ -1104,7 +1108,7 @@ export default function FinalCalendarPage() {
       }
       if (!gmapsUrl) gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
       if (!r2rUrl) r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
-      if (!uberUrl) uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      if (!uberUrl) uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
       const trafficFactor = 1.3;
       const drivingWithTrafficMin = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
       const busMin = drivingWithTrafficMin ? Math.round(drivingWithTrafficMin * 1.8) : undefined;
@@ -1139,7 +1143,7 @@ export default function FinalCalendarPage() {
     } catch {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
-      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
       setStayInfo({ origin: originAddr, destination: depPoint, gmapsUrl, r2rUrl, uberUrl });
       try { show("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
@@ -1163,7 +1167,7 @@ export default function FinalCalendarPage() {
     if (!dest) {
       const q = (m.address || m.city || "").trim();
       const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
-      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent((m.address || m.city || "").trim())}`;
       setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
       try { showOnce("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
       return;
@@ -1214,7 +1218,7 @@ export default function FinalCalendarPage() {
     } catch {
       const q = (m.address || m.city || "").trim();
       const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
-      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(q)}`;
       setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
       try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     }
@@ -1280,14 +1284,14 @@ export default function FinalCalendarPage() {
         try { show("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
       } else {
         gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(query)}`;
         setGoInfo({ destination: query, gmapsUrl, uberUrl });
         try { show("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
       }
     } catch {
       const q = `${rec.title} ${rec.cityName}`.trim();
       const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(q)}`;
       setGoInfo({ destination: q, gmapsUrl, uberUrl });
       try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
@@ -1427,13 +1431,13 @@ export default function FinalCalendarPage() {
         }
       } else {
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
         try { showOnce("Destino não geocodificado. Usando links básicos.", { variant: "info" }); } catch {}
       }
       setReturnInfo({ city: last.name, address: last.address, airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl, callTime, notifyAt });
     } catch {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("aeroporto")}`;
-      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(summaryCities[summaryCities.length - 1]?.address || "aeroporto")}`;
       setReturnInfo({ city: summaryCities[summaryCities.length - 1]?.name, address: summaryCities[summaryCities.length - 1]?.address, gmapsUrl, uberUrl });
       try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
@@ -1739,8 +1743,8 @@ export default function FinalCalendarPage() {
                       </div>
                     ) : null}
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Ver perfil</button>
-                      <button type="button" className="text-xs" onClick={() => signOut()}>Sair</button>
+                      <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("viewProfile")}</button>
+                      <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
                     </div>
                   </div>
                 ) : null}
@@ -2496,7 +2500,7 @@ export default function FinalCalendarPage() {
                           </Button>
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openGoDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">map</span>
-                            <span>Ir</span>
+                            <span>{t("goButton")}</span>
                           </Button>
                           </>
                         ) : null}
@@ -2537,7 +2541,7 @@ export default function FinalCalendarPage() {
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setCalendarHelpOpen(false)}>Fechar</Button>
+          <Button type="button" variant="outline" onClick={() => setCalendarHelpOpen(false)}>{t("close")}</Button>
         </DialogFooter>
       </Dialog>
 
@@ -2567,8 +2571,7 @@ export default function FinalCalendarPage() {
                 if (editIdx === null) return;
                 setEvents((prev) => prev.map((e, i) => {
                   if (i !== editIdx) return e;
-                  const meta = e.meta as any;
-                  const nextMeta = meta && typeof meta === "object" ? { ...meta, date: editDate, time: editTime } : meta;
+                  const nextMeta = e.meta;
                   return { ...e, date: editDate, time: editTime, meta: nextMeta };
                 }));
                 setEditOpen(false);
@@ -2579,7 +2582,7 @@ export default function FinalCalendarPage() {
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Fechar</Button>
+          <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>{t("close")}</Button>
         </DialogFooter>
       </Dialog>
 
@@ -2609,7 +2612,7 @@ export default function FinalCalendarPage() {
                   <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
                   <div>Notificação programada: {transportInfo?.notifyAt ? `às ${transportInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">
-                    <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }}>Fechar</Button>
+                    <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }}>{t("close")}</Button>
                   </div>
                 </>
               )}
@@ -2624,7 +2627,7 @@ export default function FinalCalendarPage() {
         <DialogHeader>Pesquisas e calendários salvos</DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="rounded border p-3">
-            <div className="font-semibold mb-1">Calendários salvos</div>
+            <div className="font-semibold mb-1">{t("savedCalendarsTitle")}</div>
             {savedCalendarsList.length ? (
               <ul className="space-y-2">
                 {savedCalendarsList.map((c, idx) => (
@@ -2634,7 +2637,7 @@ export default function FinalCalendarPage() {
                       <div className="text-xs text-zinc-600">{(c.events || []).length} eventos</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" onClick={() => { setEvents(c.events); setSavedDrawerOpen(false); }}>Carregar</Button>
+                      <Button type="button" variant="outline" onClick={() => { setEvents(c.events); setSavedDrawerOpen(false); }}>{t("loadLabel")}</Button>
                       <Button type="button" variant="outline" onClick={() => {
                         try {
                           const ok1 = confirm(`Deseja excluir o calendário "${c.name}"?`);
@@ -2653,40 +2656,40 @@ export default function FinalCalendarPage() {
                           } catch {}
                           show("Calendário excluído", { variant: "success" });
                         } catch { show("Erro ao excluir", { variant: "error" }); }
-                      }}>Excluir</Button>
+                      }}>{t("deleteLabel")}</Button>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="text-zinc-600">Nenhum calendário salvo.</div>
+              <div className="text-zinc-600">{t("noSavedCalendarsLabel")}</div>
             )}
           </div>
           <div className="rounded border p-3">
-            <div className="font-semibold mb-1">Pesquisas salvas</div>
+            <div className="font-semibold mb-1">{t("savedSearchesTitle")}</div>
             {savedTripsList.length ? (
               <ul className="space-y-2">
-                {savedTripsList.map((t) => (
-                  <li key={t.id} className="flex items-center justify-between gap-2">
+                {savedTripsList.map((trip) => (
+                  <li key={trip.id} className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="font-medium">{t.title}</div>
-                      <div className="text-xs text-zinc-600">{t.date} • {t.passengers} pax</div>
+                      <div className="font-medium">{trip.title}</div>
+                      <div className="text-xs text-zinc-600">{trip.date} • {trip.passengers} pax</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button type="button" variant="outline" onClick={() => {
-                        const legs = (t.flightNotes || []).map((n) => `${n.leg === "outbound" ? "Ida" : "Volta"}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
+                        const legs = (trip.flightNotes || []).map((n) => `${n.leg === "outbound" ? "Ida" : "Volta"}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
                         alert(legs.join("\n"));
-                      }}>Ver</Button>
+                      }}>{t("viewLabel")}</Button>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="text-zinc-600">Nenhuma pesquisa salva.</div>
+              <div className="text-zinc-600">{t("noSavedSearchesLabel")}</div>
             )}
           </div>
           <div className="mt-3 flex justify-end">
-            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setSavedDrawerOpen(false)}>Fechar</Button>
+            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setSavedDrawerOpen(false)}>{t("close")}</Button>
           </div>
         </div>
       </div>
@@ -2696,7 +2699,7 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => setFilesDrawerOpen(false)} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Arquivos salvos no dispositivo</DialogHeader>
+        <DialogHeader>{t("savedFilesTitle")}</DialogHeader>
         <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
           {filesList.length ? (
             <ul className="space-y-2">
@@ -2707,17 +2710,17 @@ export default function FinalCalendarPage() {
                     <div className="text-xs text-zinc-600">{f.size ? `${Math.round(f.size / 1024)} KB` : ""}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => loadFile(f.name)}>Carregar</Button>
-                    <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => deleteFile(f.name)}>Excluir</Button>
+                    <Button type="button" variant="outline" onClick={() => loadFile(f.name)}>{t("loadLabel")}</Button>
+                    <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => deleteFile(f.name)}>{t("deleteLabel")}</Button>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-zinc-600">Nenhum arquivo salvo.</div>
+            <div className="text-zinc-600">{t("noSavedFilesLabel")}</div>
           )}
           <div className="mt-3 flex justify-end">
-            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setFilesDrawerOpen(false)}>Fechar</Button>
+            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setFilesDrawerOpen(false)}>{t("close")}</Button>
           </div>
         </div>
       </div>
@@ -2769,7 +2772,7 @@ export default function FinalCalendarPage() {
             ) : null;
           })()}
           <div className="mt-3 flex justify-end">
-            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }}>Fechar</Button>
+            <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }}>{t("close")}</Button>
           </div>
         </div>
       </div>
@@ -2817,7 +2820,7 @@ export default function FinalCalendarPage() {
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
-                <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setGoDrawerOpen(false); setGoInfo(null); setGoRecord(null); }}>Fechar</Button>
+                <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setGoDrawerOpen(false); setGoInfo(null); setGoRecord(null); }}>{t("close")}</Button>
               </div>
             </>
           )}
@@ -2870,7 +2873,7 @@ export default function FinalCalendarPage() {
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
-                <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setReturnDrawerOpen(false); setReturnInfo(null); }}>Fechar</Button>
+                <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setReturnDrawerOpen(false); setReturnInfo(null); }}>{t("close")}</Button>
               </div>
             </>
           )}
@@ -2912,7 +2915,7 @@ export default function FinalCalendarPage() {
                   <div className="mt-2">Chamar Uber às: {stayInfo?.callTime || "—"}</div>
                   <div>Notificação programada: {stayInfo?.notifyAt ? `às ${stayInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">
-                    <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }}>Fechar</Button>
+                    <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }}>{t("close")}</Button>
                   </div>
                 </>
               )}
@@ -2955,7 +2958,7 @@ export default function FinalCalendarPage() {
                 <div className="text-zinc-600">Nenhum documento salvo.</div>
               )}
               <div className="mt-3 flex justify-end">
-                <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDocOpen(false); setDocFiles([]); }}>Fechar</Button>
+                <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDocOpen(false); setDocFiles([]); }}>{t("close")}</Button>
               </div>
             </div>
           </div>
