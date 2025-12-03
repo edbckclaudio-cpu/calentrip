@@ -391,6 +391,7 @@ export default function BookFlightsPage() {
                       <div className="inline-flex items-center gap-2 rounded-md px-2 py-1 border border-[#febb02] bg-[#febb02]/10 text-[#febb02]">
                         <span className="text-xs font-semibold">{t("outboundFlight")}</span>
                         <span className="text-sm font-semibold">{ts.outbound.origin}/{ts.outbound.destination}</span>
+                        <span className="text-xs font-medium">• {formatDate(ts.outbound.date)}</span>
                       </div>
                       <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">Links abaixo estão preenchidos com esse trecho (somente ida)</div>
                     </div>
@@ -423,6 +424,7 @@ export default function BookFlightsPage() {
                       <div className="inline-flex items-center gap-2 rounded-md px-2 py-1 border border-[#febb02] bg-[#febb02]/10 text-[#febb02]">
                         <span className="text-xs font-semibold">{t("inboundFlight")}</span>
                         <span className="text-sm font-semibold">{ts.inbound.origin}/{ts.inbound.destination}</span>
+                        <span className="text-xs font-medium">• {formatDate(ts.inbound.date)}</span>
                       </div>
                       <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">Links abaixo estão preenchidos com esse trecho (somente ida)</div>
                     </div>
