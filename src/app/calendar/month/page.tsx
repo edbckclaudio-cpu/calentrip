@@ -24,6 +24,12 @@ export default function MonthCalendarPage() {
 
   useEffect(() => {
     try {
+      const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+      const saved = rawSaved ? (JSON.parse(rawSaved) as { events?: EventItem[] }) : null;
+      if (saved?.events?.length) {
+        setEvents(saved.events as EventItem[]);
+        return;
+      }
       const list: EventItem[] = [];
       const trips: TripItem[] = getTrips();
       const current = trips.length ? trips[0] : null;
@@ -269,48 +275,7 @@ export default function MonthCalendarPage() {
         </div>
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário da viagem</h1>
         <div className="text-sm text-zinc-700 dark:text-zinc-300">{monthLabel}</div>
-        <div className="mt-3 rounded-lg border border-[#007AFF]/30 bg-[#007AFF]/10 p-3 text-sm">
-          Para receber notificações antes de cada evento, salve esta viagem no google calendar no seu dispositivo.
-          Use o botão abaixo. O mesmo botão está disponível no menu.
-          <div className="mt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                try {
-                  const payload = { events };
-                  if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
-                  try {
-                    const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-                    const ts = raw ? JSON.parse(raw) : null;
-                    if (ts) {
-                      const isSame = ts.mode === "same";
-                      const origin = isSame ? ts.origin : ts.outbound?.origin;
-                      const destination = isSame ? ts.destination : ts.outbound?.destination;
-                      const date = isSame ? ts.departDate : ts.outbound?.date;
-                      const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
-                      if (origin && destination && date) {
-                        const title = `${origin} → ${destination}`;
-                        const trips: TripItem[] = getTrips();
-                        const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-                        if (idx >= 0) {
-                          const next = [...trips];
-                          next[idx] = { ...next[idx], reachedFinalCalendar: true };
-                          localStorage.setItem("calentrip:trips", JSON.stringify(next));
-                        }
-                      }
-                    }
-                  } catch {}
-                  try { localStorage.setItem("calentrip:open_calendar_help", "1"); } catch {}
-                  show("Salvo em pesquisas salvas", { variant: "success" });
-                  try { window.location.href = "/calendar/final"; } catch {}
-                } catch { show("Erro ao salvar", { variant: "error" }); }
-              }}
-            >
-              Salvar no google calendar
-            </Button>
-          </div>
-        </div>
+        
         <div className="mt-2 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
           <span className="material-symbols-outlined text-[18px] text-[#febb02]">sticky_note_2</span>
           <span>
