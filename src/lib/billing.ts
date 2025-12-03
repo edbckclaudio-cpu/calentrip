@@ -1,5 +1,5 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { computeExpiryFromData, setTripPremium } from "./premium";
+import { setGlobalPremium } from "./premium";
 
 type Result = { ready?: boolean; found?: boolean; title?: string; price?: string; code?: number };
 type BillingPlugin = {
@@ -58,15 +58,11 @@ export async function completePurchaseForTrip(tripId: string, userId?: string) {
     const ack = await fetch("/api/entitlements/ack", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purchaseToken: token, productId }) });
     const ackJs = await ack.json();
     if (!ackJs?.ok) return { ok: false, error: "ack" } as const;
-    let expiry = computeExpiryFromData({
-      tripDate: (() => { try { const raw = localStorage.getItem("calentrip:tripSearch"); const ts = raw ? JSON.parse(raw) : null; if (!ts) return undefined; return ts.mode === "same" ? ts.returnDate : ts.inbound?.date; } catch { return undefined; } })(),
-      returnDate: (() => { try { const raw = localStorage.getItem("calentrip:tripSearch"); const ts = raw ? JSON.parse(raw) : null; if (!ts) return undefined; return ts.mode === "same" ? ts.returnDate : ts.inbound?.date; } catch { return undefined; } })(),
-      lastCheckout: (() => { try { const raw = localStorage.getItem("calentrip_trip_summary"); const sum = raw ? JSON.parse(raw) : null; const cities = Array.isArray(sum?.cities) ? sum.cities : []; const cs = cities.map((c: any) => c.checkout).filter(Boolean); return cs.length ? cs[cs.length - 1] : undefined; } catch { return undefined; } })(),
-    });
-    const store = await fetch("/api/entitlements/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tripId, userId, expiresAt: expiry, orderId: js?.orderId || null, source: "google_play" }) });
+    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    const store = await fetch("/api/entitlements/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tripId: "global", userId, expiresAt: expiry, orderId: js?.orderId || null, source: "google_play" }) });
     const stJs = await store.json();
     if (!stJs?.ok) return { ok: false, error: "store" } as const;
-    setTripPremium(tripId, expiry);
+    setGlobalPremium(expiry);
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "network" } as const;

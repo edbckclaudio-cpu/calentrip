@@ -7,6 +7,7 @@ import { isTripPremium, setTripPremium, computeExpiryFromData } from "@/lib/prem
  
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { Calendar, isCapAndroid } from "@/capacitor/calendar";
@@ -73,6 +74,10 @@ export default function FinalCalendarPage() {
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [premiumFlag, setPremiumFlag] = useState<boolean>(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editDate, setEditDate] = useState<string>("");
+  const [editTime, setEditTime] = useState<string>("");
 
   async function saveCalendarToFile() {
     try {
@@ -2409,6 +2414,7 @@ export default function FinalCalendarPage() {
             type="button"
             variant="outline"
             className="px-2 py-1 text-xs rounded-md gap-1"
+            disabled={!premiumFlag}
             onClick={async () => {
               try {
                 if (saveCalendarNamed()) setCalendarHelpOpen(true);
@@ -2470,10 +2476,21 @@ export default function FinalCalendarPage() {
                         ) : null}
                         
                         {(ev.type === "activity" || ev.type === "restaurant") ? (
+                          <>
+                          <Button type="button" variant="outline" disabled={!premiumFlag} className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
+                            setEditIdx(idx);
+                            setEditDate(ev.date);
+                            setEditTime(ev.time || "");
+                            setEditOpen(true);
+                          }}>
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                            <span>Editar</span>
+                          </Button>
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openGoDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">map</span>
                             <span>Ir</span>
                           </Button>
+                          </>
                         ) : null}
                         {((ev.type === "activity" || ev.type === "restaurant") && (ev.meta as RecordItem)?.files && (ev.meta as RecordItem)?.files!.length) ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
@@ -2507,12 +2524,54 @@ export default function FinalCalendarPage() {
           <div>• Abrimos o gerenciador de arquivos na pasta Download (quando possível).</div>
           <div>• Toque em calentrip.ics e escolha salvar no Google Calendar; selecione a conta e confirme.</div>
           <div className="mt-3">
-            <Button type="button" onClick={() => { try { saveCalendarFull(); } catch {} }}>Salvar no google calendar</Button>
+            <Button type="button" disabled={!premiumFlag} onClick={() => { try { saveCalendarFull(); } catch {} }}>Salvar no google calendar</Button>
             <Button type="button" variant="outline" className="ml-2" onClick={() => { try { openDownloads(); } catch {} }}>Abrir pasta Download</Button>
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setCalendarHelpOpen(false)}>Fechar</Button>
+        </DialogFooter>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen} placement="bottom">
+        <DialogHeader>Editar atividade</DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div>
+            <label className="mb-1 block text-sm">Data</label>
+            <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">Hora</label>
+            <Input type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+          </div>
+          <div className="flex justify-between">
+            <Button type="button" variant="outline" onClick={() => {
+              try {
+                if (editIdx === null) return;
+                setEvents((prev) => prev.filter((_, i) => i !== editIdx));
+                setEditOpen(false);
+                setEditIdx(null);
+                show("Atividade excluída", { variant: "success" });
+              } catch { show("Erro ao excluir", { variant: "error" }); }
+            }}>Excluir</Button>
+            <Button type="button" onClick={() => {
+              try {
+                if (editIdx === null) return;
+                setEvents((prev) => prev.map((e, i) => {
+                  if (i !== editIdx) return e;
+                  const meta = e.meta as any;
+                  const nextMeta = meta && typeof meta === "object" ? { ...meta, date: editDate, time: editTime } : meta;
+                  return { ...e, date: editDate, time: editTime, meta: nextMeta };
+                }));
+                setEditOpen(false);
+                setEditIdx(null);
+                show("Atividade atualizada", { variant: "success" });
+              } catch { show("Erro ao salvar", { variant: "error" }); }
+            }}>Salvar</Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Fechar</Button>
         </DialogFooter>
       </Dialog>
 

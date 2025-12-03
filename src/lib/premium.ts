@@ -13,7 +13,8 @@ export function getPremiumTripIds(): string[] {
 }
 
 export function isTripPremium(tripId: string): boolean {
-  return getPremiumTripIds().includes(tripId);
+  const list = getPremiumTripIds();
+  return list.includes("global") || list.includes(tripId);
 }
 
 export function setTripPremium(tripId: string, expiresAt: number) {
@@ -24,6 +25,14 @@ export function setTripPremium(tripId: string, expiresAt: number) {
     next.push({ tripId, expiresAt });
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {}
+}
+
+export function setGlobalPremium(expiresAt: number) {
+  setTripPremium("global", expiresAt);
+}
+
+export function isGlobalPremium(): boolean {
+  return isTripPremium("global");
 }
 
 export function computeExpiryFromData(opts: {
