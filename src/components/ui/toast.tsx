@@ -1,21 +1,25 @@
 "use client";
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number };
+type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number; key?: string };
 
 const ToastContext = createContext<{
-  show: (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) => number;
+  show: (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) => number;
   dismiss: (id: number) => void;
 } | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
 
-  function show(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) {
+  function show(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) {
     const id = Date.now() + Math.random();
     const variant = opts?.variant ?? "info";
     const duration = opts?.sticky ? undefined : (opts?.duration ?? 5000);
-    setItems((prev) => [...prev, { id, message, variant, duration }]);
+    const k = opts?.key;
+    setItems((prev) => {
+      const cleared = k ? prev.filter((t) => t.key !== k) : [];
+      return [...cleared, { id, message, variant, duration, key: k }];
+    });
     if (typeof duration === "number") {
       setTimeout(() => {
         setItems((prev) => prev.filter((t) => t.id !== id));

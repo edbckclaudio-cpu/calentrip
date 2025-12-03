@@ -16,13 +16,20 @@ export default function AccommodationSearchPage() {
   const { tripSearch } = useTrip();
   const router = useRouter();
   const { t } = useI18n();
-  const { show } = useToast();
+  const { show, dismiss } = useToast();
   const initialCity = useMemo(() => {
     if (!tripSearch) return "";
     if (tripSearch.mode === "same") return tripSearch.destination ?? "";
     return "";
   }, [tripSearch, show]);
   const [city, setCity] = useState(initialCity);
+  const lastToastId = useRef<number | null>(null);
+  function showToast(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) {
+    if (lastToastId.current) dismiss(lastToastId.current);
+    const id = show(message, opts);
+    lastToastId.current = id;
+    return id;
+  }
   
   const [cityCount, setCityCount] = useState(0);
   type TransportSegment = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime: string; arrTime: string; files: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>; route?: { distanceKm?: number; durationMin?: number; gmapsUrl?: string; r2rUrl?: string; osmUrl?: string } | null };
@@ -84,7 +91,7 @@ export default function AccommodationSearchPage() {
     if (!tripSearch) return;
     if (tripSearch.mode === "different") {
       setDiffCityCountHighlight(true);
-      show("Informe quantas cidades precisarão de hospedagem e clique em Check.", { duration: 6000 });
+      showToast("Informe quantas cidades precisarão de hospedagem e clique em Check.", { duration: 6000 });
     }
   }, [tripSearch]);
 
@@ -167,11 +174,11 @@ export default function AccommodationSearchPage() {
       const co = i === n - 1 ? (returnDate || "") : "";
       arr.push({ name: "", checkin: ci, checkout: co });
     }
-  setCities(arr);
-  show(t("citiesConfigured"));
+    setCities(arr);
+    showToast(t("citiesConfigured"));
     setGuideIdx(0);
     setGuideStep("name");
-    show("Preencha o nome da cidade 1 e selecione na barra de rolagem.", { duration: 6000 });
+    showToast("Preencha o nome da cidade 1 e selecione na barra de rolagem.", { duration: 6000 });
   }
 
   async function searchCities(q: string) {
@@ -237,39 +244,39 @@ export default function AccommodationSearchPage() {
   useEffect(() => {
     if (guideIdx === null) return;
     if (guideStep === "checkout") {
-      show("Escolha a data de check-out desta cidade.", { duration: 5000 });
+      showToast("Escolha a data de check-out desta cidade.", { duration: 5000 });
     } else if (guideStep === "stay") {
-      show("Clique em Comprar hospedagem.", { duration: 5000 });
+      showToast("Clique em Comprar hospedagem.", { duration: 5000 });
     } else if (guideStep === "name") {
-      show("Digite o nome da cidade e selecione na barra de rolagem.", { duration: 6000 });
+      showToast("Digite o nome da cidade e selecione na barra de rolagem.", { duration: 6000 });
     }
   }, [guideIdx, guideStep, show]);
 
   useEffect(() => {
     if (cityDetailIdx === null) return;
-    show("Use os links para buscar hospedagem. Salve prints ou arquivos em 'Escolher arquivos' para consultar durante a viagem.", { duration: 8000 });
+    showToast("Use os links para buscar hospedagem. Salve prints ou arquivos em 'Escolher arquivos' para consultar durante a viagem.", { duration: 8000 });
   }, [cityDetailIdx, show]);
 
   function onPickCity(idx: number, c: string) {
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, name: c } : x)));
     setCitySearchIdx(null);
     if (idx === cities.length - 1) {
-  setGuideStep("stay");
-  show("Como é a última cidade, o check-out é a data final da viagem. Clique em Comprar hospedagem.", { duration: 7000 });
+      setGuideStep("stay");
+      showToast("Como é a última cidade, o check-out é a data final da viagem. Clique em Comprar hospedagem.", { duration: 7000 });
     }
   }
 
   function onCityCheck(idx: number) {
     const cur = cities[idx];
-  if (!cur?.address) { show(t("provideStayAddressError"), { variant: "error" }); return; }
+    if (!cur?.address) { showToast(t("provideStayAddressError"), { variant: "error" }); return; }
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, checked: true } : x)));
     if (idx < cities.length - 1) {
       const next = idx + 1;
       const isLastNext = next === cities.length - 1;
       if (idx === 0) {
-        show(isLastNext ? `Preencha o nome da cidade 2 e selecione na barra de rolagem. Depois, compre a hospedagem.` : `Preencha o nome da cidade 2, selecione na barra de rolagem e escolha a data de check-out.`, { duration: 7000 });
+        showToast(isLastNext ? `Preencha o nome da cidade 2 e selecione na barra de rolagem. Depois, compre a hospedagem.` : `Preencha o nome da cidade 2, selecione na barra de rolagem e escolha a data de check-out.`, { duration: 7000 });
       } else {
-        show(isLastNext ? `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e compre a hospedagem.` : `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e escolha o check-out.`, { duration: 7000 });
+        showToast(isLastNext ? `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e compre a hospedagem.` : `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e escolha o check-out.`, { duration: 7000 });
       }
     }
     const allChecked = cities.every((c, i) => (i === idx ? true : c.checked));
@@ -278,7 +285,7 @@ export default function AccommodationSearchPage() {
     }
     if (allChecked && cities.length > 1) {
       setTransportOpenIdx(0);
-      show("Agora escolha como ir de uma cidade para a outra. Anote os horários e salve foto/arquivo das passagens para consulta no calendário.", { duration: 8000 });
+      showToast("Agora escolha como ir de uma cidade para a outra. Anote os horários e salve foto/arquivo das passagens para consulta no calendário.", { duration: 8000 });
     }
     const next = idx + 1;
     if (next < cities.length) {
@@ -369,11 +376,11 @@ export default function AccommodationSearchPage() {
       const msg = `Agora vamos configurar o transporte entre ${from} e ${to}.`;
       setTransportNotice(msg);
       setTransportHighlight(true);
-      show(`Agora buscar e comprar o transporte da cidade ${next + 1} para a cidade ${next + 2}`, { duration: 7000 });
+      showToast(`Agora buscar e comprar o transporte da cidade ${next + 1} para a cidade ${next + 2}`, { duration: 7000 });
       setTimeout(() => { setTransportHighlight(false); }, 7000);
     } else {
       setTransportOpenIdx(null);
-      show(t("transportSavedGoSummary"), { variant: "success" });
+      showToast(t("transportSavedGoSummary"), { variant: "success" });
       summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       setTransportNotice(null);
       setTransportHighlight(false);
@@ -385,7 +392,7 @@ export default function AccommodationSearchPage() {
   useEffect(() => {
     (async () => {
       if (transportOpenIdx === null) return;
-      show("Escolha o transporte entre as cidades, preenchendo origem, destino e horários. Você pode anexar a passagem.", { duration: 8000 });
+      showToast("Escolha o transporte entre as cidades, preenchendo origem, destino e horários. Você pode anexar a passagem.", { duration: 8000 });
       setTransportDep("");
       setTransportArr("");
       setTransportDepTime("");
@@ -538,13 +545,13 @@ export default function AccommodationSearchPage() {
                 <div>
                   <Button type="button" className={(sameSearchHighlight ? "ring-4 ring-amber-500 animate-pulse " : "") + "w-full sm:w-auto"} onClick={() => {
                     const chosen = city || initialCity;
-                    if (!chosen) { show(t("defineCityError")); return; }
+                    if (!chosen) { showToast(t("defineCityError")); return; }
                     setCities([{ name: chosen, checkin: dates.checkin || "", checkout: dates.checkout || "" }]);
                     setCityDetailIdx(0);
                     setGuideIdx(0);
                     setGuideStep("address");
                     setSameSearchHighlight(false);
-                    show(t("selectAccommodation"));
+                    showToast(t("selectAccommodation"));
                   }}>{t("searchAccommodationButton")}</Button>
                 </div>
                 
@@ -637,7 +644,7 @@ export default function AccommodationSearchPage() {
                           </div>
                         </div>
                         <div className="mt-3 flex items-center gap-2">
-                          <Button type="button" disabled={!enabled || !(c.name && (idx === cities.length - 1 || c.checkout))} className={guideIdx === idx && guideStep === "stay" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { show("Escolha a acomodação"); setCityDetailIdx(idx); setGuideStep("address"); }}>
+                          <Button type="button" disabled={!enabled || !(c.name && (idx === cities.length - 1 || c.checkout))} className={guideIdx === idx && guideStep === "stay" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { showToast("Escolha a acomodação"); setCityDetailIdx(idx); setGuideStep("address"); }}>
                             Comprar hospedagem
                           </Button>
                           <Button type="button" variant="secondary" disabled={idx !== 0 || !cities[cities.length - 1]?.checked} onClick={() => setTransportOpenIdx(idx)}>Transporte</Button>
@@ -679,7 +686,7 @@ export default function AccommodationSearchPage() {
                       )}
                     </div>
                     <div className="sticky bottom-0 p-4 border-t bg-white dark:bg-black">
-                      <Button type="button" variant="secondary" disabled={!citySearchQuery.trim()} onClick={() => { const v = citySearchQuery.trim(); if (!v) return; onPickCity(Number(citySearchIdx), v); show(t("cityDefinedManually")); }}>{t("useTypedCityButton")}</Button>
+                      <Button type="button" variant="secondary" disabled={!citySearchQuery.trim()} onClick={() => { const v = citySearchQuery.trim(); if (!v) return; onPickCity(Number(citySearchIdx), v); showToast(t("cityDefinedManually")); }}>{t("useTypedCityButton")}</Button>
                     </div>
                   </div>
                 </Dialog>
