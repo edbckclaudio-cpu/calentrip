@@ -23,6 +23,7 @@ export default function MonthCalendarPage() {
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium" } | null>(null);
   const { show } = useToast();
   const [premiumFlag, setPremiumFlag] = useState(false);
+  const [premiumUntil, setPremiumUntil] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
@@ -51,6 +52,17 @@ export default function MonthCalendarPage() {
       if (current) {
         const premium = isTripPremium(current.id);
         setPremiumFlag(premium);
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
+          const list: Array<{ tripId: string; expiresAt: number }> = raw ? JSON.parse(raw) : [];
+          const rec = list.find((r) => r.tripId === "global" && r.expiresAt > Date.now());
+          if (rec) {
+            const d = new Date(rec.expiresAt);
+            const dd = String(d.getDate()).padStart(2, "0");
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            setPremiumUntil(`${dd}/${mm}`);
+          } else setPremiumUntil("");
+        } catch { setPremiumUntil(""); }
         if (status !== "authenticated") setGating({ show: true, reason: "anon" });
         else if (!premium) setGating({ show: true, reason: "noPremium" });
         else setGating(null);
@@ -215,6 +227,7 @@ export default function MonthCalendarPage() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
+                    <div className="mt-1 text-[10px] text-zinc-500">Plano: {premiumFlag ? `Premium${premiumUntil ? ` até ${premiumUntil}` : ""}` : "Grátis"}</div>
                   </div>
                 ) : null}
               </div>
