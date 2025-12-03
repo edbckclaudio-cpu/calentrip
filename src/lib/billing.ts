@@ -46,7 +46,7 @@ export async function completePurchaseForTrip(tripId: string, userId?: string) {
   if (!ready) {
     const isDemo = (userId || "").toLowerCase().includes("demo");
     if (isDemo) {
-      const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      const expiry = Date.now() + 24 * 60 * 60 * 1000;
       setGlobalPremium(expiry);
       return { ok: true } as const;
     }
