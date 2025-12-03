@@ -90,7 +90,7 @@ export default function BookFlightsPage() {
   const { tripSearch, setTripSearch } = useTrip();
   const router = useRouter();
   const { t } = useI18n();
-  const { show } = useToast();
+  const { show, minimize } = useToast();
   const [hydrated, setHydrated] = useState(false);
   const [loadingTrip, setLoadingTrip] = useState(true);
   const [guide, setGuide] = useState<"aggregators" | "notes" | null>("aggregators");
@@ -193,15 +193,17 @@ export default function BookFlightsPage() {
     if (!hydrated || loadingTrip || introShown) return;
     if (!tripSearch) return;
     if (tripSearch.mode === "same") {
-      show(
+      const id = show(
         "Agora é a hora de escolher e comprar o voo. No quadro Plataformas de busca, clique nos links para encontrar o melhor preço e horário. As buscas já estão preenchidas, mas as plataformas podem não entender algum dado — sempre confira as informações e a quantidade de passageiros. Depois de comprar, preencha os horários dos voos, anexe ou fotografe as passagens e salve o código de reserva/localizador.",
         { variant: "info", sticky: true, key: "book-intro" }
       );
+      setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     } else {
-      show(
+      const id = show(
         "Agora é a hora de escolher e comprar o voo. As buscas estão separadas nas plataformas. Como as plataformas podem não entender algum dado, confira e garanta que a opção 'somente ida' esteja selecionada em cada trecho, e verifique a quantidade de passageiros. Depois de comprar, preencha os horários dos voos, anexe ou fotografe as passagens e salve o código de reserva/localizador.",
         { variant: "info", sticky: true, key: "book-intro" }
       );
+      setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     }
     setIntroShown(true);
   }, [hydrated, loadingTrip, tripSearch, introShown, show]);

@@ -7,6 +7,7 @@ type ToastItem = { id: number; message: string; variant?: "info" | "success" | "
 const ToastContext = createContext<{
   show: (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) => number;
   dismiss: (id: number) => void;
+  minimize: (id: number) => void;
 } | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -60,6 +61,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   function toggleMinimize(id: number) {
     setItems((prev) => prev.map((t) => (t.id === id ? { ...t, minimized: !t.minimized } : t)));
   }
+  function minimize(id: number) {
+    setItems((prev) => prev.map((t) => (t.id === id ? { ...t, minimized: true } : t)));
+  }
 
   const portal = (
     <div
@@ -111,7 +115,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <ToastContext.Provider value={{ show, dismiss }}>
+    <ToastContext.Provider value={{ show, dismiss, minimize }}>
       {children}
       {typeof document !== "undefined" ? createPortal(portal, document.body) : null}
     </ToastContext.Provider>
