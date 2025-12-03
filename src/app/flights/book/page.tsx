@@ -387,7 +387,13 @@ export default function BookFlightsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   {(() => { const ts = tripSearch as TripSearchDifferent; return (
-                    <div className="mb-2 text-sm font-semibold">{ts.outbound.origin}/{ts.outbound.destination}</div>
+                    <div className="mb-2">
+                      <div className="inline-flex items-center gap-2 rounded-md px-2 py-1 border border-[#febb02] bg-[#febb02]/10 text-[#febb02]">
+                        <span className="text-xs font-semibold">{t("outboundFlight")}</span>
+                        <span className="text-sm font-semibold">{ts.outbound.origin}/{ts.outbound.destination}</span>
+                      </div>
+                      <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">Links abaixo estão preenchidos com esse trecho (somente ida)</div>
+                    </div>
                   ); })()}
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
@@ -413,7 +419,13 @@ export default function BookFlightsPage() {
                 </div>
                 <div>
                   {(() => { const ts = tripSearch as TripSearchDifferent; return (
-                    <div className="mb-2 text-sm font-semibold">{ts.inbound.origin}/{ts.inbound.destination}</div>
+                    <div className="mb-2">
+                      <div className="inline-flex items-center gap-2 rounded-md px-2 py-1 border border-[#febb02] bg-[#febb02]/10 text-[#febb02]">
+                        <span className="text-xs font-semibold">{t("inboundFlight")}</span>
+                        <span className="text-sm font-semibold">{ts.inbound.origin}/{ts.inbound.destination}</span>
+                      </div>
+                      <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">Links abaixo estão preenchidos com esse trecho (somente ida)</div>
+                    </div>
                   ); })()}
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
