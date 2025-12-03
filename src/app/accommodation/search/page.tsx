@@ -159,8 +159,8 @@ export default function AccommodationSearchPage() {
       const co = i === n - 1 ? (returnDate || "") : "";
       arr.push({ name: "", checkin: ci, checkout: co });
     }
-    setCities(arr);
-    show("Cidades configuradas");
+  setCities(arr);
+  show(t("citiesConfigured"));
     setGuideIdx(0);
     setGuideStep("name");
   }
@@ -229,14 +229,14 @@ export default function AccommodationSearchPage() {
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, name: c } : x)));
     setCitySearchIdx(null);
     if (idx === cities.length - 1) {
-      setGuideStep("stay");
-      show("Última cidade selecionada, direcionando para compra de hospedagem", { duration: 5000 });
+  setGuideStep("stay");
+  show(t("lastCitySelectedGoToPurchase"), { duration: 5000 });
     }
   }
 
   function onCityCheck(idx: number) {
     const cur = cities[idx];
-    if (!cur?.address) { show("Informe o endereço da hospedagem antes de concluir", { variant: "error" }); return; }
+  if (!cur?.address) { show(t("provideStayAddressError"), { variant: "error" }); return; }
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, checked: true } : x)));
     if (idx < cities.length - 1) {
       const next = idx + 1;
@@ -253,7 +253,7 @@ export default function AccommodationSearchPage() {
     }
     if (allChecked && cities.length > 1) {
       setTransportOpenIdx(0);
-      show("Agora escolha transporte entre a cidade 1 e a cidade 2");
+      show(t("chooseTransportFirstSecondCity"));
     }
     const next = idx + 1;
     if (next < cities.length) {
@@ -348,7 +348,7 @@ export default function AccommodationSearchPage() {
       setTimeout(() => { setTransportHighlight(false); }, 7000);
     } else {
       setTransportOpenIdx(null);
-      show("Transporte salvo. Veja o resumo e conclua a hospedagem.", { variant: "success" });
+      show(t("transportSavedGoSummary"), { variant: "success" });
       summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       setTransportNotice(null);
       setTransportHighlight(false);
@@ -512,14 +512,14 @@ export default function AccommodationSearchPage() {
                 <div>
                   <Button type="button" className={(sameSearchHighlight ? "ring-4 ring-amber-500 animate-pulse " : "") + "w-full sm:w-auto"} onClick={() => {
                     const chosen = city || initialCity;
-                    if (!chosen) { show("Defina a cidade"); return; }
+                    if (!chosen) { show(t("defineCityError")); return; }
                     setCities([{ name: chosen, checkin: dates.checkin || "", checkout: dates.checkout || "" }]);
                     setCityDetailIdx(0);
                     setGuideIdx(0);
                     setGuideStep("address");
                     setSameSearchHighlight(false);
-                    show("Escolha a acomodação");
-                  }}>Buscar acomodação</Button>
+                    show(t("selectAccommodation"));
+                  }}>{t("searchAccommodationButton")}</Button>
                 </div>
                 
               </div>
@@ -628,14 +628,14 @@ export default function AccommodationSearchPage() {
                 <Dialog open={citySearchIdx !== null} onOpenChange={() => setCitySearchIdx(null)}>
                   <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
                     <div className="p-4">
-                      <DialogHeader>Buscar cidade</DialogHeader>
-                      <Input placeholder="Digite a cidade" value={citySearchQuery} onChange={(e) => searchCities(e.target.value)} />
+                      <DialogHeader>{t("searchCityTitle")}</DialogHeader>
+                      <Input placeholder={t("typeCity")} value={citySearchQuery} onChange={(e) => searchCities(e.target.value)} />
                     </div>
                     <div className="px-4 pb-4 flex-1 overflow-y-auto">
                       {citySearchLoading ? (
-                        <div className="text-sm text-zinc-600">Carregando…</div>
+                        <div className="text-sm text-zinc-600">{t("loading")}</div>
                       ) : citySearchResults.length === 0 ? (
-                        <div className="text-sm text-zinc-600">Nenhuma sugestão encontrada</div>
+                        <div className="text-sm text-zinc-600">{t("noSuggestionsFound")}</div>
                       ) : (
                         <ul className="max-h-64 overflow-auto divide-y">
                           {citySearchResults.map((r, i) => (
@@ -654,7 +654,7 @@ export default function AccommodationSearchPage() {
                       )}
                     </div>
                     <div className="sticky bottom-0 p-4 border-t bg-white dark:bg-black">
-                      <Button type="button" variant="secondary" disabled={!citySearchQuery.trim()} onClick={() => { const v = citySearchQuery.trim(); if (!v) return; onPickCity(Number(citySearchIdx), v); show("Cidade definida manualmente"); }}>Usar cidade digitada</Button>
+                      <Button type="button" variant="secondary" disabled={!citySearchQuery.trim()} onClick={() => { const v = citySearchQuery.trim(); if (!v) return; onPickCity(Number(citySearchIdx), v); show(t("cityDefinedManually")); }}>{t("useTypedCityButton")}</Button>
                     </div>
                   </div>
                 </Dialog>
@@ -666,12 +666,12 @@ export default function AccommodationSearchPage() {
         {cityDetailIdx !== null && (
           <Dialog open onOpenChange={() => setCityDetailIdx(null)}>
             <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md rounded-l-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800">
-              <DialogHeader>Hospedagem</DialogHeader>
+              <DialogHeader>{t("accommodationDialogTitle")}</DialogHeader>
               <div className="p-1 space-y-2 text-sm">
-                <div className="font-semibold">{cities[cityDetailIdx!]?.name || `Cidade ${(cityDetailIdx ?? 0) + 1}`}</div>
-                <div>Check-in: {cities[cityDetailIdx!]?.checkin || "—"}</div>
-                <div>Check-out: {cities[cityDetailIdx!]?.checkout || "—"}</div>
-                <div className="mt-2 font-bold text-[#febb02]">Links de acomodação</div>
+                <div className="font-semibold">{cities[cityDetailIdx!]?.name || `${t("cityGeneric")} ${(cityDetailIdx ?? 0) + 1}`}</div>
+                <div>{t("checkinLabel")}: {cities[cityDetailIdx!]?.checkin || "—"}</div>
+                <div>{t("checkoutLabel")}: {cities[cityDetailIdx!]?.checkout || "—"}</div>
+                <div className="mt-2 font-bold text-[#febb02]">{t("accommodationLinksTitle")}</div>
                 <ul className="space-y-1">
                   {(() => {
                     const c = encodeURIComponent(cities[cityDetailIdx!]?.name || "");
@@ -687,9 +687,9 @@ export default function AccommodationSearchPage() {
                   ))}
                 </ul>
                 <div className="mt-3">
-                  <label className="mb-1 block text-sm">Endereço da hospedagem</label>
+                  <label className="mb-1 block text-sm">{t("stayAddressLabel")}</label>
                   <Input
-                    placeholder="Rua, número, bairro"
+                    placeholder={t("stayAddressPlaceholder")}
                     value={cities[cityDetailIdx!]?.address || ""}
                     className={guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse" : undefined}
                     onChange={(e) => {
@@ -703,15 +703,13 @@ export default function AccommodationSearchPage() {
                       <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-amber-100">
                         <span className="material-symbols-outlined text-[14px] text-amber-800">info</span>
                       </span>
-                      <span>
-                        Informe o endereço completo da hospedagem. Este endereço ficará no calendário e, no dia da atividade, enviaremos uma notificação com distância, tempo de deslocamento, opções de transporte e links para aplicativos de carro já com o destino preenchido.
-                      </span>
+                      <span>{t("stayAddressInfo")}</span>
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="mb-1 font-semibold">Documentos da hospedagem</div>
+                    <div className="mb-1 font-semibold">{t("stayDocsTitle")}</div>
                     <div className="flex items-center gap-2">
-                      <label htmlFor={`stay-cam-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm cursor-pointer">Usar câmera</label>
+                      <label htmlFor={`stay-cam-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm cursor-pointer">{t("useCamera")}</label>
                       <input id={`stay-cam-${cityDetailIdx ?? 0}`} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         Promise.all(files.map(async (f) => {
@@ -742,7 +740,7 @@ export default function AccommodationSearchPage() {
                     ) : null}
                   </div>
                   <div className="mt-2 flex justify-end">
-                    <Button type="button" className={guideIdx === cityDetailIdx && guideStep === "check" ? "ring-4 ring-amber-500 pulse-ring" : undefined} onClick={() => { onCityCheck(cityDetailIdx!); setCityDetailIdx(null); }}>Check</Button>
+                    <Button type="button" className={guideIdx === cityDetailIdx && guideStep === "check" ? "ring-4 ring-amber-500 pulse-ring" : undefined} onClick={() => { onCityCheck(cityDetailIdx!); setCityDetailIdx(null); }}>{t("check")}</Button>
                   </div>
                 </div>
               </div>
@@ -755,7 +753,7 @@ export default function AccommodationSearchPage() {
             <div className="p-4">
               <DialogHeader>
                 <div className={transportHighlight ? "rounded-md p-1 ring-4 ring-amber-500 pulse-ring" : undefined}>
-                  Transporte entre {transportOpenIdx !== null ? cities[transportOpenIdx]?.name : ""} e {transportOpenIdx !== null ? cities[transportOpenIdx + 1]?.name : ""}
+                  {t("transportBetween")} {transportOpenIdx !== null ? cities[transportOpenIdx]?.name : ""} {t("and")} {transportOpenIdx !== null ? cities[transportOpenIdx + 1]?.name : ""}
                 </div>
               </DialogHeader>
               {transportNotice ? (
@@ -768,8 +766,8 @@ export default function AccommodationSearchPage() {
               ) : null}
             </div>
             <div className="px-4 pb-2 flex-1 overflow-y-auto text-sm">
-              <div className="mb-2">Distância: {transportRoute?.distanceKm ? `${transportRoute.distanceKm} km` : "—"}</div>
-              <div className="mb-2">Tempo estimado: {transportRoute?.durationMin ? `${transportRoute.durationMin} min` : "—"}</div>
+              <div className="mb-2">{t("stayRouteDistance")}: {transportRoute?.distanceKm ? `${transportRoute.distanceKm} km` : "—"}</div>
+              <div className="mb-2">{t("stayRouteDuration")}: {transportRoute?.durationMin ? `${transportRoute.durationMin} min` : "—"}</div>
               {transportRoute?.osmUrl ? (
                 <iframe title="map" src={transportRoute.osmUrl} className="mb-3 h-32 md:h-40 w-full rounded-md border" />
               ) : null}
@@ -779,20 +777,20 @@ export default function AccommodationSearchPage() {
                 <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={transportRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
               </ul>
               <div className="mb-2">
-                <label className="mb-1 block text-sm">Modal</label>
+                <label className="mb-1 block text-sm">{t("transportModeLabel")}</label>
                 <select className="w-full rounded-md border px-2 py-1 text-sm" value={transportMode} onChange={(e) => setTransportMode(e.target.value as "air" | "train" | "bus" | "car")}>
-                  <option value="air">Avião</option>
-                  <option value="train">Trem</option>
-                  <option value="bus">Ônibus</option>
-                  <option value="car">Carro</option>
+                  <option value="air">{t("modeAir")}</option>
+                  <option value="train">{t("modeTrain")}</option>
+                  <option value="bus">{t("modeBus")}</option>
+                  <option value="car">{t("modeCar")}</option>
                 </select>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <div>
-                  <label className="mb-1 block text-sm">Origem (aeroporto/estação)</label>
+                  <label className="mb-1 block text-sm">{t("transportOriginLabel")}</label>
                   <div className="relative">
                     <Input
-                      placeholder="Ex.: FCO / Roma Termini"
+                      placeholder={t("transportOriginPlaceholder")}
                       value={transportDep}
                       onFocus={() => {
                         const cityName = cities[transportOpenIdx || 0]?.name || "";
@@ -820,7 +818,7 @@ export default function AccommodationSearchPage() {
                             <li key={`dep-${i}`}>
                               <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportDep(o)}>
                                 <span>{o}</span>
-                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? "Aeroporto" : transportMode === "train" ? "Estação de trem" : "Estação de ônibus"}</span>
+                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? t("airport") : transportMode === "train" ? t("trainStation") : t("busStation")}</span>
                               </button>
                             </li>
                           ))}
@@ -830,10 +828,10 @@ export default function AccommodationSearchPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm">Destino (aeroporto/estação)</label>
+                  <label className="mb-1 block text-sm">{t("transportDestinationLabel")}</label>
                   <div className="relative">
                     <Input
-                      placeholder="Ex.: FLR / Firenze SMN"
+                      placeholder={t("transportDestinationPlaceholder")}
                       value={transportArr}
                       onFocus={() => {
                         const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
@@ -861,7 +859,7 @@ export default function AccommodationSearchPage() {
                             <li key={`arr-${i}`}>
                               <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportArr(o)}>
                                 <span>{o}</span>
-                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? "Aeroporto" : transportMode === "train" ? "Estação de trem" : "Estação de ônibus"}</span>
+                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? t("airport") : transportMode === "train" ? t("trainStation") : t("busStation")}</span>
                               </button>
                             </li>
                           ))}
@@ -872,11 +870,11 @@ export default function AccommodationSearchPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-sm">Horário de saída</label>
+                    <label className="mb-1 block text-sm">{t("departureTime")}</label>
                     <Input placeholder="14:30" value={transportDepTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportDepTime(formatTimeInput(e.target.value))} />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm">Horário de chegada</label>
+                    <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
                     <Input placeholder="17:05" value={transportArrTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
                   </div>
                 </div>
@@ -973,7 +971,7 @@ export default function AccommodationSearchPage() {
                     if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));
                   } catch {}
                   router.push("/entertainment/reservations");
-                }}>Seguir para agendar entretenimento e restaurantes</Button>
+                }}>{t("proceedToEntertainment")}</Button>
               </div>
             </div>
           </CardContent>
