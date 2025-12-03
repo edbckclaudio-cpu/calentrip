@@ -2395,7 +2395,7 @@ export default function FinalCalendarPage() {
           {(() => { const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : ""; const isAndroid = /Android/.test(ua); return isAndroid; })() ? (
             <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { openGoogleCalendarInstall(); } catch {} }}>
               <span className="material-symbols-outlined text-[16px]">android</span>
-              <span>Instalar GC</span>
+              <span className="hidden sm:inline">Instalar GC</span>
             </Button>
           ) : null}
           <Button
@@ -2410,11 +2410,11 @@ export default function FinalCalendarPage() {
             }}
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
-            <span>Salvar</span>
+            <span className="hidden sm:inline">Salvar</span>
           </Button>
           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-            <span>Calendário</span>
+            <span className="hidden sm:inline">Calendário</span>
           </Button>
         </div>
         <Card>
