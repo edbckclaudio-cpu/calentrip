@@ -216,10 +216,10 @@ export default function FinalCalendarPage() {
     return false;
   }, [locConsent]);
 
-  function saveCalendarNamed() {
+  function saveCalendarNamed(silent?: boolean, fixedName?: string) {
     try {
-      const rawName = typeof window !== "undefined" ? (prompt("Nome do calendário (apenas letras, até 9)") || "") : "";
-      let name = (rawName || "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
+      const rawName = silent ? "" : (typeof window !== "undefined" ? (prompt("Nome do calendário (apenas letras, até 9)") || "") : "");
+      let name = (fixedName || rawName || "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
       if (!name) {
         try {
           const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
@@ -368,6 +368,7 @@ export default function FinalCalendarPage() {
   }
 
   async function saveCalendarFull() {
+    try { saveCalendarNamed(true); } catch {}
     const uaHeader = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
     const isAndroidHeader = /Android/.test(uaHeader);
     function fmt(d: Date) {
