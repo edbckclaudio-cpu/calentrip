@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number; key?: string };
+type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number; key?: string; minimized?: boolean };
 
 const ToastContext = createContext<{
   show: (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) => number;
@@ -43,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const k = opts?.key;
     setItems((prev) => {
       const cleared = k ? prev.filter((t) => t.key !== k) : [];
-      return [...cleared, { id, message, variant, duration, key: k }];
+      return [...cleared, { id, message, variant, duration, key: k, minimized: false }];
     });
     if (typeof duration === "number") {
       setTimeout(() => {
@@ -57,6 +57,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.filter((t) => t.id !== id));
   }
 
+  function toggleMinimize(id: number) {
+    setItems((prev) => prev.map((t) => (t.id === id ? { ...t, minimized: !t.minimized } : t)));
+  }
+
   const portal = (
     <div
       className="fixed top-0 left-0 right-0 z-[9999] w-full px-2 space-y-2 flex flex-col items-center pointer-events-none"
@@ -66,7 +70,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         <div
           key={t.id}
           className={
-            `relative min-w-[220px] max-w-[92vw] sm:max-w-[560px] lg:max-w-[640px] rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-[14px] sm:text-sm font-semibold leading-snug break-words shadow-2xl ring-2 pointer-events-auto ` +
+            (t.minimized
+              ? `relative min-w-[160px] max-w-[92vw] rounded-xl px-2 py-1 text-[12px] font-semibold leading-snug shadow-2xl ring-2 pointer-events-auto `
+              : `relative min-w-[220px] max-w-[92vw] sm:max-w-[560px] lg:max-w-[640px] rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-[14px] sm:text-sm font-semibold leading-snug break-words shadow-2xl ring-2 pointer-events-auto `) +
             (t.variant === "success"
               ? "bg-emerald-600 text-white ring-emerald-700"
               : t.variant === "error"
@@ -74,7 +80,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               : "bg-[#007AFF] text-white ring-[#005bbb]")
           }
         >
-          {t.message}
+          {t.minimized ? (
+            <div className="flex items-center gap-2 pr-8">
+              <span className="line-clamp-1">{(t.message || "").slice(0, 32)}{(t.message || "").length > 32 ? "…" : ""}</span>
+            </div>
+          ) : (
+            <div className="pr-8">{t.message}</div>
+          )}
+          <button
+            type="button"
+            className="absolute top-1 right-8 sm:top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md/2 bg-white/10 hover:bg-white/20 text-white"
+            onClick={() => toggleMinimize(t.id)}
+            aria-label={t.minimized ? "Maximizar" : "Minimizar"}
+          >
+            <span className="material-symbols-outlined text-[18px]">{t.minimized ? "expand_more" : "expand_less"}</span>
+          </button>
           {((typeof t.duration !== "number") || (t.message || "").length > 80) ? (
             <button
               type="button"

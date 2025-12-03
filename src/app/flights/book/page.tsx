@@ -195,12 +195,12 @@ export default function BookFlightsPage() {
     if (tripSearch.mode === "same") {
       show(
         "Agora é a hora de escolher e comprar o voo. No quadro Plataformas de busca, clique nos links para encontrar o melhor preço e horário. As buscas já estão preenchidas, mas as plataformas podem não entender algum dado — sempre confira as informações e a quantidade de passageiros. Depois de comprar, preencha os horários dos voos, anexe ou fotografe as passagens e salve o código de reserva/localizador.",
-        { variant: "info", duration: 12000 }
+        { variant: "info", sticky: true, key: "book-intro" }
       );
     } else {
       show(
         "Agora é a hora de escolher e comprar o voo. As buscas estão separadas nas plataformas. Como as plataformas podem não entender algum dado, confira e garanta que a opção 'somente ida' esteja selecionada em cada trecho, e verifique a quantidade de passageiros. Depois de comprar, preencha os horários dos voos, anexe ou fotografe as passagens e salve o código de reserva/localizador.",
-        { variant: "info", duration: 12000 }
+        { variant: "info", sticky: true, key: "book-intro" }
       );
     }
     setIntroShown(true);
