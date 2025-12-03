@@ -2593,14 +2593,17 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-            <DialogHeader>Transporte até o aeroporto</DialogHeader>
+        <DialogHeader>Transporte até o aeroporto</DialogHeader>
             <div className="space-y-3 text-sm">
               {loading ? (
                 <div>Calculando…</div>
               ) : (
                 <>
                   <div>Destino: {transportInfo?.airportName || drawerData?.originIata}</div>
-                  <div>Distância: {transportInfo?.distanceKm ? `${transportInfo.distanceKm} km` : "—"}</div>
+              <div>Distância (a partir da sua localização): {transportInfo?.distanceKm ? `${transportInfo.distanceKm} km` : "—"}</div>
+              {!transportInfo?.distanceKm && locConsent !== "granted" ? (
+                <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+              ) : null}
                   <div>Tempo estimado (com trânsito): {transportInfo?.durationWithTrafficMin ? `${transportInfo.durationWithTrafficMin} min` : transportInfo?.durationMin ? `${transportInfo.durationMin} min` : "—"}</div>
                   <div className="mt-2">
                     <a className="underline" href={transportInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
@@ -2737,7 +2740,10 @@ export default function FinalCalendarPage() {
         <div className="space-y-3 text-sm">
           <div>Cidade: {arrivalInfo?.city || "—"}</div>
           <div>Destino: {arrivalInfo?.address || "—"}</div>
-          <div>Distância: {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
+          <div>Distância (a partir da sua localização): {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
+          {!arrivalInfo?.distanceKm && locConsent !== "granted" ? (
+            <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+          ) : null}
             <div className="grid grid-cols-2 gap-2">
               <div>A pé: {arrivalInfo?.walkingMin ? `${arrivalInfo.walkingMin} min` : "—"}</div>
               <div>Ônibus: {arrivalInfo?.busMin ? `${arrivalInfo.busMin} min (estimado)` : "—"}</div>
