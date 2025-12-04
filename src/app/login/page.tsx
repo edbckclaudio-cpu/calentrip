@@ -2,12 +2,17 @@
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
 export default function LoginPage() {
   const { t } = useI18n();
-  const sp = useSearchParams();
-  const nextParam = sp.get("callback") || sp.get("next") || null;
+  const nextParam = useMemo(() => {
+    try {
+      if (typeof window === "undefined") return null;
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get("callback") || sp.get("next") || null;
+    } catch { return null; }
+  }, []);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const safe = (url: string | null) => {
     if (!url) return null;
