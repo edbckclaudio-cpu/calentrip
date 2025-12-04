@@ -525,7 +525,7 @@ export default function AccommodationSearchPage() {
                 })()}
                 <label className="mb-1 block text-sm">Cidade para a hospedagem</label>
                 <Input
-                  placeholder="Roma"
+                  placeholder={t("stayCityInputPlaceholder")}
                   value={city}
                   className={sameCityHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined}
                   onChange={(e) => {
@@ -597,7 +597,7 @@ export default function AccommodationSearchPage() {
                             <label className="mb-1 block text-sm">Nome da cidade</label>
                             <div className="flex items-center gap-2">
                               <Input
-                                placeholder="Roma"
+                                placeholder={t("stayCityInputPlaceholder")}
                                 value={c.name}
                                 disabled={!enabled}
                                 className={guideIdx === idx && guideStep === "name" ? "ring-4 ring-amber-500 animate-pulse" : undefined}
@@ -918,12 +918,12 @@ export default function AccommodationSearchPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="mb-1 block text-sm">{t("departureTime")}</label>
-                    <Input placeholder="14:30" value={transportDepTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportDepTime(formatTimeInput(e.target.value))} />
+                    <Input placeholder="hh:mm" value={transportDepTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportDepTime(formatTimeInput(e.target.value))} />
                     
                   </div>
                   <div>
                     <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
-                    <Input placeholder="17:05" value={transportArrTime} type="tel" inputMode="numeric" pattern="[0-9]*" disabled={transportMode === "car"} onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
+                    <Input placeholder="hh:mm" value={transportArrTime} type="tel" inputMode="numeric" pattern="[0-9]*" disabled={transportMode === "car"} onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
                   </div>
                 </div>
                 <div className="mt-2">

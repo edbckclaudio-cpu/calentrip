@@ -444,7 +444,7 @@ export default function EntertainmentReservationsPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm">Horário</label>
-                        <Input placeholder="19:30" value={time} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTime(formatTimeInput(e.target.value))} />
+                        <Input placeholder="hh:mm" value={time} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTime(formatTimeInput(e.target.value))} />
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -600,7 +600,7 @@ export default function EntertainmentReservationsPage() {
                         </div>
                         <div>
                           <label className="mb-1 block text-xs">Horário</label>
-                          <Input placeholder="19:30" value={aiTimeMap[`ai-${idx}`] || ""} type="tel" inputMode="numeric" pattern="[0-9]*" onFocus={() => setAiActiveKey(`ai-${idx}`)} onChange={(e) => setAiTimeMap((prev) => ({ ...prev, [`ai-${idx}`]: formatTimeInput(e.target.value) }))} />
+                          <Input placeholder="hh:mm" value={aiTimeMap[`ai-${idx}`] || ""} type="tel" inputMode="numeric" pattern="[0-9]*" onFocus={() => setAiActiveKey(`ai-${idx}`)} onChange={(e) => setAiTimeMap((prev) => ({ ...prev, [`ai-${idx}`]: formatTimeInput(e.target.value) }))} />
                         </div>
                       </div>
                       <div className="mt-2 space-y-2">
@@ -689,7 +689,7 @@ export default function EntertainmentReservationsPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-xs">Horário</label>
-                        <Input placeholder="19:30" value={restTimeMap[`rest-${idx}`] || ""} type="tel" inputMode="numeric" pattern="[0-9]*" onFocus={() => setRestActiveKey(`rest-${idx}`)} onChange={(e) => setRestTimeMap((prev) => ({ ...prev, [`rest-${idx}`]: formatTimeInput(e.target.value) }))} />
+                        <Input placeholder="hh:mm" value={restTimeMap[`rest-${idx}`] || ""} type="tel" inputMode="numeric" pattern="[0-9]*" onFocus={() => setRestActiveKey(`rest-${idx}`)} onChange={(e) => setRestTimeMap((prev) => ({ ...prev, [`rest-${idx}`]: formatTimeInput(e.target.value) }))} />
                       </div>
                     </div>
                     <div className="mt-2 space-y-2">
@@ -761,7 +761,7 @@ export default function EntertainmentReservationsPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm">Horário</label>
-                <Input placeholder="19:30" value={editTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setEditTime(formatTimeInput(e.target.value))} />
+                <Input placeholder="hh:mm" value={editTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setEditTime(formatTimeInput(e.target.value))} />
               </div>
             </div>
             <div className="flex justify-end">
