@@ -275,7 +275,7 @@ export default function EntertainmentReservationsPage() {
     try {
       const cityName = cities[idx]?.name || "";
       const qid = await fetchCityQid(cityName);
-      if (!qid) { setAiError("Não foi possível identificar a cidade no Wikidata"); setAiLoading(false); return; }
+      if (!qid) { setAiError(t("cityIdError")); setAiLoading(false); return; }
       const cats: Array<{ qid: string; cat: AISuggestion["category"] }> = [
         { qid: "Q33506", cat: "museum" },
         { qid: "Q22698", cat: "park" },
@@ -366,8 +366,8 @@ export default function EntertainmentReservationsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-zinc-600">Volte e informe hospedagens para continuar.</div>
-                <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide" onClick={() => router.push("/accommodation/search")}>Voltar para hospedagens</Button>
+                <div className="text-sm text-zinc-600">{t("backAndInformStaysMessage")}</div>
+                <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide" onClick={() => router.push("/accommodation/search")}>{t("backToAccommodationButton")}</Button>
               </div>
             </CardContent>
           </Card>
@@ -377,7 +377,7 @@ export default function EntertainmentReservationsPage() {
       <div className="container-page">
         <Card className="rounded-xl shadow-md">
           <CardHeader>
-            <CardTitle>Resumo de atividades e restaurantes</CardTitle>
+          <CardTitle>{t("activitiesRestaurantsSummaryTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {sorted.length ? (
@@ -385,10 +385,10 @@ export default function EntertainmentReservationsPage() {
                 {sorted.map((r, idx) => (
                   <li key={`rec-${idx}`} className="flex items-center justify-between gap-2">
                     <div>
-                      {r.date} {r.time || ""} • {r.cityName} • {r.kind === "activity" ? "Atividade" : "Restaurante"}: {r.title}{r.address ? ` • ${r.address}` : ""}
+                      {r.date} {r.time || ""} • {r.cityName} • {r.kind === "activity" ? t("activityWord") : t("restaurantWord")}: {r.title}{r.address ? ` • ${r.address}` : ""}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" onClick={() => openGoDrawer(r)}>Como ir</Button>
+                      <Button type="button" variant="outline" onClick={() => openGoDrawer(r)}>{t("goHowButton")}</Button>
                     <Button type="button" variant="outline" onClick={() => {
                         const j = records.indexOf(r);
                         if (j >= 0) {

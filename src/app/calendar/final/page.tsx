@@ -551,7 +551,7 @@ export default function FinalCalendarPage() {
     const lines: string[] = [];
     lines.push("BEGIN:VCALENDAR");
     lines.push("VERSION:2.0");
-    lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
+    lines.push(`PRODID:-//CalenTrip//Calendar Export//${lang.toUpperCase()}`);
     lines.push("CALSCALE:GREGORIAN");
     lines.push("METHOD:PUBLISH");
     lines.push("X-WR-CALNAME:CalenTrip");
@@ -801,18 +801,18 @@ export default function FinalCalendarPage() {
         const extra = returnDetails;
         const info: string[] = [];
         info.push(desc);
-        if (extra?.airportName) info.push(`Destino: ${extra.airportName}`);
-        if (extra?.distanceKm !== undefined) info.push(`Distância: ${extra.distanceKm} km`);
+        if (extra?.airportName) info.push(`${t("destinationLabel")}: ${extra.airportName}`);
+        if (extra?.distanceKm !== undefined) info.push(`${t("distanceLabel")}: ${extra.distanceKm} km`);
         const modes: string[] = [];
-        if (extra?.walkingMin) modes.push(`A pé: ${extra.walkingMin} min`);
-        if (extra?.busMin) modes.push(`Ônibus: ${extra.busMin} min (estimado)`);
-        if (extra?.trainMin) modes.push(`Trem/Metro: ${extra.trainMin} min (estimado)`);
-        if (extra?.drivingMin !== undefined) modes.push(`Uber/Táxi: ${extra.drivingMin} min${extra.priceEstimate !== undefined ? ` • R$${extra.priceEstimate}` : ""}`);
+        if (extra?.walkingMin) modes.push(`${t("walkLabel")}: ${extra.walkingMin} ${t("minutesShort")}`);
+        if (extra?.busMin) modes.push(`${t("busLabel")}: ${extra.busMin} ${t("minutesShort")} ${t("estimatedSuffix")}`);
+        if (extra?.trainMin) modes.push(`${t("trainMetroLabel")}: ${extra.trainMin} ${t("minutesShort")} ${t("estimatedSuffix")}`);
+        if (extra?.drivingMin !== undefined) modes.push(`${t("drivingTaxiLabel")}: ${extra.drivingMin} ${t("minutesShort")}${extra.priceEstimate !== undefined ? ` • R$${extra.priceEstimate}` : ""}`);
         if (modes.length) info.push(modes.join(" | "));
-        if (extra?.gmapsUrl) info.push(`Google Maps: ${extra.gmapsUrl}`);
-        if (extra?.uberUrl) info.push(`Uber: ${extra.uberUrl}`);
-        if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
-        if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
+        if (extra?.gmapsUrl) info.push(`${t("googleMapsLabel")}: ${extra.gmapsUrl}`);
+        if (extra?.uberUrl) info.push(`${t("uberLabel")}: ${extra.uberUrl}`);
+        if (extra?.callTime) info.push(`${t("callUberAtLabel")}: ${extra.callTime}`);
+        if (extra?.notifyAt) info.push(`${t("notificationScheduledLabel")}: ${extra.notifyAt}`);
         lines.push(`DESCRIPTION:${info.join("\\n")}`);
         if (extra?.callAtISO) {
           const callAt = new Date(extra.callAtISO);
@@ -820,14 +820,14 @@ export default function FinalCalendarPage() {
           lines.push("BEGIN:VEVENT");
           lines.push(`DTSTART:${fmtICS(callAt)}`);
           lines.push(`DTEND:${fmtICS(callEnd)}`);
-          lines.push(`SUMMARY:Chamar Uber`);
-          const descParts = [`Chamar Uber às: ${extra.callTime}`];
-          if (extra.uberUrl) descParts.push(`Uber: ${extra.uberUrl}`);
-          if (extra.gmapsUrl) descParts.push(`Google Maps: ${extra.gmapsUrl}`);
+          lines.push(`SUMMARY:${t("callUberSummaryLabel")}`);
+          const descParts = [`${t("callUberAtLabel")}: ${extra.callTime}`];
+          if (extra.uberUrl) descParts.push(`${t("uberLabel")}: ${extra.uberUrl}`);
+          if (extra.gmapsUrl) descParts.push(`${t("googleMapsLabel")}: ${extra.gmapsUrl}`);
           lines.push(`DESCRIPTION:${descParts.join("\\n")}`);
           lines.push("BEGIN:VALARM");
           lines.push("ACTION:DISPLAY");
-          lines.push("DESCRIPTION:Lembrete de transporte");
+          lines.push(`DESCRIPTION:${t("transportReminderLabel")}`);
           lines.push("TRIGGER:-PT120M");
           lines.push("END:VALARM");
           lines.push("END:VEVENT");
@@ -842,11 +842,11 @@ export default function FinalCalendarPage() {
             const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
             const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
             const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
-            info.push(`Destino: ${destName}`);
-            info.push(`Google Maps: ${gmaps}`);
-            info.push(`Rome2Rio: ${r2r}`);
-            info.push(`Uber: ${uber}`);
-            info.push(`Chegar no aeroporto: 3h antes do voo.`);
+            info.push(`${t("destinationLabel")}: ${destName}`);
+            info.push(`${t("googleMapsLabel")}: ${gmaps}`);
+            info.push(`${t("rome2rioLabel")}: ${r2r}`);
+            info.push(`${t("uberLabel")}: ${uber}`);
+            info.push(`${t("arriveAirportAdvice")}`);
           }
         } else if (e.type === "transport") {
           const seg = e.meta as TransportSegmentMeta;
@@ -1745,8 +1745,8 @@ export default function FinalCalendarPage() {
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
                 <>
-                  <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
-                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/final" })}>{t("signInDemo")}</Button>
+                  <Button type="button" onClick={() => signIn("google", { callbackUrl: typeof window !== "undefined" ? window.location.href : "/calendar/final" })}>{t("signInWithGoogle")}</Button>
+                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: typeof window !== "undefined" ? window.location.href : "/calendar/final" })}>{t("signInDemo")}</Button>
                 </>
               ) : (
                 <Button
@@ -2666,11 +2666,11 @@ export default function FinalCalendarPage() {
                     <a className="underline" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
                   </div>
                   <div>
-                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
                   </div>
-                  <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
-                  <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
-                  <div>Notificação programada: {transportInfo?.notifyAt ? `às ${transportInfo.notifyAt}` : "—"}</div>
+                  <div className="mt-2">{t("arriveAirportAdvice")}</div>
+                  <div>{t("callUberAtLabel")}: {transportInfo?.callTime || "—"}</div>
+                  <div>{t("notificationScheduledLabel")}: {transportInfo?.notifyAt ? `${lang === "es" ? "a las" : lang === "en" ? "at" : "às"} ${transportInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">
                     <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }}>{t("close")}</Button>
                   </div>
@@ -2684,7 +2684,7 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => setSavedDrawerOpen(false)} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Pesquisas e calendários salvos</DialogHeader>
+        <DialogHeader>{t("savedSearchesTitle")} & {t("savedCalendarsTitle")}</DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="rounded border p-3">
             <div className="font-semibold mb-1">{t("savedCalendarsTitle")}</div>
@@ -2694,15 +2694,15 @@ export default function FinalCalendarPage() {
                   <li key={`${c.name}-${idx}`} className="flex items-center justify-between gap-2">
                     <div>
                       <div className="font-medium">{c.name}</div>
-                      <div className="text-xs text-zinc-600">{(c.events || []).length} eventos</div>
+                      <div className="text-xs text-zinc-600">{(c.events || []).length} {t("eventsWord")}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button type="button" variant="outline" onClick={() => { setEvents(c.events); setSavedDrawerOpen(false); }}>{t("loadLabel")}</Button>
                       <Button type="button" variant="outline" onClick={() => {
                         try {
-                          const ok1 = confirm(`Deseja excluir o calendário "${c.name}"?`);
+                          const ok1 = confirm(t("confirmDeleteCalendar").replace("{name}", c.name));
                           if (!ok1) return;
-                          const ok2 = confirm("Tem certeza? Esta ação não pode ser desfeita.");
+                          const ok2 = confirm(t("confirmAreYouSure"));
                           if (!ok2) return;
                           const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
                           const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
@@ -2714,8 +2714,8 @@ export default function FinalCalendarPage() {
                             const one = rawOne ? JSON.parse(rawOne) as { name?: string; events?: EventItem[] } : null;
                             if ((one?.name || "") === (c?.name || "")) localStorage.removeItem("calentrip:saved_calendar");
                           } catch {}
-                          show("Calendário excluído", { variant: "success" });
-                        } catch { show("Erro ao excluir", { variant: "error" }); }
+                          show(t("calendarDeletedMsg"), { variant: "success" });
+                        } catch { show(t("deleteError"), { variant: "error" }); }
                       }}>{t("deleteLabel")}</Button>
                     </div>
                   </li>
@@ -2737,7 +2737,7 @@ export default function FinalCalendarPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Button type="button" variant="outline" onClick={() => {
-                        const legs = (trip.flightNotes || []).map((n) => `${n.leg === "outbound" ? "Ida" : "Volta"}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
+                        const legs = (trip.flightNotes || []).map((n) => `${n.leg === "outbound" ? (lang === "es" ? "Ida" : lang === "en" ? "Outbound" : "Ida") : (lang === "es" ? "Vuelta" : lang === "en" ? "Return" : "Volta")}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
                         alert(legs.join("\n"));
                       }}>{t("viewLabel")}</Button>
                     </div>
@@ -2790,25 +2790,25 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Chegada e deslocamento até hospedagem</DialogHeader>
+        <DialogHeader>{t("arrivalDrawerTitle")}</DialogHeader>
         <div className="space-y-3 text-sm">
-          <div>Cidade: {arrivalInfo?.city || "—"}</div>
-          <div>Destino: {arrivalInfo?.address || "—"}</div>
-          <div>Distância (a partir da sua localização): {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
+          <div>{t("cityLabel")}: {arrivalInfo?.city || "—"}</div>
+          <div>{t("stayRouteToAddressLabel")}: {arrivalInfo?.address || "—"}</div>
+          <div>{t("distanceFromYourLocationLabel")}: {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
           {!arrivalInfo?.distanceKm && locConsent !== "granted" ? (
-            <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+            <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
           ) : null}
             <div className="grid grid-cols-2 gap-2">
-              <div>A pé: {arrivalInfo?.walkingMin ? `${arrivalInfo.walkingMin} min` : "—"}</div>
-              <div>Ônibus: {arrivalInfo?.busMin ? `${arrivalInfo.busMin} min (estimado)` : "—"}</div>
-              <div>Trem/Metro: {arrivalInfo?.trainMin ? `${arrivalInfo.trainMin} min (estimado)` : "—"}</div>
-              <div>Uber/Táxi: {arrivalInfo?.drivingMin ? `${arrivalInfo.drivingMin} min` : "—"}{arrivalInfo?.priceEstimate !== undefined ? ` • R$${arrivalInfo.priceEstimate}` : ""}</div>
+              <div>{t("walkLabel")}: {arrivalInfo?.walkingMin ? `${arrivalInfo.walkingMin} ${t("minutesShort")}` : "—"}</div>
+              <div>{t("busLabel")}: {arrivalInfo?.busMin ? `${arrivalInfo.busMin} ${t("minutesShort")} ${t("estimatedSuffix")}` : "—"}</div>
+              <div>{t("trainMetroLabel")}: {arrivalInfo?.trainMin ? `${arrivalInfo.trainMin} ${t("minutesShort")} ${t("estimatedSuffix")}` : "—"}</div>
+              <div>{t("drivingTaxiLabel")}: {arrivalInfo?.drivingMin ? `${arrivalInfo.drivingMin} ${t("minutesShort")}` : "—"}{arrivalInfo?.priceEstimate !== undefined ? ` • R$${arrivalInfo.priceEstimate}` : ""}</div>
           </div>
           <div>
-            <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+            <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
           </div>
           <div>
-            <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+            <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
           </div>
           {(() => {
             const files = summaryCities.find((c) => {
@@ -2830,7 +2830,7 @@ export default function FinalCalendarPage() {
                   }));
                   setDocFiles(resolved);
                   setDocOpen(true);
-                }}>Arquivos salvos</Button>
+                }}>{t("savedFilesTitle")}</Button>
               </div>
             ) : null;
           })()}
@@ -2845,22 +2845,22 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => { setGoDrawerOpen(false); setGoInfo(null); setGoRecord(null); }} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Como ir até o destino</DialogHeader>
+        <DialogHeader>{t("goDrawerTitle")}</DialogHeader>
         <div className="space-y-3 text-sm">
           {goLoading ? (
-            <div>Calculando…</div>
+            <div>{t("loading")}</div>
           ) : (
             <>
-              <div>Destino: {goInfo?.destination || "—"}</div>
-              <div>Distância (a partir da sua localização): {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
+              <div>{t("destinationLabel")}: {goInfo?.destination || "—"}</div>
+              <div>{t("distanceFromYourLocationLabel")}: {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
               {!goInfo?.distanceKm && locConsent !== "granted" ? (
-                <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+                <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
               ) : null}
               <div>
-                <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
               </div>
               <div>
-                <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
               </div>
               {goRecord?.files && goRecord.files.length ? (
                 <div>
@@ -2876,7 +2876,7 @@ export default function FinalCalendarPage() {
                     }));
                     setDocFiles(resolved);
                     setDocOpen(true);
-                  }}>Arquivos salvos</Button>
+                  }}>{t("savedFilesTitle")}</Button>
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
@@ -2892,26 +2892,26 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => { setReturnDrawerOpen(false); setReturnInfo(null); }} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Transporte até o aeroporto final da viagem</DialogHeader>
+        <DialogHeader>{t("returnDrawerTitle")}</DialogHeader>
         <div className="space-y-3 text-sm">
           {returnLoading ? (
-            <div>Calculando…</div>
+            <div>{t("loading")}</div>
           ) : (
             <>
-              <div>Destino: {returnInfo?.airportName || "—"}</div>
-              <div>Origem: {returnInfo?.address || returnInfo?.city || "—"}</div>
-              <div>Distância (a partir da sua localização): {returnInfo?.distanceKm ? `${returnInfo.distanceKm} km` : "—"}</div>
+              <div>{t("destinationLabel")}: {returnInfo?.airportName || "—"}</div>
+              <div>{t("originLabel")}: {returnInfo?.address || returnInfo?.city || "—"}</div>
+              <div>{t("distanceFromYourLocationLabel")}: {returnInfo?.distanceKm ? `${returnInfo.distanceKm} km` : "—"}</div>
               {!returnInfo?.distanceKm && locConsent !== "granted" ? (
-                <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+                <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
               ) : null}
               <div>
-                <a className="underline" href={returnInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                <a className="underline" href={returnInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
               </div>
               <div>
-                <a className="underline" href={returnInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                <a className="underline" href={returnInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
               </div>
-              <div className="mt-2">Chamar Uber às: {returnInfo?.callTime || "—"}</div>
-              <div>Notificação programada: {returnInfo?.notifyAt ? `às ${returnInfo.notifyAt}` : "—"}</div>
+              <div className="mt-2">{t("callUberAtLabel")}: {returnInfo?.callTime || "—"}</div>
+              <div>{t("notificationScheduledLabel")}: {returnInfo?.notifyAt ? `${lang === "es" ? "a las" : lang === "en" ? "at" : "às"} ${returnInfo.notifyAt}` : "—"}</div>
               {returnFiles.length ? (
                 <div>
                   <Button type="button" variant="outline" onClick={async () => {
@@ -2926,7 +2926,7 @@ export default function FinalCalendarPage() {
                     }));
                     setDocFiles(resolved);
                     setDocOpen(true);
-                  }}>Visualizar documentos</Button>
+                  }}>{t("viewDocumentsButton")}</Button>
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
@@ -2942,32 +2942,32 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-            <DialogHeader>Como chegar da hospedagem de checkout até o transporte para a próxima cidade</DialogHeader>
+            <DialogHeader>{t("stayDrawerTitle")}</DialogHeader>
             <div className="space-y-3 text-sm">
               {stayLoading ? (
-                <div>Calculando…</div>
+                <div>{t("loading")}</div>
               ) : (
                 <>
-                  <div>Origem: {stayInfo?.origin || "—"}</div>
-                  <div>Destino: {stayInfo?.destination || "—"}</div>
-                  <div>Distância (a partir da sua localização): {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
+                  <div>{t("originLabel")}: {stayInfo?.origin || "—"}</div>
+                  <div>{t("destinationLabel")}: {stayInfo?.destination || "—"}</div>
+                  <div>{t("distanceFromYourLocationLabel")}: {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
                   {!stayInfo?.distanceKm && locConsent !== "granted" ? (
-                    <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
+                    <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
                   ) : null}
                   {stayInfo?.mapUrl ? (
                     <iframe title="map" src={stayInfo.mapUrl} className="mt-2 h-40 w-full rounded-md border" />
                   ) : null}
                   <div className="mt-2">
-                    <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                    <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
                   </div>
                   <div>
-                    <a className="underline" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
+                    <a className="underline" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">{t("seeOptionsOnRome2Rio")}</a>
                   </div>
                   <div>
-                    <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                    <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
                   </div>
-                  <div className="mt-2">Chamar Uber às: {stayInfo?.callTime || "—"}</div>
-                  <div>Notificação programada: {stayInfo?.notifyAt ? `às ${stayInfo.notifyAt}` : "—"}</div>
+                  <div className="mt-2">{t("callUberAtLabel")}: {stayInfo?.callTime || "—"}</div>
+                  <div>{t("notificationScheduledLabel")}: {stayInfo?.notifyAt ? `${lang === "es" ? "a las" : lang === "en" ? "at" : "às"} ${stayInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">
                     <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }}>{t("close")}</Button>
                   </div>
@@ -2981,7 +2981,7 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDocOpen(false); setDocFiles([]); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-            <DialogHeader>Documentos: {docTitle}</DialogHeader>
+            <DialogHeader>{t("documentsWord")}: {docTitle}</DialogHeader>
             <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
               {docFiles.length ? (
                 <ul className="space-y-2">
@@ -2998,10 +2998,10 @@ export default function FinalCalendarPage() {
                           ) : f.type === "application/pdf" ? (
                             <iframe src={f.dataUrl} title={f.name} className="w-full h-48 rounded border" />
                           ) : (
-                            <div className="text-xs text-zinc-600">Arquivo disponível no dispositivo.</div>
+                            <div className="text-xs text-zinc-600">{t("fileAvailableOnDevice")}</div>
                           )}
                           <div>
-                            <a className="underline" href={f.dataUrl}>Abrir no dispositivo</a>
+                            <a className="underline" href={f.dataUrl}>{t("openOnDevice")}</a>
                           </div>
                         </div>
                       )}
@@ -3009,7 +3009,7 @@ export default function FinalCalendarPage() {
                   ))}
                 </ul>
               ) : (
-                <div className="text-zinc-600">Nenhum documento salvo.</div>
+                <div className="text-zinc-600">{t("noDocumentsSaved")}</div>
               )}
               <div className="mt-3 flex justify-end">
                 <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDocOpen(false); setDocFiles([]); }}>{t("close")}</Button>

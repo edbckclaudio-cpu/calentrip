@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/legal/terms",
     "/profile",
     "/support",
+    "/login",
   ];
   return links.map((p) => ({ url: `${base}${p}`, lastModified: now, changeFrequency: "daily", priority: p === "/" ? 1 : 0.7 }));
 }

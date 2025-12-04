@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CalendarInput } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useTrip } from "@/lib/trip-context";
@@ -148,13 +147,13 @@ export default function FlightsSearchPage() {
                   className={(attempted && mode === "different" && !(outbound.date && inbound.date) ? "ring-2 ring-red-400 " : "") + (mode === "different" && hintRangeDiff ? " pulse-ring ring-4 ring-amber-500 " : "")}
                   onClick={() => { setRangeOpen(true); setHintRangeDiff(false); }}
                 >
-                  {outbound.date && inbound.date ? `${outbound.date} → ${inbound.date}` : "Selecionar período"}
+                  {outbound.date && inbound.date ? `${outbound.date} → ${inbound.date}` : t("selectPeriodButton")}
                 </Button>
                 {attempted && mode === "different" && !(outbound.date && inbound.date) && (
                   <div className="mt-1 text-xs text-red-600">{t("required")}</div>
                 )}
                 <div className="mt-2">
-                  <Button type="button" variant="secondary" onClick={() => setExampleOpen(true)}>Exemplo de viagem</Button>
+                  <Button type="button" variant="secondary" onClick={() => setExampleOpen(true)}>{t("exampleTripButton")}</Button>
                 </div>
               </div>
               <div className="rounded-lg border p-3">

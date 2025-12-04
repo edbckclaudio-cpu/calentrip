@@ -112,7 +112,7 @@ export default function ProfilePage() {
                 </div>
               </>
             ) : (
-              <div>Nenhuma viagem selecionada. Salve sua busca de voos para habilitar a assinatura.</div>
+              <div>{t("subscriptionNoTripHint")}</div>
             )}
           </CardContent>
         </Card>

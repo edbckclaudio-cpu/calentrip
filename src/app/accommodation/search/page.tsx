@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useTrip } from "@/lib/trip-context";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { findAirportByIata, getCountryByIata } from "@/lib/airports";
-import { getTrips } from "@/lib/trips-store";
 import { useToast } from "@/components/ui/toast";
 
 export default function AccommodationSearchPage() {
@@ -21,15 +20,15 @@ export default function AccommodationSearchPage() {
     if (!tripSearch) return "";
     if (tripSearch.mode === "same") return tripSearch.destination ?? "";
     return "";
-  }, [tripSearch, show]);
+  }, [tripSearch]);
   const [city, setCity] = useState(initialCity);
   const lastToastId = useRef<number | null>(null);
-  function showToast(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) {
+  const showToast = useCallback((message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) => {
     if (lastToastId.current) dismiss(lastToastId.current);
     const id = show(message, opts);
     lastToastId.current = id;
     return id;
-  }
+  }, [show, dismiss]);
   
   const [cityCount, setCityCount] = useState(0);
   type TransportSegment = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime: string; arrTime: string; files: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>; route?: { distanceKm?: number; durationMin?: number; gmapsUrl?: string; r2rUrl?: string; osmUrl?: string } | null };
@@ -93,21 +92,13 @@ export default function AccommodationSearchPage() {
       setDiffCityCountHighlight(true);
       showToast("Informe quantas cidades precisarão de hospedagem e clique em Check.", { duration: 6000 });
     }
-  }, [tripSearch]);
-
-  function totalPassengers(p: { adults?: number; children?: number; infants?: number } | number | undefined) {
-    if (typeof p === "number") return p;
-    const o = p ?? { adults: 1, children: 0, infants: 0 };
-    return Number(o.adults ?? 0) + Number(o.children ?? 0) + Number(o.infants ?? 0);
-  }
+  }, [tripSearch, showToast]);
 
   
 
-  const arrival = useMemo(() => {
-    if (!tripSearch) return "";
-    if (tripSearch.mode === "same") return tripSearch.destination ?? "";
-    return tripSearch.outbound.destination ?? "";
-  }, [tripSearch]);
+  
+
+  
 
   const arrivalDate = useMemo(() => {
     if (!tripSearch) return "";
@@ -250,12 +241,12 @@ export default function AccommodationSearchPage() {
     } else if (guideStep === "name") {
       showToast("Digite o nome da cidade e selecione na barra de rolagem.", { duration: 6000 });
     }
-  }, [guideIdx, guideStep, show]);
+  }, [guideIdx, guideStep, showToast]);
 
   useEffect(() => {
     if (cityDetailIdx === null) return;
     showToast("Use os links para buscar hospedagem. Salve prints ou arquivos em 'Escolher arquivos' para consultar durante a viagem.", { duration: 8000 });
-  }, [cityDetailIdx, show]);
+  }, [cityDetailIdx, showToast]);
 
   function onPickCity(idx: number, c: string) {
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, name: c } : x)));
@@ -470,7 +461,7 @@ export default function AccommodationSearchPage() {
         setTransportArrOpts([]);
       }
     })();
-  }, [transportOpenIdx, cities, transportMode]);
+  }, [transportOpenIdx, cities, transportMode, showToast]);
 
   if (!tripSearch) {
     return (

@@ -36,8 +36,10 @@ export async function POST() {
       },
     };
     const resp = await fetch(queryUrl, { method: "POST", headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" }, body: JSON.stringify(queryPayload) });
-    const rows = await resp.json().catch(() => []);
-    const names: string[] = (rows || []).map((r: any) => r?.document?.name).filter(Boolean);
+    const rows = await resp.json().catch(() => [] as unknown);
+    type RunQueryRow = { document?: { name?: string } };
+    const list: RunQueryRow[] = Array.isArray(rows) ? rows as RunQueryRow[] : [];
+    const names: string[] = list.map((r) => r.document?.name || "").filter(Boolean);
     for (const name of names) {
       try { await fetch(`https://firestore.googleapis.com/v1/${name}`, { method: "DELETE", headers: { Authorization: `Bearer ${access}` } }); } catch {}
     }
