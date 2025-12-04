@@ -200,7 +200,7 @@ export default function BookFlightsPage() {
       setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     } else {
       const id = show(
-        "Hora de escolher e comprar o voo. As buscas estão separadas nas plataformas. Valide os dados e garanta que a opção \"somente ida\" esteja ativa em cada trecho; confira também a quantidade de passageiros. Após a compra, registre os horários dos voos, anexe ou fotografe as passagens e salve o localizador/código de reserva.",
+        "Hora de escolher e comprar o voo. Vá no quadro Plataformas de busca, e acesse os links, alguns buscadores podem não reconhecer todos dados — valide os dados e garanta que a opção \"somente ida\" esteja ativa em cada trecho; confira também a quantidade de passageiros. Após a compra, registre os horários dos voos, anexe ou fotografe as passagens e salve o localizador/código de reserva.",
         { variant: "info", sticky: true, key: "book-intro" }
       );
       setTimeout(() => { try { minimize(id); } catch {} }, 20000);
