@@ -616,8 +616,9 @@ export default function EntertainmentReservationsPage() {
                               reader.readAsDataURL(f);
                             }))).then((arr) => { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: [...(prev[`ai-${idx}`] || []), ...arr] })); setAiActiveKey(`ai-${idx}`); });
                           }} />
-                          <Button type="button" className="rounded-md font-semibold" onClick={() => { setAiActiveKey(`ai-${idx}`); const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
-                          <Input id={`ai-file-${idx}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
+                          <Button type="button" className="rounded-lg font-semibold" onClick={() => { setAiActiveKey(`ai-${idx}`); const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                          <label htmlFor={`ai-file-${idx}`} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">{t("attachProofButton")}</label>
+                          <Input id={`ai-file-${idx}`} className="hidden" type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                             const files = Array.from(e.target.files || []);
                             if (!files.length) { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: prev[`ai-${idx}`] || [] })); setAiActiveKey(`ai-${idx}`); return; }
                             Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
@@ -705,8 +706,9 @@ export default function EntertainmentReservationsPage() {
                             reader.readAsDataURL(f);
                           }))).then((arr) => { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: [...(prev[`rest-${idx}`] || []), ...arr] })); setRestActiveKey(`rest-${idx}`); });
                         }} />
-                        <Button type="button" variant="secondary" className="rounded-md font-semibold" onClick={() => { setRestActiveKey(`rest-${idx}`); const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
-                        <Input id={`rest-file-${idx}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
+                        <Button type="button" className="rounded-lg font-semibold" onClick={() => { setRestActiveKey(`rest-${idx}`); const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                        <label htmlFor={`rest-file-${idx}`} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">{t("attachProofButton")}</label>
+                        <Input id={`rest-file-${idx}`} className="hidden" type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                           const files = Array.from(e.target.files || []);
                           if (!files.length) { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: prev[`rest-${idx}`] || [] })); setRestActiveKey(`rest-${idx}`); return; }
                           Promise.all(files.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
@@ -722,15 +724,15 @@ export default function EntertainmentReservationsPage() {
                       )}
                     </div>
                     <div className="mt-2">
-                        <Button type="button" variant="secondary" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
-                        const cityName = cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`;
-                        const d = restDateMap[`rest-${idx}`] || "";
-                        const t = restTimeMap[`rest-${idx}`] || "";
-                        const files = restFilesMap[`rest-${idx}`] || [];
-                        if (!d) return;
-                        setRecords((prev) => [...prev, { kind: "restaurant", cityIdx: aiRestOpenIdx!, cityName, date: d, time: t, title: s.name, files }]);
-                        show("Restaurante adicionado", { variant: "success" });
-                      }}>Adicionar ao cronograma</Button>
+                        <Button type="button" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
+                          const cityName = cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`;
+                          const d = restDateMap[`rest-${idx}`] || "";
+                          const t = restTimeMap[`rest-${idx}`] || "";
+                          const files = restFilesMap[`rest-${idx}`] || [];
+                          if (!d) return;
+                          setRecords((prev) => [...prev, { kind: "restaurant", cityIdx: aiRestOpenIdx!, cityName, date: d, time: t, title: s.name, files }]);
+                          show("Restaurante adicionado", { variant: "success" });
+                        }}>Adicionar ao cronograma</Button>
                     </div>
                   </li>
                 ))}

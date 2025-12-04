@@ -741,7 +741,7 @@ export default function AccommodationSearchPage() {
                   <div className="mt-3">
                     <div className="mb-1 font-semibold">{t("stayDocsTitle")}</div>
                     <div className="flex items-center gap-2">
-                      <label htmlFor={`stay-cam-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm cursor-pointer">{t("useCamera")}</label>
+                      <label htmlFor={`stay-cam-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">{t("useCamera")}</label>
                       <input id={`stay-cam-${cityDetailIdx ?? 0}`} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         Promise.all(files.map(async (f) => {
@@ -752,7 +752,8 @@ export default function AccommodationSearchPage() {
                           setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, stayFiles: [...(x.stayFiles || []), ...list] } : x)));
                         });
                       }} />
-                      <Input id={`stay-file-${cityDetailIdx ?? 0}`} type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
+                      <label htmlFor={`stay-file-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">{t("attachProofButton")}</label>
+                      <Input id={`stay-file-${cityDetailIdx ?? 0}`} className="hidden" type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         Promise.all(files.map(async (f) => {
                           const mod = await import("@/lib/attachments-store");
@@ -945,7 +946,7 @@ export default function AccommodationSearchPage() {
                     });
                   }} />
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="secondary" onClick={() => document.getElementById("file-transport")?.click()}>Anexar passagem</Button>
+                    <Button type="button" onClick={() => document.getElementById("file-transport")?.click()}>{t("attachProofButton")}</Button>
                     <span className="text-xs text-zinc-600">Foto/arquivo da passagem ficará disponível no calendário.</span>
                   </div>
                   {transportFiles.length ? (
