@@ -235,7 +235,62 @@ export default function FinalCalendarPage() {
           }
         } catch { name = "CALENDAR"; }
       }
-      const payload = { name, events };
+      let evs = events;
+      if (!evs.length) {
+        try {
+          const all: TripItem[] = getTrips();
+          const list: EventItem[] = [];
+          const seenFlights = new Set<string>();
+          all.forEach((t) => {
+            (t.flightNotes || []).forEach((fn) => {
+              const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
+              const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
+              if (!seenFlights.has(sig)) {
+                seenFlights.add(sig);
+                list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
+              }
+            });
+          });
+          const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+          const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
+          const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
+          cities.forEach((c, i) => {
+            const cityName = c.name || `Cidade ${i + 1}`;
+            const addr = c.address || "(endereço não informado)";
+            if (c.checkin) {
+              let ciTime = i === 0 ? "23:59" : "17:00";
+              try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+              list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
+            }
+            if (c.checkout) {
+              list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+            }
+          });
+          for (let i = 0; i < cities.length - 1; i++) {
+            const c = cities[i];
+            const n = cities[i + 1];
+            const seg = c.transportToNext;
+            if (seg) {
+              const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+              const date = c.checkout || n?.checkin || "";
+              const time = seg.depTime || "11:00";
+              list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
+            }
+          }
+          const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+          const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
+          (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+          const seen = new Set<string>();
+          evs = list.filter((e) => {
+            const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          setEvents(evs);
+        } catch {}
+      }
+      const payload = { name, events: evs };
       if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
       try {
         const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
@@ -260,11 +315,11 @@ export default function FinalCalendarPage() {
             const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
             if (idx >= 0) {
               const next = [...trips];
-              next[idx] = { ...next[idx], reachedFinalCalendar: true, savedCalendarName: name, savedEvents: events };
+              next[idx] = { ...next[idx], reachedFinalCalendar: true, savedCalendarName: name, savedEvents: evs };
               localStorage.setItem("calentrip:trips", JSON.stringify(next));
             } else {
               const id = String(Date.now());
-              const next = [{ id, title, date, passengers: pax, reachedFinalCalendar: true, savedCalendarName: name, savedEvents: events }, ...trips].slice(0, 20);
+              const next = [{ id, title, date, passengers: pax, reachedFinalCalendar: true, savedCalendarName: name, savedEvents: evs }, ...trips].slice(0, 20);
               localStorage.setItem("calentrip:trips", JSON.stringify(next));
             }
           }
