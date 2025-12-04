@@ -886,6 +886,13 @@ export default function FinalCalendarPage() {
 
   useEffect(() => {
     try {
+      const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+      if (rawSaved) {
+        try {
+          const sc = JSON.parse(rawSaved) as { events?: EventItem[] };
+          if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
+        } catch {}
+      }
       const all: TripItem[] = getTrips();
       let trips: TripItem[] = [];
       try {
