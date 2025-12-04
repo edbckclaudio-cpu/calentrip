@@ -50,14 +50,23 @@ body {
 
 /* Pulse only the ring/glow, keep content solid */
 .pulse-ring {
-  animation: ringPulse 1.4s ease-in-out infinite;
+  animation: ringPulse 1.2s ease-in-out infinite, bgPulse 1.2s ease-in-out infinite;
 }
 
 @keyframes ringPulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(254, 187, 2, 0.45);
+    box-shadow: 0 0 0 0 rgba(254, 187, 2, 0.50);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(254, 187, 2, 0.25);
+    box-shadow: 0 0 0 8px rgba(254, 187, 2, 0.30);
+  }
+}
+
+@keyframes bgPulse {
+  0%, 100% {
+    background-color: inherit;
+  }
+  50% {
+    background-color: rgba(254, 187, 2, 0.12);
   }
 }
