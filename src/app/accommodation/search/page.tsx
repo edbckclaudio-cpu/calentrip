@@ -425,6 +425,48 @@ export default function AccommodationSearchPage() {
     }
   }
 
+  function proceedToEntertainment() {
+    try {
+      const data = { cities: cities };
+      if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));
+    } catch {}
+    try { router.push("/entertainment/reservations"); } catch {}
+    try {
+      setTimeout(() => {
+        try {
+          if (typeof window !== "undefined") {
+            const same = (window.location.pathname || "").includes("/entertainment/reservations");
+            if (!same) window.location.href = "/entertainment/reservations";
+          }
+        } catch {}
+      }, 600);
+    } catch {}
+    (async () => {
+      try {
+        const modDb = await import("@/lib/trips-db");
+        const trips = await modDb.getSavedTrips();
+        const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
+        if (cur) {
+          for (const c of cities) {
+            const files = (c.stayFiles || []).filter((f) => f.id).map((f) => ({ name: f.name, type: f.type, size: f.size, id: f.id! }));
+            if (files.length) {
+              const ref = `${c.name || ""}|${c.address || ""}`;
+              await modDb.saveRefAttachments(cur.id, "stay", ref, files);
+            }
+          }
+          for (let i = 0; i < cities.length - 1; i++) {
+            const seg = cities[i]?.transportToNext;
+            if (seg && Array.isArray(seg.files) && seg.files.length) {
+              const files = (seg.files || []).filter((f) => ("id" in f) && Boolean((f as { id?: string }).id)).map((f) => ({ name: f.name, type: f.type, size: f.size, id: (f as { id?: string }).id || "" }));
+              const ref = `${cities[i]?.name || ""}->${cities[i+1]?.name || ""}`;
+              await modDb.saveRefAttachments(cur.id, "transport", ref, files);
+            }
+          }
+        }
+      } catch {}
+    })();
+  }
+
   useEffect(() => {
     (async () => {
       if (transportOpenIdx === null) return;
@@ -1109,35 +1151,18 @@ export default function AccommodationSearchPage() {
                 ))}
               </ul>
               <div className="mt-3 flex justify-end p-3 pt-0">
-                <Button type="button" className={proceedHighlight ? "ring-4 ring-amber-500 pulse-ring" : undefined} onClick={async () => {
-                  try {
-                    const data = { cities: cities };
-                    if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));
-                  } catch {}
-                  try {
-                    const modDb = await import("@/lib/trips-db");
-                    const trips = await modDb.getSavedTrips();
-                    const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
-                    if (cur) {
-                      for (const c of cities) {
-                        const files = (c.stayFiles || []).filter((f) => f.id).map((f) => ({ name: f.name, type: f.type, size: f.size, id: f.id! }));
-                        if (files.length) {
-                          const ref = `${c.name || ""}|${c.address || ""}`;
-                          await modDb.saveRefAttachments(cur.id, "stay", ref, files);
-                        }
-                      }
-                      for (let i = 0; i < cities.length - 1; i++) {
-                        const seg = cities[i]?.transportToNext;
-                        if (seg && Array.isArray(seg.files) && seg.files.length) {
-                          const files = (seg.files || []).filter((f) => ("id" in f) && Boolean((f as { id?: string }).id)).map((f) => ({ name: f.name, type: f.type, size: f.size, id: (f as { id?: string }).id || "" }));
-                          const ref = `${cities[i]?.name || ""}->${cities[i+1]?.name || ""}`;
-                          await modDb.saveRefAttachments(cur.id, "transport", ref, files);
-                        }
-                      }
-                    }
-                  } catch {}
-                  router.push("/entertainment/reservations");
-                }}>{t("proceedToEntertainment")}</Button>
+                <Button
+                  type="button"
+                  role="button"
+                  className={proceedHighlight ? "ring-4 ring-amber-500 pulse-ring" : undefined}
+                  style={{ touchAction: "manipulation" }}
+                  onClick={proceedToEntertainment}
+                  onTouchStart={proceedToEntertainment}
+                  onTouchEnd={proceedToEntertainment}
+                  onPointerUp={proceedToEntertainment}
+                >
+                  {t("proceedToEntertainment")}
+                </Button>
               </div>
             </div>
           </CardContent>
