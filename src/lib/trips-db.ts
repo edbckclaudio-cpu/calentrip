@@ -191,12 +191,21 @@ export async function addTrip(trip: TripItem) {
     } catch {}
     return;
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  await db.run(
-    "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    [trip.id, trip.title, trip.date, trip.passengers, JSON.stringify(trip.flightNotes || []), trip.reachedFinalCalendar ? 1 : 0, trip.savedCalendarName || null, Date.now()]
-  );
-  await db.close();
+  try {
+    const db = await conn.open(_dbName, false, "no-encryption", 1);
+    await db.run(
+      "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [trip.id, trip.title, trip.date, trip.passengers, JSON.stringify(trip.flightNotes || []), trip.reachedFinalCalendar ? 1 : 0, trip.savedCalendarName || null, Date.now()]
+    );
+    await db.close();
+  } catch {
+    _useFallback = true;
+    try {
+      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
+      const next = [trip, ...list].slice(0, 20);
+      if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
+    } catch {}
+  }
 }
 
 export async function updateTrip(id: string, data: Partial<TripItem>) {

@@ -582,9 +582,8 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     if (!dep || !arr) return false;
     return toMinutes(arr) < toMinutes(dep) && !nextDay[i as 0 | 1];
   };
-  const legFilled = (i: number) => Boolean(notes[i]?.dep) && Boolean(notes[i]?.arr);
-  const legValid = (i: number) => legFilled(i) && !invalidLeg(i);
-  const canProceed = legValid(0);
+  const legDepFilled = (i: number) => Boolean(notes[i]?.dep);
+  const canProceed = legDepFilled(0);
 
   function proceedOnce() {
     if (proceedLockRef.current || proceeding) return;
@@ -612,8 +611,8 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
       arrivalNextDay: nextDay[i as 0 | 1] || undefined,
     }));
     const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
-    await addTrip({ id, title, date, passengers, flightNotes });
-    try { await saveTripAttachments(id, attachments.map((a) => ({ leg: a.leg, name: a.name, type: a.type, size: a.size, id: a.id || "" }))); } catch {}
+    addTrip({ id, title, date, passengers, flightNotes }).catch(() => {});
+    try { saveTripAttachments(id, attachments.map((a) => ({ leg: a.leg, name: a.name, type: a.type, size: a.size, id: a.id || "" }))).catch(() => {}); } catch {}
     if (hintId != null) {
       try { dismiss(hintId); } catch {}
     }
