@@ -54,6 +54,7 @@ export default function AccommodationSearchPage() {
   const [transportArrTime, setTransportArrTime] = useState("");
   const transportDepTimeRef = useRef<HTMLInputElement | null>(null);
   const transportArrTimeRef = useRef<HTMLInputElement | null>(null);
+  const [proceedingEntertainment, setProceedingEntertainment] = useState(false);
   const [transportFiles, setTransportFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
   const summaryRef = useRef<HTMLDivElement | null>(null);
   const [transportNotice, setTransportNotice] = useState<string | null>(null);
@@ -426,6 +427,7 @@ export default function AccommodationSearchPage() {
   }
 
   function proceedToEntertainment() {
+    setProceedingEntertainment(true);
     try {
       const data = { cities: cities };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));
@@ -465,6 +467,7 @@ export default function AccommodationSearchPage() {
         }
       } catch {}
     })();
+    try { setTimeout(() => setProceedingEntertainment(false), 2500); } catch {}
   }
 
   useEffect(() => {
@@ -1156,12 +1159,20 @@ export default function AccommodationSearchPage() {
                   role="button"
                   className={proceedHighlight ? "ring-4 ring-amber-500 pulse-ring" : undefined}
                   style={{ touchAction: "manipulation" }}
+                  disabled={proceedingEntertainment}
                   onClick={proceedToEntertainment}
                   onTouchStart={proceedToEntertainment}
                   onTouchEnd={proceedToEntertainment}
                   onPointerUp={proceedToEntertainment}
                 >
-                  {t("proceedToEntertainment")}
+                  {proceedingEntertainment ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
+                      <span>{t("proceedToEntertainment")}</span>
+                    </span>
+                  ) : (
+                    t("proceedToEntertainment")
+                  )}
                 </Button>
               </div>
             </div>
