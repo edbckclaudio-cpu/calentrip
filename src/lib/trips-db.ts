@@ -1,6 +1,5 @@
-import { Capacitor } from "@capacitor/core";
-import { Preferences } from "@capacitor/preferences";
-import { CapacitorSQLite } from "@capacitor-community/sqlite";
+let _Preferences: any = null;
+let _CapacitorSQLite: any = null;
 
 export type FlightNote = {
   leg: "outbound" | "inbound";
@@ -50,7 +49,10 @@ let _useFallback = false;
 async function getConnection(): Promise<Conn | null> {
   if (_conn) return _conn;
   try {
-    const anySql = CapacitorSQLite as unknown as {
+    if (!_CapacitorSQLite) {
+      try { const mod = await import("@capacitor-community/sqlite"); _CapacitorSQLite = (mod as any).CapacitorSQLite || mod; } catch { _useFallback = true; return null; }
+    }
+    const anySql = _CapacitorSQLite as unknown as {
       createConnection: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<unknown>;
       open: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<{
         execute: (sql: string) => Promise<void>;
@@ -128,19 +130,20 @@ export async function initDatabase() {
 
 export async function migrateFromLocalStorage() {
   try {
-    const flag = await Preferences.get({ key: "migration_complete" });
+    if (!_Preferences) { try { const mod = await import("@capacitor/preferences"); _Preferences = (mod as any).Preferences || mod; } catch {} }
+    const flag = _Preferences ? await _Preferences.get({ key: "migration_complete" }) : undefined;
     if ((flag?.value || "") === "true") return;
   } catch {}
   try {
     const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:trips") : null;
     const arr: TripItem[] = raw ? JSON.parse(raw) : [];
     if (!arr.length) {
-      await Preferences.set({ key: "migration_complete", value: "true" });
+      if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
       return;
     }
     const conn = await getConnection();
     if (!conn) {
-      await Preferences.set({ key: "migration_complete", value: "true" });
+      if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
       return;
     }
     const db = await conn.open(_dbName, false, "no-encryption", 1);
@@ -174,9 +177,9 @@ export async function migrateFromLocalStorage() {
       }
     }
     await db.close();
-    await Preferences.set({ key: "migration_complete", value: "true" });
+    if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
   } catch {
-    try { await Preferences.set({ key: "migration_complete", value: "true" }); } catch {}
+    try { if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" }); } catch {}
   }
 }
 
