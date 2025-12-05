@@ -253,6 +253,8 @@ const dict: Record<Lang, Record<string, string>> = {
     saveCalendarButton: "Salvar calendário",
     saveLabel: "Salvar",
     saveToGoogleCalendarButton: "Salvar no Google Calendar",
+    selectPeriodButton: "Selecionar período",
+    exampleTripButton: "Exemplo de viagem",
   },
   en: {
     appName: "CalenTrip",
@@ -503,6 +505,8 @@ const dict: Record<Lang, Record<string, string>> = {
     saveCalendarButton: "Save calendar",
     saveLabel: "Save",
     saveToGoogleCalendarButton: "Save to Google Calendar",
+    selectPeriodButton: "Select period",
+    exampleTripButton: "Example trip",
   },
   es: {
     appName: "CalenTrip",
@@ -753,6 +757,8 @@ const dict: Record<Lang, Record<string, string>> = {
     saveCalendarButton: "Guardar calendario",
     saveLabel: "Guardar",
     saveToGoogleCalendarButton: "Guardar en Google Calendar",
+    selectPeriodButton: "Seleccionar período",
+    exampleTripButton: "Ejemplo de viaje",
   },
 };
 
