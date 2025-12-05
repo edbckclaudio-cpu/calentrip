@@ -180,6 +180,8 @@ export default function AccommodationSearchPage() {
 
 
   function onConfirmCityCount() {
+    setDiffCityCountHighlight(false);
+    setDiffCheckHighlight(false);
     if (!tripSearch || tripSearch.mode !== "different") return;
     const n = Math.max(0, Math.min(8, Number(cityCount) || 0));
     if (n === 0) { setCities([]); return; }
@@ -607,10 +609,10 @@ export default function AccommodationSearchPage() {
                     role="button"
                     className={diffCheckHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined}
                     style={{ touchAction: "manipulation" }}
-                    onClick={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
-                    onTouchStart={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
-                    onTouchEnd={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
-                    onPointerUp={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                    onClick={() => { setDiffCityCountHighlight(false); setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                    onTouchStart={() => { setDiffCityCountHighlight(false); setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                    onTouchEnd={() => { setDiffCityCountHighlight(false); setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                    onPointerUp={() => { setDiffCityCountHighlight(false); setDiffCheckHighlight(false); onConfirmCityCount(); }}
                   >
                     Check
                   </Button>
