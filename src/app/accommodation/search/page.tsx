@@ -282,6 +282,13 @@ export default function AccommodationSearchPage() {
     showToast("Use os links para buscar hospedagem. Salve prints ou arquivos em 'Escolher arquivos' para consultar durante a viagem.", { duration: 8000 });
   }, [cityDetailIdx, showToast]);
 
+  useEffect(() => {
+    if (guideStep) {
+      setDiffCityCountHighlight(false);
+      setDiffCheckHighlight(false);
+    }
+  }, [guideStep]);
+
   function onPickCity(idx: number, c: string) {
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, name: c } : x)));
     setCitySearchIdx(null);
