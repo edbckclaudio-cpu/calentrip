@@ -12,7 +12,7 @@ import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { TripItem, FlightNote, getSavedTrips, updateTrip, saveCalendarEvents, getTripEvents, getTripAttachments, getRefAttachments } from "@/lib/trips-db";
+import { TripItem, FlightNote, getSavedTrips, updateTrip, saveCalendarEvents, getTripEvents, getTripAttachments, getRefAttachments, migrateFromLocalStorage } from "@/lib/trips-db";
 import { findAirportByIata } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
@@ -81,6 +81,12 @@ export default function FinalCalendarPage() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
+
+  useEffect(() => {
+    (async () => {
+      try { await migrateFromLocalStorage(); } catch {}
+    })();
+  }, []);
 
   async function saveCalendarToFile() {
     try {
@@ -416,6 +422,12 @@ export default function FinalCalendarPage() {
             if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
           } catch {}
         }
+        const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
+        if (dbEvents.length) {
+          const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
+          setEvents(mapped);
+          return;
+        }
         const all: TripItem[] = await getSavedTrips();
         let trips: TripItem[] = [];
         try {
@@ -490,7 +502,7 @@ export default function FinalCalendarPage() {
         setEvents(unique);
       } catch {}
     })();
-  }, [events.length]);
+  }, [events.length, currentTripId]);
 
   const lastInboundSignature = useMemo(() => {
     let sig = "";
@@ -1064,6 +1076,12 @@ export default function FinalCalendarPage() {
           if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
         } catch {}
       }
+      const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
+      if (dbEvents.length) {
+        const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
+        setEvents(mapped);
+        return;
+      }
       const all: TripItem[] = await getSavedTrips();
       let trips: TripItem[] = [];
       try {
@@ -1146,7 +1164,7 @@ export default function FinalCalendarPage() {
       setEvents(unique);
       } catch {}
     })();
-  }, []);
+  }, [currentTripId]);
 
   async function openTransportDrawer(item: EventItem) {
     if (item.type !== "flight") return;

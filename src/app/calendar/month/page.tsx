@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DialogHeader } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
+import { TripItem, FlightNote, getSavedTrips, getTripEvents, updateTrip, migrateFromLocalStorage } from "@/lib/trips-db";
 import { alarmForEvent } from "@/lib/ics";
 
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
@@ -29,6 +29,7 @@ export default function MonthCalendarPage() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
 
   async function exportICS() {
     function fmtUTC(d: Date) {
@@ -161,6 +162,11 @@ export default function MonthCalendarPage() {
   }
 
   useEffect(() => {
+    (async () => { try { await migrateFromLocalStorage(); } catch {} })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
     try {
       const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       const saved = rawSaved ? (JSON.parse(rawSaved) as { events?: EventItem[] }) : null;
@@ -178,11 +184,12 @@ export default function MonthCalendarPage() {
         }
       } catch {}
       const list: EventItem[] = [];
-      const trips: TripItem[] = getTrips();
+      const trips: TripItem[] = await getSavedTrips();
       const current = trips.length ? trips[0] : null;
       if (current) {
         const premium = isTripPremium(current.id);
         setPremiumFlag(premium);
+        setCurrentTripId(current.id);
         try {
           const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
           const list: Array<{ tripId: string; expiresAt: number }> = raw ? JSON.parse(raw) : [];
@@ -197,6 +204,12 @@ export default function MonthCalendarPage() {
         if (status !== "authenticated") setGating({ show: true, reason: "anon" });
         else if (!premium) setGating({ show: true, reason: "noPremium" });
         else setGating(null);
+      }
+      const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
+      if (dbEvents.length) {
+        const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
+        setEvents(mapped);
+        return;
       }
       trips.forEach((t) => {
         if (t.flightNotes && t.flightNotes.length) {
@@ -241,30 +254,31 @@ export default function MonthCalendarPage() {
       });
       setEvents(unique);
     } catch {}
+    })();
   }, [status]);
 
   useEffect(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-      const ts = raw ? JSON.parse(raw) : null;
-      if (!ts) return;
-      const isSame = ts.mode === "same";
-      const origin = isSame ? ts.origin : ts.outbound?.origin;
-      const destination = isSame ? ts.destination : ts.outbound?.destination;
-      const date = isSame ? ts.departDate : ts.outbound?.date;
-      const pax = (() => {
-        const p = ts.passengers || {};
-        return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
-      })();
-      if (!origin || !destination || !date) return;
-      const title = `${origin} → ${destination}`;
-      const trips: TripItem[] = getTrips();
-      const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-      if (idx < 0) return;
-      const next = [...trips];
-      next[idx] = { ...next[idx], reachedFinalCalendar: true };
-      if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-    } catch {}
+    (async () => {
+      try {
+        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+        const ts = raw ? JSON.parse(raw) : null;
+        if (!ts) return;
+        const isSame = ts.mode === "same";
+        const origin = isSame ? ts.origin : ts.outbound?.origin;
+        const destination = isSame ? ts.destination : ts.outbound?.destination;
+        const date = isSame ? ts.departDate : ts.outbound?.date;
+        const pax = (() => {
+          const p = ts.passengers || {};
+          return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
+        })();
+        if (!origin || !destination || !date) return;
+        const title = `${origin} → ${destination}`;
+        const trips: TripItem[] = await getSavedTrips();
+        const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+        if (idx < 0) return;
+        await updateTrip(trips[idx].id, { reachedFinalCalendar: true });
+      } catch {}
+    })();
   }, []);
 
   const grouped = useMemo(() => {
@@ -382,7 +396,7 @@ export default function MonthCalendarPage() {
         <button
           type="button"
           className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-          onClick={() => {
+          onClick={async () => {
             try {
               const payload = { events };
               if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
@@ -397,13 +411,7 @@ export default function MonthCalendarPage() {
                   const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
                   if (origin && destination && date) {
                     const title = `${origin} → ${destination}`;
-                    const trips: TripItem[] = getTrips();
-                    const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-                    if (idx >= 0) {
-                      const next = [...trips];
-                      next[idx] = { ...next[idx], reachedFinalCalendar: true };
-                      localStorage.setItem("calentrip:trips", JSON.stringify(next));
-                    }
+                    if (currentTripId) { await updateTrip(currentTripId, { reachedFinalCalendar: true }); }
                   }
                 }
               } catch {}
