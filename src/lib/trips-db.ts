@@ -1,3 +1,4 @@
+"use client";
 let _Preferences: any = null;
 let _CapacitorSQLite: any = null;
 
