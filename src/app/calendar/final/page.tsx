@@ -384,23 +384,52 @@ export default function FinalCalendarPage() {
     (async () => {
       try {
         if (events.length) return;
+        const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+        if (rawSaved) {
+          try {
+            const sc = JSON.parse(rawSaved) as { events?: EventItem[] };
+            if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
+          } catch {}
+        }
         const all: TripItem[] = await getSavedTrips();
+        let trips: TripItem[] = [];
+        try {
+          const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const ts = rawTs ? JSON.parse(rawTs) : null;
+          if (ts) {
+            const isSame = ts.mode === "same";
+            const origin = isSame ? ts.origin : ts.outbound?.origin;
+            const destination = isSame ? ts.destination : ts.outbound?.destination;
+            const date = isSame ? ts.departDate : ts.outbound?.date;
+            const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+            const title = origin && destination ? `${origin} → ${destination}` : "";
+            const matchIdx = all.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+            if (matchIdx >= 0) trips = [all[matchIdx]];
+          }
+        } catch {}
+        if (!trips.length) {
+          const actives = all.filter((t) => t.reachedFinalCalendar);
+          trips = actives.length ? [actives[actives.length - 1]] : (all.length ? [all[all.length - 1]] : []);
+        }
         const list: EventItem[] = [];
         const seenFlights = new Set<string>();
-        all.forEach((t) => {
-          (t.flightNotes || []).forEach((fn) => {
-            const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
-            const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
-            if (!seenFlights.has(sig)) {
-              seenFlights.add(sig);
-              list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
-            }
-          });
+        trips.forEach((t) => {
+          if (t.flightNotes && t.flightNotes.length) {
+            t.flightNotes.forEach((fn) => {
+              const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
+              const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
+              if (!seenFlights.has(sig)) {
+                seenFlights.add(sig);
+                list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
+              }
+            });
+          }
         });
         const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
         const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
-        const citiesQuick = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
-        citiesQuick.forEach((c, i) => {
+        const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
+        setSummaryCities(cities as Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>);
+        cities.forEach((c, i) => {
           const cityName = c.name || `Cidade ${i + 1}`;
           const addr = c.address || "(endereço não informado)";
           if (c.checkin) {
@@ -412,9 +441,9 @@ export default function FinalCalendarPage() {
             list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
           }
         });
-        for (let i = 0; i < citiesQuick.length - 1; i++) {
-          const c = citiesQuick[i];
-          const n = citiesQuick[i + 1];
+        for (let i = 0; i < cities.length - 1; i++) {
+          const c = cities[i];
+          const n = cities[i + 1];
           const seg = c.transportToNext;
           if (seg) {
             const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
@@ -427,13 +456,13 @@ export default function FinalCalendarPage() {
         const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
         (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
         const seen = new Set<string>();
-        const evs = list.filter((e) => {
+        const unique = list.filter((e) => {
           const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
         });
-        if (evs.length) setEvents(evs);
+        setEvents(unique);
       } catch {}
     })();
   }, [events.length]);
