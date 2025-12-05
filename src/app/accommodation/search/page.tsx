@@ -192,6 +192,8 @@ export default function AccommodationSearchPage() {
     showToast(t("citiesConfigured"));
     setGuideIdx(0);
     setGuideStep("name");
+    setDiffCityCountHighlight(false);
+    setDiffCheckHighlight(false);
     showToast("Preencha o nome da cidade 1 e selecione na barra de rolagem.", { duration: 6000 });
   }
 
@@ -662,7 +664,6 @@ export default function AccommodationSearchPage() {
                             Comprar hospedagem
                           </Button>
                           <Button type="button" variant="secondary" disabled={idx !== 0 || !cities[cities.length - 1]?.checked} onClick={() => setTransportOpenIdx(idx)}>Transporte</Button>
-                          <Button type="button" variant="outline" disabled={!enabled || !c.address} onClick={() => onCityCheck(idx)}>Check</Button>
                         </div>
                             </>
                           );
