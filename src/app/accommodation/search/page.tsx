@@ -117,6 +117,13 @@ export default function AccommodationSearchPage() {
     }
   }, [tripSearch, showToast]);
 
+  useEffect(() => {
+    if (cities.length > 0) {
+      setDiffCityCountHighlight(false);
+      setDiffCheckHighlight(false);
+    }
+  }, [cities.length]);
+
   
 
   
@@ -595,7 +602,18 @@ export default function AccommodationSearchPage() {
                       }
                     }}
                   />
-                  <Button type="button" className={diffCheckHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}>Check</Button>
+                  <Button
+                    type="button"
+                    role="button"
+                    className={diffCheckHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined}
+                    style={{ touchAction: "manipulation" }}
+                    onClick={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                    onTouchStart={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                    onTouchEnd={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                    onPointerUp={() => { setDiffCheckHighlight(false); onConfirmCityCount(); }}
+                  >
+                    Check
+                  </Button>
                 </div>
                 {cities.length > 0 && (
                   <div className="space-y-3">
