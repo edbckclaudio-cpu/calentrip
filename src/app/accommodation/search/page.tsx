@@ -52,6 +52,8 @@ export default function AccommodationSearchPage() {
   const [transportArrOpts, setTransportArrOpts] = useState<string[]>([]);
   const [transportDepTime, setTransportDepTime] = useState("");
   const [transportArrTime, setTransportArrTime] = useState("");
+  const transportDepTimeRef = useRef<HTMLInputElement | null>(null);
+  const transportArrTimeRef = useRef<HTMLInputElement | null>(null);
   const [transportFiles, setTransportFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
   const summaryRef = useRef<HTMLDivElement | null>(null);
   const [transportNotice, setTransportNotice] = useState<string | null>(null);
@@ -395,8 +397,8 @@ export default function AccommodationSearchPage() {
       mode: transportMode,
       dep: transportDepRef.current?.value ?? transportDep,
       arr: transportArrRef.current?.value ?? transportArr,
-      depTime: transportDepTime,
-      arrTime: transportArrTime,
+      depTime: transportDepTimeRef.current?.value ?? transportDepTime,
+      arrTime: transportArrTimeRef.current?.value ?? transportArrTime,
       files: transportFiles.slice(),
       route: transportRoute || undefined,
     };
@@ -979,12 +981,41 @@ export default function AccommodationSearchPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="mb-1 block text-sm">{t("departureTime")}</label>
-                    <Input placeholder="hh:mm" value={transportDepTime} type="tel" inputMode="numeric" pattern="[0-9]*" onChange={(e) => setTransportDepTime(formatTimeInput(e.target.value))} />
+                    <Input
+                      placeholder="hh:mm"
+                      defaultValue={transportDepTime}
+                      type="tel"
+                      inputMode="numeric"
+                      enterKeyHint="next"
+                      ref={transportDepTimeRef}
+                      style={{ touchAction: "manipulation" }}
+                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
+                      onInput={(e) => {
+                        const v = formatTimeInput((e.target as HTMLInputElement).value);
+                        (e.target as HTMLInputElement).value = v;
+                        setTransportDepTime(v);
+                      }}
+                    />
                     
                   </div>
                   <div>
                     <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
-                    <Input placeholder="hh:mm" value={transportArrTime} type="tel" inputMode="numeric" pattern="[0-9]*" disabled={transportMode === "car"} onChange={(e) => setTransportArrTime(formatTimeInput(e.target.value))} />
+                    <Input
+                      placeholder="hh:mm"
+                      defaultValue={transportArrTime}
+                      type="tel"
+                      inputMode="numeric"
+                      enterKeyHint="next"
+                      disabled={transportMode === "car"}
+                      ref={transportArrTimeRef}
+                      style={{ touchAction: "manipulation" }}
+                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
+                      onInput={(e) => {
+                        const v = formatTimeInput((e.target as HTMLInputElement).value);
+                        (e.target as HTMLInputElement).value = v;
+                        setTransportArrTime(v);
+                      }}
+                    />
                   </div>
                 </div>
                 <div className="mt-2">
