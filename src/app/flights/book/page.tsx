@@ -4,7 +4,7 @@ import { useTrip } from "@/lib/trip-context";
 import type { TripSearchSame, TripSearchDifferent } from "@/lib/trip-context";
 import { getCountryByIata } from "@/lib/airports";
 import { useRouter } from "next/navigation";
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableCell, TableBody } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -511,6 +511,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const [proceedPulse, setProceedPulse] = useState(false);
   const [infoShown, setInfoShown] = useState(false);
   const [hintId, setHintId] = useState<number | null>(null);
+  const proceedLockRef = useRef(false);
   function fmtTime(v: string) {
     const s = v.replace(/\D/g, "").slice(0, 4);
     if (!s) return "";
@@ -583,6 +584,13 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const legFilled = (i: number) => Boolean(notes[i]?.dep) && Boolean(notes[i]?.arr);
   const legValid = (i: number) => legFilled(i) && !invalidLeg(i);
   const canProceed = legValid(0);
+
+  function proceedOnce() {
+    if (proceedLockRef.current) return;
+    proceedLockRef.current = true;
+    save();
+    setTimeout(() => { proceedLockRef.current = false; }, 1000);
+  }
 
   async function save() {
     if (!tripSearch) return;
@@ -755,7 +763,17 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         </div>
       ))}
       <div className="flex justify-end">
-        <Button type="button" disabled={!canProceed} onClick={save} className={proceedPulse ? "ring-4 ring-amber-500 pulse-ring" : undefined}>{t("proceedToAccommodation")}</Button>
+        <Button
+          type="button"
+          role="button"
+          disabled={!canProceed}
+          onClick={proceedOnce}
+          onTouchEnd={proceedOnce}
+          onPointerUp={proceedOnce}
+          className={(proceedPulse ? "ring-4 ring-amber-500 pulse-ring " : "") + "relative z-[1001]"}
+        >
+          {t("proceedToAccommodation")}
+        </Button>
       </div>
     </div>
   );
