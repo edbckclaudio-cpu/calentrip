@@ -617,7 +617,17 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     }
     show("Notas salvas, redirecionando…", { variant: "success" });
     try { onProceed?.(); } catch {}
-    router.push("/accommodation/search");
+    try { router.push("/accommodation/search"); } catch {}
+    try {
+      setTimeout(() => {
+        try {
+          if (typeof window !== "undefined") {
+            const same = (window.location.pathname || "").includes("/accommodation/search");
+            if (!same) window.location.href = "/accommodation/search";
+          }
+        } catch {}
+      }, 600);
+    } catch {}
   }
 
   return (
@@ -771,7 +781,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
           onTouchStart={proceedOnce}
           onTouchEnd={proceedOnce}
           onPointerUp={proceedOnce}
-          className={(proceedPulse ? "ring-4 ring-amber-500 pulse-ring " : "") + "relative z-[1001]"}
+          className={(proceedPulse ? "ring-4 ring-amber-500 pulse-ring " : "") + "relative z-[1001] pointer-events-auto"}
           style={{ touchAction: "manipulation" }}
         >
           {t("proceedToAccommodation")}
