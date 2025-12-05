@@ -46,6 +46,8 @@ export default function AccommodationSearchPage() {
   const [transportMode, setTransportMode] = useState<"air" | "train" | "bus" | "car">("train");
   const [transportDep, setTransportDep] = useState("");
   const [transportArr, setTransportArr] = useState("");
+  const transportDepRef = useRef<HTMLInputElement | null>(null);
+  const transportArrRef = useRef<HTMLInputElement | null>(null);
   const [transportDepOpts, setTransportDepOpts] = useState<string[]>([]);
   const [transportArrOpts, setTransportArrOpts] = useState<string[]>([]);
   const [transportDepTime, setTransportDepTime] = useState("");
@@ -391,8 +393,8 @@ export default function AccommodationSearchPage() {
     const i = transportOpenIdx;
     const segment: TransportSegment = {
       mode: transportMode,
-      dep: transportDep,
-      arr: transportArr,
+      dep: transportDepRef.current?.value ?? transportDep,
+      arr: transportArrRef.current?.value ?? transportArr,
       depTime: transportDepTime,
       arrTime: transportArrTime,
       files: transportFiles.slice(),
@@ -879,13 +881,14 @@ export default function AccommodationSearchPage() {
                   <div className="relative">
                     <Input
                       placeholder={t("transportOriginPlaceholder")}
-                      value={transportDep}
+                      defaultValue={transportDep}
                       disabled={transportMode === "car"}
                       inputMode="text"
                       autoCapitalize="none"
                       autoCorrect="off"
                       enterKeyHint="next"
                       style={{ touchAction: "manipulation" }}
+                      ref={transportDepRef}
                       onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => setTransportDep((e.target as HTMLInputElement).value)}
                       onFocus={() => {
@@ -912,7 +915,7 @@ export default function AccommodationSearchPage() {
                         <ul className="max-h-24 overflow-auto divide-y">
                           {transportDepOpts.map((o, i) => (
                             <li key={`dep-${i}`}>
-                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportDep(o)}>
+                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => { setTransportDep(o); if (transportDepRef.current) transportDepRef.current.value = o; }}>
                                 <span>{o}</span>
                                 <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? t("airport") : transportMode === "train" ? t("trainStation") : t("busStation")}</span>
                               </button>
@@ -928,13 +931,14 @@ export default function AccommodationSearchPage() {
                   <div className="relative">
                     <Input
                       placeholder={t("transportDestinationPlaceholder")}
-                      value={transportArr}
+                      defaultValue={transportArr}
                       disabled={transportMode === "car"}
                       inputMode="text"
                       autoCapitalize="none"
                       autoCorrect="off"
                       enterKeyHint="next"
                       style={{ touchAction: "manipulation" }}
+                      ref={transportArrRef}
                       onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => setTransportArr((e.target as HTMLInputElement).value)}
                       onFocus={() => {
@@ -961,7 +965,7 @@ export default function AccommodationSearchPage() {
                         <ul className="max-h-24 overflow-auto divide-y">
                           {transportArrOpts.map((o, i) => (
                             <li key={`arr-${i}`}>
-                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => setTransportArr(o)}>
+                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => { setTransportArr(o); if (transportArrRef.current) transportArrRef.current.value = o; }}>
                                 <span>{o}</span>
                                 <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? t("airport") : transportMode === "train" ? t("trainStation") : t("busStation")}</span>
                               </button>
