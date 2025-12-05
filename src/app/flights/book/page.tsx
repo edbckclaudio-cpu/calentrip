@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableCell, TableBody } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addTrip } from "@/lib/trips-store";
+import { addTrip, saveTripAttachments } from "@/lib/trips-db";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/ui/toast";
 
@@ -583,7 +583,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const allFilled = notes.every((n) => Boolean(n.dep) && Boolean(n.arr));
   const allValid = allFilled && !invalidLeg(0) && !invalidLeg(1);
 
-  function save() {
+  async function save() {
     if (!tripSearch) return;
     const passengers = totalPassengers(tripSearch.passengers);
     const first = legs[0];
@@ -601,7 +601,8 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
       arrivalNextDay: nextDay[i as 0 | 1] || undefined,
     }));
     const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
-    addTrip({ id, title, date, passengers, flightNotes, attachments });
+    await addTrip({ id, title, date, passengers, flightNotes });
+    try { await saveTripAttachments(id, attachments.map((a) => ({ leg: a.leg, name: a.name, type: a.type, size: a.size, id: a.id || "" }))); } catch {}
     if (hintId != null) {
       try { dismiss(hintId); } catch {}
     }

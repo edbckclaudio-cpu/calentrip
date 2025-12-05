@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { findAirportByIata, getCountryByIata } from "@/lib/airports";
 import { useToast } from "@/components/ui/toast";
+import { getSavedTrips, getRefAttachments } from "@/lib/trips-db";
 
 export default function AccommodationSearchPage() {
   const { tripSearch } = useTrip();
@@ -60,6 +61,7 @@ export default function AccommodationSearchPage() {
   const [diffCityCountHighlight, setDiffCityCountHighlight] = useState(false);
   const [diffCheckHighlight, setDiffCheckHighlight] = useState(false);
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
+  const [transportDocsCount, setTransportDocsCount] = useState<Record<number, number>>({});
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
     const allStays = cities.every((c) => Boolean(c.name && c.address && c.checked));
@@ -72,6 +74,27 @@ export default function AccommodationSearchPage() {
       setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
     } catch {}
   }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const trips = await getSavedTrips();
+        const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
+        const map: Record<number, number> = {};
+        for (let i = 0; i < cities.length - 1; i++) {
+          const seg = cities[i]?.transportToNext;
+          const localCount = Array.isArray(seg?.files) ? seg!.files!.length : 0;
+          let dbCount = 0;
+          if (cur) {
+            const ref = `${cities[i]?.name || ""}->${cities[i+1]?.name || ""}`;
+            const more = await getRefAttachments(cur.id, "transport", ref);
+            dbCount = more.length;
+          }
+          map[i] = localCount + dbCount;
+        }
+        setTransportDocsCount(map);
+      } catch {}
+    })();
+  }, [cities]);
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
@@ -1001,7 +1024,7 @@ export default function AccommodationSearchPage() {
                       <span>
                         Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext?.mode || "").toUpperCase()}
                         {c.transportToNext?.mode === "car" ? "" : ` • ${c.transportToNext?.depTime || "—"} → ${c.transportToNext?.arrTime || "—"}`}
-                        {` • Anexos: ${(c.transportToNext?.files || []).length}`}
+                        {` • Anexos: ${transportDocsCount[i] ?? (c.transportToNext?.files || []).length}`}
                       </span>
                       </span>
                     </li>
@@ -1009,10 +1032,32 @@ export default function AccommodationSearchPage() {
                 ))}
               </ul>
               <div className="mt-3 flex justify-end p-3 pt-0">
-                <Button type="button" className={proceedHighlight ? "ring-4 ring-amber-500 pulse-ring" : undefined} onClick={() => {
+                <Button type="button" className={proceedHighlight ? "ring-4 ring-amber-500 pulse-ring" : undefined} onClick={async () => {
                   try {
                     const data = { cities: cities };
                     if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));
+                  } catch {}
+                  try {
+                    const modDb = await import("@/lib/trips-db");
+                    const trips = await modDb.getSavedTrips();
+                    const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
+                    if (cur) {
+                      for (const c of cities) {
+                        const files = (c.stayFiles || []).filter((f) => f.id).map((f) => ({ name: f.name, type: f.type, size: f.size, id: f.id! }));
+                        if (files.length) {
+                          const ref = `${c.name || ""}|${c.address || ""}`;
+                          await modDb.saveRefAttachments(cur.id, "stay", ref, files);
+                        }
+                      }
+                      for (let i = 0; i < cities.length - 1; i++) {
+                        const seg = cities[i]?.transportToNext;
+                        if (seg && Array.isArray(seg.files) && seg.files.length) {
+                          const files = (seg.files || []).filter((f) => ("id" in f) && Boolean((f as { id?: string }).id)).map((f) => ({ name: f.name, type: f.type, size: f.size, id: (f as { id?: string }).id || "" }));
+                          const ref = `${cities[i]?.name || ""}->${cities[i+1]?.name || ""}`;
+                          await modDb.saveRefAttachments(cur.id, "transport", ref, files);
+                        }
+                      }
+                    }
                   } catch {}
                   router.push("/entertainment/reservations");
                 }}>{t("proceedToEntertainment")}</Button>

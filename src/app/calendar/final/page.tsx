@@ -12,7 +12,7 @@ import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
+import { TripItem, FlightNote, getSavedTrips, updateTrip, saveCalendarEvents, getTripEvents, getTripAttachments, getRefAttachments } from "@/lib/trips-db";
 import { findAirportByIata } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
@@ -58,6 +58,7 @@ export default function FinalCalendarPage() {
   const [summaryCities, setSummaryCities] = useState<Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>>([]);
   const [returnDrawerOpen, setReturnDrawerOpen] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
+  const [transportDocsCount, setTransportDocsCount] = useState<Record<string, number>>({});
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
@@ -87,7 +88,8 @@ export default function FinalCalendarPage() {
       const name = typeof window !== "undefined" ? prompt("Nome do arquivo (até 9 letras)") || "" : "";
       const safe = name.replace(/[^A-Za-z]/g, "").slice(0, 9);
       if (!safe) { show("Nome inválido", { variant: "error" }); return; }
-      const payload = { name: safe, version: 1, createdAt: new Date().toISOString(), events, summaryCities };
+      const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
+      const payload = { name: safe, version: 1, createdAt: new Date().toISOString(), events: dbEvents.length ? dbEvents.map((e) => ({ label: e.label || e.name, date: e.date, time: e.time })) : events, summaryCities };
       const json = JSON.stringify(payload);
       const r = await StorageFiles.save({ name: safe, json });
       if (r?.ok) { show("Arquivo salvo no dispositivo", { variant: "success" }); } else { show("Erro ao salvar arquivo", { variant: "error" }); }
@@ -123,28 +125,53 @@ export default function FinalCalendarPage() {
   }
 
   useEffect(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-      const ts = raw ? JSON.parse(raw) : null;
-      if (!ts) return;
-      const isSame = ts.mode === "same";
-      const origin = isSame ? ts.origin : ts.outbound?.origin;
-      const destination = isSame ? ts.destination : ts.outbound?.destination;
-      const date = isSame ? ts.departDate : ts.outbound?.date;
-      const pax = (() => {
-        const p = ts.passengers || {};
-        return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
-      })();
-      if (!origin || !destination || !date) return;
-      const title = `${origin} → ${destination}`;
-      const trips: TripItem[] = getTrips();
-      const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-      if (idx < 0) return;
-      const next = [...trips];
-      next[idx] = { ...next[idx], reachedFinalCalendar: true };
-      if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-    } catch {}
+    (async () => {
+      try {
+        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+        const ts = raw ? JSON.parse(raw) : null;
+        if (!ts) return;
+        const isSame = ts.mode === "same";
+        const origin = isSame ? ts.origin : ts.outbound?.origin;
+        const destination = isSame ? ts.destination : ts.outbound?.destination;
+        const date = isSame ? ts.departDate : ts.outbound?.date;
+        const pax = (() => {
+          const p = ts.passengers || {};
+          return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
+        })();
+        if (!origin || !destination || !date) return;
+        const title = `${origin} → ${destination}`;
+        const trips: TripItem[] = await getSavedTrips();
+        const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
+        if (idx < 0) return;
+        setCurrentTripId(trips[idx].id);
+        await updateTrip(trips[idx].id, { reachedFinalCalendar: true });
+      } catch {}
+    })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const map: Record<string, number> = {};
+        const items = events.filter((e) => e.type === "transport");
+        for (const e of items) {
+          const m = String(e.label || "");
+          const m2 = m.replace(/^Transporte:\s*/, "");
+          const base = m2.split(" • ")[0] || "";
+          const parts = base.split("→").map((s) => s.trim());
+          const ref = parts.length >= 2 ? `${parts[0]}->${parts[1]}` : base.replace(" → ", "->");
+          const localCount = ((e.meta as TransportSegmentMeta & { files?: SavedFile[] })?.files || []).length;
+          let dbCount = 0;
+          if (currentTripId) {
+            const more = await getRefAttachments(currentTripId, "transport", ref);
+            dbCount = more.length;
+          }
+          map[ref] = localCount + dbCount;
+        }
+        setTransportDocsCount(map);
+      } catch {}
+    })();
+  }, [events, currentTripId]);
 
   useEffect(() => {
     try {
@@ -167,27 +194,29 @@ export default function FinalCalendarPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_saved_drawer") : null;
-      if (flag === "1") {
-        localStorage.removeItem("calentrip:open_saved_drawer");
-        try {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
-          const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
-          setSavedCalendar(sc);
-        } catch { setSavedCalendar(null); }
-        try {
-          const trips = getTrips();
-          setSavedTripsList(trips);
-        } catch { setSavedTripsList([]); }
-        try {
-          const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
-          const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
-          setSavedCalendarsList(list);
-        } catch { setSavedCalendarsList([]); }
-        setSavedDrawerOpen(true);
-      }
-    } catch {}
+    (async () => {
+      try {
+        const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_saved_drawer") : null;
+        if (flag === "1") {
+          localStorage.removeItem("calentrip:open_saved_drawer");
+          try {
+            const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+            const sc = raw ? (JSON.parse(raw) as { events?: EventItem[] }) : null;
+            setSavedCalendar(sc);
+          } catch { setSavedCalendar(null); }
+          try {
+            const trips = await getSavedTrips();
+            setSavedTripsList(trips);
+          } catch { setSavedTripsList([]); }
+          try {
+            const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+            const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+            setSavedCalendarsList(list);
+          } catch { setSavedCalendarsList([]); }
+          setSavedDrawerOpen(true);
+        }
+      } catch {}
+    })();
   }, []);
 
   useEffect(() => {
@@ -216,7 +245,7 @@ export default function FinalCalendarPage() {
     return false;
   }, [locConsent]);
 
-  function saveCalendarNamed(silent?: boolean, fixedName?: string) {
+  async function saveCalendarNamed(silent?: boolean, fixedName?: string) {
     try {
       const rawName = silent ? "" : (typeof window !== "undefined" ? (prompt("Nome do calendário (apenas letras, até 9)") || "") : "");
       let name = (fixedName || rawName || "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
@@ -238,7 +267,7 @@ export default function FinalCalendarPage() {
       let evs = events;
       if (!evs.length) {
         try {
-          const all: TripItem[] = getTrips();
+          const all: TripItem[] = await getSavedTrips();
           const list: EventItem[] = [];
           const seenFlights = new Set<string>();
           all.forEach((t) => {
@@ -290,40 +319,12 @@ export default function FinalCalendarPage() {
           setEvents(evs);
         } catch {}
       }
-      const payload = { name, events: evs };
-      if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+      if (currentTripId) {
+        await saveCalendarEvents(currentTripId, evs.map((e) => ({ name: e.label, label: e.label, date: e.date, time: e.time, type: e.type })));
+        await updateTrip(currentTripId, { reachedFinalCalendar: true, savedCalendarName: name });
+      }
       try {
-        const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
-        const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
-        const entry = { name, events, savedAt: new Date().toISOString() };
-        const idx = list.findIndex((c) => (c?.name || "") === name);
-        if (idx >= 0) list[idx] = entry; else list.push(entry);
-        localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(list));
-      } catch {}
-      try {
-        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-        const ts = raw ? JSON.parse(raw) : null;
-        if (ts) {
-          const isSame = ts.mode === "same";
-          const origin = isSame ? ts.origin : ts.outbound?.origin;
-          const destination = isSame ? ts.destination : ts.outbound?.destination;
-          const date = isSame ? ts.departDate : ts.outbound?.date;
-          const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
-          if (origin && destination && date) {
-            const title = `${origin} → ${destination}`;
-            const trips: TripItem[] = getTrips();
-            const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-            if (idx >= 0) {
-              const next = [...trips];
-              next[idx] = { ...next[idx], reachedFinalCalendar: true, savedCalendarName: name, savedEvents: evs };
-              localStorage.setItem("calentrip:trips", JSON.stringify(next));
-            } else {
-              const id = String(Date.now());
-              const next = [{ id, title, date, passengers: pax, reachedFinalCalendar: true, savedCalendarName: name, savedEvents: evs }, ...trips].slice(0, 20);
-              localStorage.setItem("calentrip:trips", JSON.stringify(next));
-            }
-          }
-        }
+        if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name, events: evs }));
       } catch {}
       show("Salvo em pesquisas salvas", { variant: "success" });
       return true;
@@ -353,28 +354,30 @@ export default function FinalCalendarPage() {
   }, [events]);
 
   useEffect(() => {
-    try {
-      const trips: TripItem[] = getTrips();
-      const current = trips.length ? trips[0] : null;
-      if (!current) return;
-      const premium = isTripPremium(current.id);
-      setCurrentTripId(current.id);
-      setPremiumFlag(premium);
+    (async () => {
       try {
-        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
-        const list: Array<{ tripId: string; expiresAt: number }> = raw ? JSON.parse(raw) : [];
-        const rec = list.find((r) => r.tripId === "global" && r.expiresAt > Date.now());
-        if (rec) {
-          const d = new Date(rec.expiresAt);
-          const dd = String(d.getDate()).padStart(2, "0");
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          setPremiumUntil(`${dd}/${mm}`);
-        } else setPremiumUntil("");
-      } catch { setPremiumUntil(""); }
-      if (status !== "authenticated") setGating({ show: true, reason: "anon", tripId: current.id });
-      else if (!premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
-      else setGating(null);
-    } catch {}
+        const trips: TripItem[] = await getSavedTrips();
+        const current = trips.length ? trips[0] : null;
+        if (!current) return;
+        const premium = isTripPremium(current.id);
+        setCurrentTripId(current.id);
+        setPremiumFlag(premium);
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
+          const list: Array<{ tripId: string; expiresAt: number }> = raw ? JSON.parse(raw) : [];
+          const rec = list.find((r) => r.tripId === "global" && r.expiresAt > Date.now());
+          if (rec) {
+            const d = new Date(rec.expiresAt);
+            const dd = String(d.getDate()).padStart(2, "0");
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            setPremiumUntil(`${dd}/${mm}`);
+          } else setPremiumUntil("");
+        } catch { setPremiumUntil(""); }
+        if (status !== "authenticated") setGating({ show: true, reason: "anon", tripId: current.id });
+        else if (!premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
+        else setGating(null);
+      } catch {}
+    })();
   }, [status]);
 
   const lastInboundSignature = useMemo(() => {
@@ -485,7 +488,7 @@ export default function FinalCalendarPage() {
     }
     async function computeReturnDetails() {
       if (!summaryCities.length) return null as null | { airportName: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; gmapsUrl?: string; uberUrl?: string; callTime?: string; notifyAt?: string; callAtISO?: string; notifyAtISO?: string };
-      const trips: TripItem[] = getTrips();
+      const trips: TripItem[] = await getSavedTrips();
       const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
       if (!notes.length) return null;
       const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
@@ -724,7 +727,7 @@ export default function FinalCalendarPage() {
         callAtISO?: string;
         notifyAtISO?: string;
       };
-      const trips: TripItem[] = getTrips();
+      const trips: TripItem[] = await getSavedTrips();
       const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
       if (!notes.length) return null;
       const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
@@ -940,7 +943,8 @@ export default function FinalCalendarPage() {
   }
 
   useEffect(() => {
-    try {
+    (async () => {
+      try {
       const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (rawSaved) {
         try {
@@ -948,7 +952,7 @@ export default function FinalCalendarPage() {
           if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
         } catch {}
       }
-      const all: TripItem[] = getTrips();
+      const all: TripItem[] = await getSavedTrips();
       let trips: TripItem[] = [];
       try {
         const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
@@ -1028,7 +1032,8 @@ export default function FinalCalendarPage() {
         return true;
       });
       setEvents(unique);
-    } catch {}
+      } catch {}
+    })();
   }, []);
 
   async function openTransportDrawer(item: EventItem) {
@@ -1386,13 +1391,16 @@ export default function FinalCalendarPage() {
     setReturnDrawerOpen(true);
     setReturnLoading(true);
     try {
-      const trips: TripItem[] = getTrips();
+      const trips = await getSavedTrips();
       const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
       if (!notes.length) { setReturnInfo({ city: last.name, address: last.address }); return; }
       const sortedNotes = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime());
       const fn = sortedNotes[sortedNotes.length - 1];
-      const trip = trips.find((t) => (t.flightNotes || []).some((n) => n.leg === "inbound" && n.origin === fn.origin && n.destination === fn.destination && n.date === fn.date && n.departureTime === fn.departureTime));
-      setReturnFiles((trip?.attachments || []).filter((a) => a.leg === "inbound").map((a) => ({ name: a.name, type: a.type, size: a.size, dataUrl: a.dataUrl })));
+      try {
+        const trip = trips.find((t) => (t.flightNotes || []).some((n) => n.leg === "inbound" && n.origin === fn.origin && n.destination === fn.destination && n.date === fn.date && n.departureTime === fn.departureTime));
+        const atts = trip ? await getTripAttachments(trip.id, "inbound") : [];
+        setReturnFiles(atts.map((a) => ({ name: a.name, type: a.type, size: a.size, id: a.id })));
+      } catch { setReturnFiles([]); }
       const airport = await findAirportByIata(fn.origin);
       const geocode = async (q: string) => {
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
@@ -1520,10 +1528,10 @@ export default function FinalCalendarPage() {
     if (!summaryCities.length) return;
     const last = summaryCities[summaryCities.length - 1];
     if (!last.address) return;
-    const trips: TripItem[] = getTrips();
-    const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
-    if (!notes.length) return;
     (async () => {
+      const trips = await getSavedTrips();
+      const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
+      if (!notes.length) return;
       const sortedNotes = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime());
       const fn = sortedNotes[sortedNotes.length - 1];
       const airport = await findAirportByIata(fn.origin);
@@ -1869,14 +1877,14 @@ export default function FinalCalendarPage() {
             </span>
             {sideOpen ? <span className="text-sm font-medium">Iniciar nova pesquisa</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             try {
               const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
               const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
               setSavedCalendar(sc);
             } catch { setSavedCalendar(null); }
             try {
-              const trips = getTrips();
+              const trips = await getSavedTrips();
               setSavedTripsList(trips);
             } catch { setSavedTripsList([]); }
             try {
@@ -1899,7 +1907,7 @@ export default function FinalCalendarPage() {
           </button>
           
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
-            const ok = saveCalendarNamed(false);
+            const ok = await saveCalendarNamed(false);
             if (ok) {
               try { await saveCalendarFull(); } catch {}
               setCalendarHelpOpen(true);
@@ -1928,7 +1936,7 @@ export default function FinalCalendarPage() {
           </button>
           {false && (<button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             try {
-              const ok = saveCalendarNamed();
+              const ok = await saveCalendarNamed();
               if (ok) { setCalendarHelpOpen(true); return; }
             } catch {}
             setCalendarHelpOpen(true);
@@ -1993,7 +2001,7 @@ export default function FinalCalendarPage() {
                 callAtISO?: string;
                 notifyAtISO?: string;
               };
-              const trips: TripItem[] = getTrips();
+              const trips = await getSavedTrips();
               const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
               if (!notes.length) return null;
               const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
@@ -2486,7 +2494,8 @@ export default function FinalCalendarPage() {
             disabled={!premiumFlag}
             onClick={async () => {
               try {
-                if (saveCalendarNamed()) setCalendarHelpOpen(true);
+                const ok = await saveCalendarNamed();
+                if (ok) setCalendarHelpOpen(true);
                 await saveCalendarToFile();
               } catch {}
             }}
@@ -2532,10 +2541,50 @@ export default function FinalCalendarPage() {
                           </Button>
                         ) : null}
                         {ev.type === "transport" ? (
-                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
-                            <span className="material-symbols-outlined text-[16px]">directions</span>
-                            <span>Rota</span>
-                          </Button>
+                          <>
+                            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
+                              <span className="material-symbols-outlined text-[16px]">directions</span>
+                              <span>Rota</span>
+                            </Button>
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
+                              try {
+                                const mod = await import("@/lib/attachments-store");
+                                const files = (ev.meta as (TransportSegmentMeta & { files?: SavedFile[] }))?.files || [];
+                                let list = files as Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>;
+                                if (currentTripId) {
+                                  const m = String(ev.label || "");
+                                  const m2 = m.replace(/^Transporte:\s*/, "");
+                                  const base = m2.split(" • ")[0] || "";
+                                  const parts = base.split("→").map((s) => s.trim());
+                                  const ref = parts.length >= 2 ? `${parts[0]}->${parts[1]}` : base.replace(" → ", "->");
+                                  const more = await getRefAttachments(currentTripId, "transport", ref);
+                                  list = list.concat(more.map((a) => ({ name: a.name, type: a.type, size: a.size, id: a.id })));
+                                }
+                                const resolved = await Promise.all(list.map(async (f) => {
+                                  if (!f.dataUrl && f.id) {
+                                    const url = await mod.getObjectUrl(f.id);
+                                    return { ...f, dataUrl: url || undefined };
+                                  }
+                                  return f;
+                                }));
+                                setDocTitle(String(ev.label || "Transporte"));
+                                setDocFiles(resolved);
+                                setDocOpen(true);
+                              } catch {}
+                            }}>
+                              <span className="material-symbols-outlined text-[16px]">description</span>
+                              <span>Docs</span>
+                            </Button>
+                            {(() => {
+                              const m = String(ev.label || "");
+                              const m2 = m.replace(/^Transporte:\s*/, "");
+                              const base = m2.split(" • ")[0] || "";
+                              const parts = base.split("→").map((s) => s.trim());
+                              const ref = parts.length >= 2 ? `${parts[0]}->${parts[1]}` : base.replace(" → ", "->");
+                              const c = transportDocsCount[ref] || 0;
+                              return c ? <span className="text-[11px] text-zinc-600">{c} docs</span> : null;
+                            })()}
+                          </>
                         ) : null}
                         {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(ev)}>
@@ -2818,19 +2867,27 @@ export default function FinalCalendarPage() {
             })?.stayFiles || [];
             return files.length ? (
               <div>
-                <Button type="button" variant="outline" onClick={async () => {
-                  setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem");
-                  const mod = await import("@/lib/attachments-store");
-                  const resolved = await Promise.all(files.map(async (f) => {
-                    if (!f.dataUrl && f.id) {
-                      const url = await mod.getObjectUrl(f.id);
-                      return { ...f, dataUrl: url || undefined };
-                    }
-                    return f;
-                  }));
-                  setDocFiles(resolved);
-                  setDocOpen(true);
-                }}>{t("savedFilesTitle")}</Button>
+                  <Button type="button" variant="outline" onClick={async () => {
+                    setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem");
+                    const mod = await import("@/lib/attachments-store");
+                    let list = files;
+                    try {
+                      if (currentTripId) {
+                        const ref = `${arrivalInfo?.city || ""}|${arrivalInfo?.address || ""}`;
+                        const more = await getRefAttachments(currentTripId, "stay", ref);
+                        list = list.concat(more.map((m) => ({ name: m.name, type: m.type, size: m.size, id: m.id })));
+                      }
+                    } catch {}
+                    const resolved = await Promise.all(list.map(async (f) => {
+                      if (!f.dataUrl && f.id) {
+                        const url = await mod.getObjectUrl(f.id);
+                        return { ...f, dataUrl: url || undefined };
+                      }
+                      return f;
+                    }));
+                    setDocFiles(resolved);
+                    setDocOpen(true);
+                  }}>{t("savedFilesTitle")}</Button>
               </div>
             ) : null;
           })()}
@@ -2867,7 +2924,15 @@ export default function FinalCalendarPage() {
                   <Button type="button" variant="outline" onClick={async () => {
                     setDocTitle(goRecord!.title);
                     const mod = await import("@/lib/attachments-store");
-                    const resolved = await Promise.all((goRecord!.files || []).map(async (f) => {
+                    let list = goRecord!.files || [];
+                    try {
+                      if (currentTripId && goRecord) {
+                        const ref = `${goRecord.title}|${goRecord.date}|${goRecord.cityName}`;
+                        const more = await getRefAttachments(currentTripId, goRecord.kind, ref);
+                        list = list.concat(more.map((m) => ({ name: m.name, type: m.type, size: m.size, id: m.id })));
+                      }
+                    } catch {}
+                    const resolved = await Promise.all(list.map(async (f) => {
                       if (!f.dataUrl && f.id) {
                         const url = await mod.getObjectUrl(f.id);
                         return { ...f, dataUrl: url || undefined };

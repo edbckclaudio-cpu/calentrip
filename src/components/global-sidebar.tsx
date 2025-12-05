@@ -5,7 +5,8 @@ import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
-import { getTrips, TripItem, addTrip, removeTrip, FlightNote } from "@/lib/trips-store";
+import { FlightNote } from "@/lib/trips-store";
+import { getSavedTrips, getTripEvents, removeTrip, TripItem, migrateFromLocalStorage, initDatabase, addTrip } from "@/lib/trips-db";
 import { useTrip } from "@/lib/trip-context";
 import { findAirportByIata } from "@/lib/airports";
 
@@ -19,8 +20,12 @@ export default function GlobalSidebar() {
   const { lang, t } = useI18n();
   const { tripSearch, setTripSearch } = useTrip();
 
-  function openSaved() {
-    try { setSavedTrips(getTrips().filter((t) => t.reachedFinalCalendar)); } catch { setSavedTrips([]); }
+  async function openSaved() {
+    try { await initDatabase(); await migrateFromLocalStorage(); } catch {}
+    try {
+      const trips = await getSavedTrips();
+      setSavedTrips(trips.filter((t) => t.reachedFinalCalendar));
+    } catch { setSavedTrips([]); }
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
       const list = raw ? (JSON.parse(raw) as SavedCalendar[]) : [];
@@ -206,27 +211,29 @@ export default function GlobalSidebar() {
                       <div className="text-xs text-zinc-600 dark:text-zinc-400">{it.date} • {it.passengers} pax</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" onClick={() => {
+                      <Button type="button" variant="outline" onClick={async () => {
                         try {
-                          if (typeof window !== "undefined" && it.savedEvents) {
-                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events: it.savedEvents || [] }));
+                          const events = await getTripEvents(it.id);
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events }));
                             localStorage.setItem("calentrip:auto_load_saved", "1");
                           }
                           window.location.href = "/calendar/final";
                         } catch {}
                       }}>{t("calendarList")}</Button>
-                      <Button type="button" variant="outline" onClick={() => {
+                      <Button type="button" variant="outline" onClick={async () => {
                         try {
-                          if (typeof window !== "undefined" && it.savedEvents) {
-                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events: it.savedEvents || [] }));
+                          const events = await getTripEvents(it.id);
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events }));
                             localStorage.setItem("calentrip:auto_load_saved", "1");
                           }
                           window.location.href = "/calendar/month";
                         } catch {}
                       }}>{t("calendarMonth")}</Button>
-                      <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
-                        try { removeTrip(it.id); } catch {}
-                        try { setSavedTrips(getTrips().filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
+                      <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={async () => {
+                        try { await removeTrip(it.id); } catch {}
+                        try { const trips = await getSavedTrips(); setSavedTrips(trips.filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
                       }}>{t("deleteLabel")}</Button>
                     </div>
                   </li>

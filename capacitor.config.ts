@@ -6,6 +6,11 @@ const config: CapacitorConfig = {
   appId: 'digital.calentrip',
   appName: 'CalenTrip',
   webDir: 'out',
+  plugins: {
+    CapacitorSQLite: {
+      iosDatabaseLocation: 'Library/CapacitorDatabase',
+    },
+  },
   server: serverUrl
     ? {
         url: serverUrl,

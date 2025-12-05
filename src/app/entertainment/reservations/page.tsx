@@ -8,6 +8,7 @@ import { CalendarInput } from "@/components/ui/calendar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/lib/i18n";
+import { getSavedTrips, saveRefAttachments } from "@/lib/trips-db";
 
 type CityStay = { name?: string; checkin?: string; checkout?: string; address?: string };
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
@@ -98,6 +99,40 @@ export default function EntertainmentReservationsPage() {
     try {
       localStorage.setItem("calentrip:entertainment:records", JSON.stringify(records));
     } catch {}
+  }, [records]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const trips = await getSavedTrips();
+        const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
+        if (!cur) return;
+        const nextRecords = [...records];
+        let changed = false;
+        for (let i = 0; i < nextRecords.length; i++) {
+          const r = nextRecords[i];
+          const files = (r.files || []);
+          const pending = files.filter((f) => ("dataUrl" in f) && Boolean((f as { dataUrl?: string }).dataUrl));
+          if (pending.length) {
+            const mod = await import("@/lib/attachments-store");
+            const saved = await Promise.all(pending.map(async (f) => {
+              const obj = await mod.saveFromDataUrl(f.dataUrl!, f.name);
+              return { name: obj.name, type: obj.type, size: obj.size, id: obj.id };
+            }));
+            const ref = `${r.title}|${r.date}|${r.cityName}`;
+            await saveRefAttachments(cur.id, r.kind, ref, saved);
+            nextRecords[i] = { ...r, files: files.map((f) => {
+              const found = saved.find((s) => s.name === f.name && s.size === f.size);
+              return found ? { name: found.name, type: found.type, size: found.size, dataUrl: f.dataUrl } : f;
+            }) };
+            changed = true;
+          }
+        }
+        if (changed) {
+          try { localStorage.setItem("calentrip:entertainment:records", JSON.stringify(nextRecords)); } catch {}
+        }
+      } catch {}
+    })();
   }, [records]);
 
   useEffect(() => {
