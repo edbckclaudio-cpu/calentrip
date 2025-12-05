@@ -768,9 +768,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
           role="button"
           disabled={!canProceed}
           onClick={proceedOnce}
+          onTouchStart={proceedOnce}
           onTouchEnd={proceedOnce}
           onPointerUp={proceedOnce}
           className={(proceedPulse ? "ring-4 ring-amber-500 pulse-ring " : "") + "relative z-[1001]"}
+          style={{ touchAction: "manipulation" }}
         >
           {t("proceedToAccommodation")}
         </Button>
