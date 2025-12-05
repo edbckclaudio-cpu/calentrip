@@ -10,6 +10,7 @@ import { Table, TableHeader, TableRow, TableCell, TableBody } from "@/components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addTrip, saveTripAttachments } from "@/lib/trips-db";
+import { saveFromFile } from "@/lib/attachments-store";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/ui/toast";
 
@@ -549,13 +550,14 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const [files, setFiles] = useState([[], []] as Array<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>);
   const [nextDay, setNextDay] = useState<[boolean, boolean]>([false, false]);
   const [arrivalWarnShown, setArrivalWarnShown] = useState<[boolean, boolean]>([false, false]);
-  const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
-  useEffect(() => {
+  const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>(() => {
     try {
       const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 480px)").matches;
-      setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
-    } catch {}
-  }, []);
+      return { maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" };
+    } catch {
+      return { maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" };
+    }
+  });
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
@@ -746,8 +748,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
               onChange={(e) => {
                 const list = Array.from(e.target.files ?? []);
                 Promise.all(list.map(async (f) => {
-                  const mod = await import("@/lib/attachments-store");
-                  const saved = await mod.saveFromFile(f);
+                  const saved = await saveFromFile(f);
                   return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
                 })).then((items) => {
                   setFiles((prev) => prev.map((arr, idx) => (idx === i ? items : arr)));

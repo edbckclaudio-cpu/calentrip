@@ -117,7 +117,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ show, dismiss, minimize }}>
       {children}
-      {typeof document !== "undefined" ? createPortal(portal, document.body) : null}
+      {items.length > 0 && typeof document !== "undefined" ? createPortal(portal, document.body) : null}
     </ToastContext.Provider>
   );
 }

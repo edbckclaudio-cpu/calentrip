@@ -481,6 +481,13 @@ export default function AccommodationSearchPage() {
   }, [pathname, proceedingEntertainment]);
 
   useEffect(() => {
+    try {
+      const payload = { cities };
+      if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
+    } catch {}
+  }, [cities]);
+
+  useEffect(() => {
     (async () => {
       if (transportOpenIdx === null) return;
       showToast("Escolha o transporte entre as cidades, preenchendo origem, destino e horários. Você pode anexar a passagem.", { duration: 8000 });
