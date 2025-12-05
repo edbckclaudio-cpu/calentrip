@@ -428,10 +428,23 @@ export default function AccommodationSearchPage() {
   }
 
   function proceedToEntertainment() {
+    if (proceedingEntertainment) return;
     setProceedingEntertainment(true);
     try {
-      const data = { cities: cities };
-      if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(data));
+      const summary = { cities: cities.map((c) => ({
+        name: c.name,
+        checkin: c.checkin,
+        checkout: c.checkout,
+        address: c.address,
+        transportToNext: c.transportToNext ? {
+          mode: c.transportToNext.mode,
+          dep: c.transportToNext.dep,
+          arr: c.transportToNext.arr,
+          depTime: c.transportToNext.depTime,
+          arrTime: c.transportToNext.arrTime,
+        } : undefined,
+      })) };
+      if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(summary));
     } catch {}
     try { router.push("/entertainment/reservations"); } catch {}
     try {
@@ -1178,9 +1191,6 @@ export default function AccommodationSearchPage() {
                   style={{ touchAction: "manipulation" }}
                   disabled={proceedingEntertainment}
                   onClick={proceedToEntertainment}
-                  onTouchStart={proceedToEntertainment}
-                  onTouchEnd={proceedToEntertainment}
-                  onPointerUp={proceedToEntertainment}
                 >
                   {proceedingEntertainment ? (
                     <span className="inline-flex items-center gap-2">

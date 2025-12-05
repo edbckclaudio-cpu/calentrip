@@ -1,6 +1,16 @@
 "use client";
-let _Preferences: any = null;
-let _CapacitorSQLite: any = null;
+type PreferencesAdapter = { get: (opts: { key: string }) => Promise<{ value?: string }>; set: (opts: { key: string; value: string }) => Promise<void> };
+type CapacitorSQLiteAdapter = {
+  createConnection?: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<unknown>;
+  open: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<{
+    execute: (sql: string) => Promise<void>;
+    run: (sql: string, params?: unknown[]) => Promise<void>;
+    query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
+    close: () => Promise<void>;
+  }>;
+};
+let _Preferences: PreferencesAdapter | null = null;
+let _CapacitorSQLite: CapacitorSQLiteAdapter | null = null;
 
 export type FlightNote = {
   leg: "outbound" | "inbound";
@@ -51,17 +61,13 @@ async function getConnection(): Promise<Conn | null> {
   if (_conn) return _conn;
   try {
     if (!_CapacitorSQLite) {
-      try { const mod = await import("@capacitor-community/sqlite"); _CapacitorSQLite = (mod as any).CapacitorSQLite || mod; } catch { _useFallback = true; return null; }
+      try {
+        const mod = await import("@capacitor-community/sqlite");
+        const candidate = (mod as unknown as { CapacitorSQLite?: CapacitorSQLiteAdapter }).CapacitorSQLite ?? (mod as unknown as CapacitorSQLiteAdapter);
+        _CapacitorSQLite = candidate;
+      } catch { _useFallback = true; return null; }
     }
-    const anySql = _CapacitorSQLite as unknown as {
-      createConnection: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<unknown>;
-      open: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<{
-        execute: (sql: string) => Promise<void>;
-        run: (sql: string, params?: unknown[]) => Promise<void>;
-        query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
-        close: () => Promise<void>;
-      }>;
-    };
+    const anySql = _CapacitorSQLite as CapacitorSQLiteAdapter;
     const adapter: Conn = {
       open: async (db, encrypted = false, mode = "no-encryption", version = 1) => {
         const handle = await anySql.open({ database: db, version, encrypted, mode });
@@ -131,7 +137,13 @@ export async function initDatabase() {
 
 export async function migrateFromLocalStorage() {
   try {
-    if (!_Preferences) { try { const mod = await import("@capacitor/preferences"); _Preferences = (mod as any).Preferences || mod; } catch {} }
+    if (!_Preferences) {
+      try {
+        const mod = await import("@capacitor/preferences");
+        const candidate = (mod as unknown as { Preferences?: PreferencesAdapter }).Preferences ?? (mod as unknown as PreferencesAdapter);
+        _Preferences = candidate;
+      } catch {}
+    }
     const flag = _Preferences ? await _Preferences.get({ key: "migration_complete" }) : undefined;
     if ((flag?.value || "") === "true") return;
   } catch {}
