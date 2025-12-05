@@ -512,6 +512,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const [infoShown, setInfoShown] = useState(false);
   const [hintId, setHintId] = useState<number | null>(null);
   const proceedLockRef = useRef(false);
+  const [proceeding, setProceeding] = useState(false);
   function fmtTime(v: string) {
     const s = v.replace(/\D/g, "").slice(0, 4);
     if (!s) return "";
@@ -586,10 +587,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const canProceed = legValid(0);
 
   function proceedOnce() {
-    if (proceedLockRef.current) return;
+    if (proceedLockRef.current || proceeding) return;
     proceedLockRef.current = true;
+    setProceeding(true);
     save();
-    setTimeout(() => { proceedLockRef.current = false; }, 1000);
+    setTimeout(() => { proceedLockRef.current = false; setProceeding(false); }, 2000);
   }
 
   async function save() {
@@ -776,7 +778,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         <Button
           type="button"
           role="button"
-          disabled={!canProceed}
+          disabled={!canProceed || proceeding}
           onClick={proceedOnce}
           onTouchStart={proceedOnce}
           onTouchEnd={proceedOnce}
@@ -784,7 +786,14 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
           className={(proceedPulse ? "ring-4 ring-amber-500 pulse-ring " : "") + "relative z-[1001] pointer-events-auto"}
           style={{ touchAction: "manipulation" }}
         >
-          {t("proceedToAccommodation")}
+          {proceeding ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-4 w-4 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
+              <span>{t("proceedToAccommodation")}</span>
+            </span>
+          ) : (
+            t("proceedToAccommodation")
+          )}
         </Button>
       </div>
     </div>
