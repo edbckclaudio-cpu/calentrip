@@ -881,6 +881,7 @@ export default function AccommodationSearchPage() {
                       placeholder={t("transportOriginPlaceholder")}
                       value={transportDep}
                       disabled={transportMode === "car"}
+                      onInput={(e) => setTransportDep((e.target as HTMLInputElement).value)}
                       onFocus={() => {
                         const cityName = cities[transportOpenIdx || 0]?.name || "";
                         if (!cityName) return;
@@ -923,6 +924,7 @@ export default function AccommodationSearchPage() {
                       placeholder={t("transportDestinationPlaceholder")}
                       value={transportArr}
                       disabled={transportMode === "car"}
+                      onInput={(e) => setTransportArr((e.target as HTMLInputElement).value)}
                       onFocus={() => {
                         const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
                         if (!cityName) return;
