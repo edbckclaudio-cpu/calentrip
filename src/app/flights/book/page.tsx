@@ -580,8 +580,9 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     if (!dep || !arr) return false;
     return toMinutes(arr) < toMinutes(dep) && !nextDay[i as 0 | 1];
   };
-  const allFilled = notes.every((n) => Boolean(n.dep) && Boolean(n.arr));
-  const allValid = allFilled && !invalidLeg(0) && !invalidLeg(1);
+  const legFilled = (i: number) => Boolean(notes[i]?.dep) && Boolean(notes[i]?.arr);
+  const legValid = (i: number) => legFilled(i) && !invalidLeg(i);
+  const canProceed = legValid(0);
 
   async function save() {
     if (!tripSearch) return;
@@ -754,7 +755,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         </div>
       ))}
       <div className="flex justify-end">
-        <Button type="button" disabled={!allValid} onClick={save} className={proceedPulse ? "ring-4 ring-amber-500 pulse-ring" : undefined}>{t("proceedToAccommodation")}</Button>
+        <Button type="button" disabled={!canProceed} onClick={save} className={proceedPulse ? "ring-4 ring-amber-500 pulse-ring" : undefined}>{t("proceedToAccommodation")}</Button>
       </div>
     </div>
   );
