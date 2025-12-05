@@ -601,7 +601,7 @@ export default function AccommodationSearchPage() {
                     min={1}
                     max={8}
                     value={cityCount || ""}
-                    className={diffCityCountHighlight ? "ring-4 ring-amber-500 animate-pulse" : undefined}
+                    className={diffCityCountHighlight ? "ring-4 ring-amber-500" : undefined}
                     onChange={(e) => {
                       const v = Number(e.target.value) || 0;
                       setCityCount(v);
