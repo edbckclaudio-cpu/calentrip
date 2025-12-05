@@ -327,7 +327,22 @@ export default function FinalCalendarPage() {
           }
           const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
           const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
-          (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+          (recs || []).forEach((r) => {
+            const dSrc = (r.date || "").trim().replace(/\//g, "-");
+            const parts = dSrc.split("-");
+            const d = parts.length === 3 && parts[0].length !== 4 ? `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}` : dSrc;
+            const tSrc = (r.time || "");
+            let t: string | undefined;
+            if (tSrc) {
+              const p = tSrc.split(":");
+              if (p.length === 2) t = `${p[0].padStart(2, "0")}:${p[1].padStart(2, "0").slice(0, 2)}`;
+              else {
+                const digits = tSrc.replace(/\D/g, "");
+                t = digits.length >= 4 ? `${digits.slice(0, 2).padStart(2, "0")}:${digits.slice(2, 4).padEnd(2, "0").slice(0, 2)}` : undefined;
+              }
+            }
+            list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: d, time: t, meta: r });
+          });
           const seen = new Set<string>();
           evs = list.filter((e) => {
             const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
@@ -504,7 +519,22 @@ export default function FinalCalendarPage() {
         }
         const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
         const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
-        (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+        (recs || []).forEach((r) => {
+          const dSrc = (r.date || "").trim().replace(/\//g, "-");
+          const parts = dSrc.split("-");
+          const d = parts.length === 3 && parts[0].length !== 4 ? `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}` : dSrc;
+          const tSrc = (r.time || "");
+          let t: string | undefined;
+          if (tSrc) {
+            const p = tSrc.split(":");
+            if (p.length === 2) t = `${p[0].padStart(2, "0")}:${p[1].padStart(2, "0").slice(0, 2)}`;
+            else {
+              const digits = tSrc.replace(/\D/g, "");
+              t = digits.length >= 4 ? `${digits.slice(0, 2).padStart(2, "0")}:${digits.slice(2, 4).padEnd(2, "0").slice(0, 2)}` : undefined;
+            }
+          }
+          list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: d, time: t, meta: r });
+        });
         const seen = new Set<string>();
         const unique = list.filter((e) => {
           const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
@@ -1166,7 +1196,22 @@ export default function FinalCalendarPage() {
       }
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
       const recs: RecordItem[] = raw ? JSON.parse(raw) : [];
-      (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+      (recs || []).forEach((r) => {
+        const dSrc = (r.date || "").trim().replace(/\//g, "-");
+        const parts = dSrc.split("-");
+        const d = parts.length === 3 && parts[0].length !== 4 ? `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}` : dSrc;
+        const tSrc = (r.time || "");
+        let t: string | undefined;
+        if (tSrc) {
+          const p = tSrc.split(":");
+          if (p.length === 2) t = `${p[0].padStart(2, "0")}:${p[1].padStart(2, "0").slice(0, 2)}`;
+          else {
+            const digits = tSrc.replace(/\D/g, "");
+            t = digits.length >= 4 ? `${digits.slice(0, 2).padStart(2, "0")}:${digits.slice(2, 4).padEnd(2, "0").slice(0, 2)}` : undefined;
+          }
+        }
+        list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: d, time: t, meta: r });
+      });
       const seen = new Set<string>();
       const unique = list.filter((e) => {
         const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
