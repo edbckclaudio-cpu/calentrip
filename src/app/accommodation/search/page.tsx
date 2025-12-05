@@ -881,6 +881,12 @@ export default function AccommodationSearchPage() {
                       placeholder={t("transportOriginPlaceholder")}
                       value={transportDep}
                       disabled={transportMode === "car"}
+                      inputMode="text"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      enterKeyHint="next"
+                      style={{ touchAction: "manipulation" }}
+                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => setTransportDep((e.target as HTMLInputElement).value)}
                       onFocus={() => {
                         const cityName = cities[transportOpenIdx || 0]?.name || "";
@@ -924,6 +930,12 @@ export default function AccommodationSearchPage() {
                       placeholder={t("transportDestinationPlaceholder")}
                       value={transportArr}
                       disabled={transportMode === "car"}
+                      inputMode="text"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      enterKeyHint="next"
+                      style={{ touchAction: "manipulation" }}
+                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => setTransportArr((e.target as HTMLInputElement).value)}
                       onFocus={() => {
                         const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
