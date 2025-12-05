@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarInput } from "@/components/ui/calendar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { findAirportByIata, getCountryByIata } from "@/lib/airports";
 import { useToast } from "@/components/ui/toast";
@@ -17,6 +17,7 @@ export default function AccommodationSearchPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { show, dismiss } = useToast();
+  const pathname = usePathname();
   const initialCity = useMemo(() => {
     if (!tripSearch) return "";
     if (tripSearch.mode === "same") return tripSearch.destination ?? "";
@@ -469,6 +470,15 @@ export default function AccommodationSearchPage() {
     })();
     try { setTimeout(() => setProceedingEntertainment(false), 2500); } catch {}
   }
+
+  useEffect(() => {
+    if (proceedingEntertainment) {
+      try {
+        const ok = (pathname || "").includes("/entertainment/reservations");
+        if (ok) setProceedingEntertainment(false);
+      } catch {}
+    }
+  }, [pathname, proceedingEntertainment]);
 
   useEffect(() => {
     (async () => {
