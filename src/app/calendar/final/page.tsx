@@ -74,17 +74,30 @@ export default function FinalCalendarPage() {
   const { data: session, status } = useSession();
   const { lang, t } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
-  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
+  
   const [premiumFlag, setPremiumFlag] = useState<boolean>(false);
   const [premiumUntil, setPremiumUntil] = useState<string>("");
   const [editOpen, setEditOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try { await migrateFromLocalStorage(); } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const all: TripItem[] = await getSavedTrips();
+        if (!all.length) { setCurrentTripId(null); return; }
+        const sorted = [...all].sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0));
+        const sel = sorted.find((t) => t.reachedFinalCalendar) || sorted[0];
+        setCurrentTripId(sel.id);
+      } catch { setCurrentTripId(null); }
     })();
   }, []);
 
