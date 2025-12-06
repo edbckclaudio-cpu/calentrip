@@ -1218,6 +1218,57 @@ export default function FinalCalendarPage() {
     }
   }
 
+  async function chooseStayCandidate(i: number, c: { name: string; lat: number; lon: number }) {
+    setStayChosenIdx(i);
+    try {
+      const pos = await new Promise((resolve) => {
+        try {
+          if (!ensureLocationConsent()) { resolve(null); return; }
+          navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+        } catch { resolve(null); }
+      });
+      let gmapsUrl: string | undefined;
+      let uberUrl: string | undefined;
+      let distanceKm: number | undefined;
+      let drivingMin: number | undefined;
+      let walkingMin: number | undefined;
+      const cityForSearch = (stayInfo?.origin || "").split(",")[0] || "";
+      if (pos) {
+        const cur = { lat: (pos as GeolocationPosition).coords.latitude, lon: (pos as GeolocationPosition).coords.longitude };
+        const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`;
+        const resD = await fetch(osrmDrive); const jsD = await resD.json(); const rD = jsD?.routes?.[0];
+        if (rD) { distanceKm = Math.round((rD.distance ?? 0) / 1000); drivingMin = Math.round((rD.duration ?? 0) / 60); }
+        try { const resW = await fetch(`https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`); const jsW = await resW.json(); const rW = jsW?.routes?.[0]; if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60); } catch {}
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(c.name)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
+      } else {
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.name)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
+      }
+      const trafficFactor = 1.3;
+      const drivingWithTrafficMin = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+      let callTime: string | undefined; let notifyAt: string | undefined;
+      if (editIdx !== null) {
+        const ev = events[editIdx];
+        const [h, m] = (ev?.time || "00:00").split(":");
+        const depDT = new Date(`${ev?.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
+        const bufferMin = 60;
+        const travelMs = ((drivingWithTrafficMin ?? drivingMin ?? 30) + bufferMin) * 60 * 1000;
+        const callAt = new Date(depDT.getTime() - travelMs);
+        const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        callTime = fmt(callAt);
+        notifyAt = `${callAt.toLocaleDateString()} ${fmt(callAt)}`;
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
+          const map = raw ? JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }> : {};
+          map[cityForSearch] = { name: c.name, lat: c.lat, lon: c.lon };
+          if (typeof window !== "undefined") localStorage.setItem("calentrip:bus_station_selection", JSON.stringify(map));
+        } catch {}
+      }
+      setStayInfo((prev) => ({ ...(prev || {}), destination: c.name, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, gmapsUrl, uberUrl, callTime, notifyAt }));
+    } catch {}
+  }
+
   async function openCheckinDrawer(item: EventItem) {
     if (item.type !== "stay") return;
     const m = item.meta as { city?: string; address?: string; kind: "checkin" | "checkout" } | undefined;
