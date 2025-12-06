@@ -540,7 +540,7 @@ export default function AccommodationSearchPage() {
         osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox.join("%2C")}&layer=mapnik`;
       }
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originQ)}&destination=${encodeURIComponent(destQ)}`;
-      const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originQ)}/${encodeURIComponent(destQ)}`;
+      const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originQ)}/${encodeURIComponent(destQ)}?lang=pt-BR&currency=BRL${o && d ? `&sLat=${o.lat}&sLng=${o.lon}&dLat=${d.lat}&dLng=${d.lon}` : ""}`;
       setTransportRoute({ distanceKm, durationMin, gmapsUrl, r2rUrl, osmUrl });
       const suggestAir = async (city: string) => {
         const { searchAirportsAsync } = await import("@/lib/airports");
@@ -927,7 +927,12 @@ export default function AccommodationSearchPage() {
                 <iframe title="map" src={transportRoute.osmUrl} className="mb-3 h-32 md:h-40 w-full rounded-md border" />
               ) : null}
               <ul className="space-y-1 mb-2">
-                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={transportRoute?.r2rUrl} target="_blank" rel="noopener noreferrer">Rome2Rio</a></li>
+                <li>
+                  <a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700 flex items-center gap-1" href={transportRoute?.r2rUrl} target="_blank" rel="noopener noreferrer">
+                    <span className="material-symbols-outlined text-[16px]">alt_route</span>
+                    <span>Opções de rota (Rome2Rio)</span>
+                  </a>
+                </li>
                 <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">Rentalcars</a></li>
                 <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={transportRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
               </ul>

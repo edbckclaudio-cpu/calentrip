@@ -46,7 +46,7 @@ export default function Header() {
         <button type="button" aria-label="Menu" className="inline-flex h-8 w-8 items-center justify-center" onClick={() => setOpenNav(true)}>
           <span className="material-symbols-outlined text-[24px] text-[var(--brand)]">menu</span>
         </button>
-        <Link href="/flights/search" className="flex items-center gap-2">
+        <Link href="/flights/search" prefetch={false} className="flex items-center gap-2">
           <Image src="/icon-192.png" alt="CalenTrip" width={24} height={24} className="h-6 w-6" />
           <span className="text-sm font-semibold text-[var(--brand)]">{t("appName")}</span>
         </Link>

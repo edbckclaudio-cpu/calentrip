@@ -34,7 +34,7 @@ export default function BottomNav() {
           const active = pathname.startsWith(it.href);
           return (
             <li key={it.href} className="flex items-center justify-center py-2">
-              <Link href={it.href} className="flex flex-col items-center gap-1 text-xs">
+              <Link href={it.href} prefetch={it.href === "/flights/search" ? false : undefined} className="flex flex-col items-center gap-1 text-xs">
                 <NavIcon name={it.name} active={active} />
                 <span className={active ? "text-[var(--brand)]" : "text-zinc-600"}>{it.label}</span>
               </Link>
