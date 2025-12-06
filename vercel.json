@@ -2,5 +2,8 @@
   "version": 2,
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_ENABLE_DEMO_AUTH": "1"
+  }
 }
