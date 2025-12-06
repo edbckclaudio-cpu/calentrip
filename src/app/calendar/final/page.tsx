@@ -815,15 +815,16 @@ export default function FinalCalendarPage() {
       }
       const all: TripItem[] = getTrips();
       let trips: TripItem[] = [];
+      let tsObj: any = null;
       try {
         const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-        const ts = rawTs ? JSON.parse(rawTs) : null;
-        if (ts) {
-          const isSame = ts.mode === "same";
-          const origin = isSame ? ts.origin : ts.outbound?.origin;
-          const destination = isSame ? ts.destination : ts.outbound?.destination;
-          const date = isSame ? ts.departDate : ts.outbound?.date;
-          const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+        tsObj = rawTs ? JSON.parse(rawTs) : null;
+        if (tsObj) {
+          const isSame = tsObj.mode === "same";
+          const origin = isSame ? tsObj.origin : tsObj.outbound?.origin;
+          const destination = isSame ? tsObj.destination : tsObj.outbound?.destination;
+          const date = isSame ? tsObj.departDate : tsObj.outbound?.date;
+          const pax = (() => { const p = tsObj.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
           const title = origin && destination ? `${origin} → ${destination}` : "";
           const matchIdx = all.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
           if (matchIdx >= 0) trips = [all[matchIdx]];
@@ -855,6 +856,22 @@ export default function FinalCalendarPage() {
           });
         }
       });
+      if (!list.some((e) => e.type === "flight") && tsObj) {
+        const isSame = tsObj.mode === "same";
+        if (isSame) {
+          const o = tsObj.origin?.trim();
+          const d = tsObj.destination?.trim();
+          const dd = tsObj.departDate?.trim();
+          const rd = tsObj.returnDate?.trim();
+          if (o && d && dd) list.push({ type: "flight", label: `Voo de ida: ${o} → ${d}` , date: dd, time: tsObj.departTime || undefined });
+          if (o && d && rd) list.push({ type: "flight", label: `Voo de volta: ${d} → ${o}` , date: rd, time: tsObj.returnTime || undefined });
+        } else if (tsObj?.outbound && tsObj?.inbound) {
+          const ob = tsObj.outbound;
+          const ib = tsObj.inbound;
+          if (ob?.origin && ob?.destination && ob?.date) list.push({ type: "flight", label: `Voo de ida: ${ob.origin} → ${ob.destination}`, date: ob.date, time: ob.time || undefined });
+          if (ib?.origin && ib?.destination && ib?.date) list.push({ type: "flight", label: `Voo de volta: ${ib.origin} → ${ib.destination}`, date: ib.date, time: ib.time || undefined });
+        }
+      }
       const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
       const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
       const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
