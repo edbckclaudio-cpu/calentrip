@@ -57,7 +57,7 @@ export default function FinalCalendarPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerData, setDrawerData] = useState<{ originIata: string; departureDate: string; departureTime: string } | null>(null);
-  const [transportInfo, setTransportInfo] = useState<{ distanceKm?: number; durationMin?: number; durationWithTrafficMin?: number; gmapsUrl?: string; r2rUrl?: string; uberUrl?: string; airportName?: string; callTime?: string; notifyAt?: string } | null>(null);
+  const [transportInfo, setTransportInfo] = useState<{ distanceKm?: number; durationMin?: number; durationWithTrafficMin?: number; gmapsUrl?: string; r2rUrl?: string; uberUrl?: string; airportName?: string; arrivalByTime?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [stayDrawerOpen, setStayDrawerOpen] = useState(false);
   const [stayLoading, setStayLoading] = useState(false);
@@ -1034,11 +1034,12 @@ export default function FinalCalendarPage() {
       if (fn.departureTime && fn.date) {
         const [h, m] = (fn.departureTime || "00:00").split(":");
         const dt = new Date(`${fn.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
-        const arriveTarget = new Date(dt.getTime() - 3 * 60 * 60 * 1000);
+    const arriveTarget = new Date(dt.getTime() - 3 * 60 * 60 * 1000);
         const travelMs = (durationWithTrafficMin ?? durationMin ?? 60) * 60 * 1000;
         const callAt = new Date(arriveTarget.getTime() - travelMs);
         const notifyAtDate = new Date(callAt.getTime() - 2 * 60 * 60 * 1000);
         const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        const arriveBy = fmt(arriveTarget);
         callTime = fmt(callAt);
         notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
         try {
@@ -1062,7 +1063,7 @@ export default function FinalCalendarPage() {
           if (typeof window !== "undefined") localStorage.setItem("calentrip:transport_notify", JSON.stringify(map));
         } catch {}
       }
-      setTransportInfo({ distanceKm, durationMin, durationWithTrafficMin, gmapsUrl, r2rUrl, uberUrl, airportName: originQ, callTime, notifyAt });
+      setTransportInfo({ distanceKm, durationMin, durationWithTrafficMin, gmapsUrl, r2rUrl, uberUrl, airportName: originQ, arrivalByTime: arriveBy, callTime, notifyAt });
       try {
         const allTrips: TripItem[] = getTrips();
         const match = allTrips.find((t) => (t.flightNotes || []).some((n) => n.leg === "outbound" && n.origin === fn.origin && n.destination === fn.destination && n.date === fn.date));
@@ -2747,6 +2748,10 @@ export default function FinalCalendarPage() {
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
                             <span>Aeroporto retorno</span>
                           </Button>
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
+                            <span className="material-symbols-outlined text-[16px]">local_taxi</span>
+                            <span>Ir para aeroporto</span>
+                          </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature && returnFiles.length ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
@@ -2882,7 +2887,7 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Deslocamento até o aeroporto</DialogHeader>
+        <DialogHeader>Transporte para o Aeroporto</DialogHeader>
             <div className="space-y-3 text-sm">
               {loading ? (
                 <div>Calculando…</div>
@@ -2906,6 +2911,8 @@ export default function FinalCalendarPage() {
                   <div>
                     <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Uber</a>
                   </div>
+                  <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
+                  <div>Chegar às: {transportInfo?.arrivalByTime || "—"}</div>
                   {outboundFiles.length ? (
                     <div>
                       <Button type="button" variant="outline" onClick={async () => {
