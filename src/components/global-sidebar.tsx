@@ -5,8 +5,7 @@ import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
-import { FlightNote } from "@/lib/trips-store";
-import { getSavedTrips, getTripEvents, removeTrip, TripItem, migrateFromLocalStorage, initDatabase, addTrip } from "@/lib/trips-db";
+import { getSavedTrips, getTripEvents, removeTrip, TripItem, migrateFromLocalStorage, initDatabase, addTrip, FlightNote } from "@/lib/trips-db";
 import { useTrip } from "@/lib/trip-context";
 import { findAirportByIata } from "@/lib/airports";
 
@@ -53,12 +52,12 @@ export default function GlobalSidebar() {
                 )}
                 {sideOpen ? (
                   <div className="flex-1">
-                    <div className="text-sm font-semibold">{session?.user?.name || t("userWord")}</div>
+                    <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
-                    <div className="mt-1 text-[10px] text-zinc-500">{t("language")}: {lang.toUpperCase()}</div>
+                    <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("viewProfile")}</button>
-                      <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
+                      <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Ver perfil</button>
+                      <button type="button" className="text-xs" onClick={() => signOut()}>Sair</button>
                     </div>
                   </div>
                 ) : null}
@@ -68,11 +67,11 @@ export default function GlobalSidebar() {
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">PF</span>
                 {sideOpen ? (
                   <div className="flex-1">
-                    <div className="text-sm font-semibold">{t("signInTitle")}</div>
-                    <div className="mt-1 text-[10px] text-zinc-500">{t("language")}: {lang.toUpperCase()}</div>
+                    <div className="text-sm font-semibold">Entrar</div>
+                    <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: typeof window !== "undefined" ? window.location.href : "/flights/search" })}>{t("googleWord")}</button>
-                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: typeof window !== "undefined" ? window.location.href : "/flights/search" })}>{t("demoWord")}</button>
+                      <button type="button" className="text-xs" onClick={() => signIn("google")}>Google</button>
+                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>Demo</button>
                     </div>
                   </div>
                 ) : null}
@@ -120,33 +119,34 @@ export default function GlobalSidebar() {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">travel_explore</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">{t("startNewSearch")}</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Iniciar nova pesquisa</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
-            openSaved();
+            try { if (typeof window !== "undefined") localStorage.setItem("calentrip:open_saved_drawer", "1"); } catch {}
+            try { window.location.href = "/calendar/final"; } catch {}
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">{t("savedSearchesTitle")}</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Pesquisas salvas</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">{t("calendarList")}</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">{t("calendarMonth")}</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Calendário mensal</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">account_circle</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">{t("profile")}</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Perfil</span> : null}
           </button>
         </div>
       </div>
@@ -155,10 +155,10 @@ export default function GlobalSidebar() {
       ) : null}
 
       <Dialog open={savedOpen} onOpenChange={setSavedOpen} placement="bottom">
-      <DialogHeader>{t("savedSearchesTitle")}</DialogHeader>
+      <DialogHeader>Pesquisas salvas</DialogHeader>
       <div className="p-4 md:p-6 space-y-4 text-sm max-h-[70vh] overflow-y-auto">
           <div className="rounded border p-3">
-            <div className="font-semibold mb-1">{t("savedCalendarsTitle")}</div>
+            <div className="font-semibold mb-1">Calendários salvos</div>
             {savedCalendars.length ? (
               <ul className="space-y-2">
                 {savedCalendars.map((c, idx) => (
@@ -176,7 +176,7 @@ export default function GlobalSidebar() {
                           }
                           window.location.href = "/calendar/final";
                         } catch {}
-                      }}>{t("loadLabel")}</Button>
+                      }}>Carregar</Button>
                       <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
                         try {
                           const ok1 = confirm(`Deseja excluir o calendário \"${c.name}\"?`);
@@ -189,19 +189,19 @@ export default function GlobalSidebar() {
                           localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(next));
                           setSavedCalendars(next);
                         } catch {}
-                      }}>{t("deleteLabel")}</Button>
+                      }}>Excluir</Button>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="text-zinc-600">{t("noSavedCalendarsLabel")}</div>
+              <div className="text-zinc-600">Nenhum calendário salvo.</div>
             )}
           </div>
           <div className="rounded border p-3">
-            <div className="font-semibold mb-1">{t("savedSearchesTitle")}</div>
+            <div className="font-semibold mb-1">Pesquisas salvas</div>
             {savedTrips.length === 0 ? (
-              <div className="text-zinc-600">{t("noSavedSearchesLabel")}</div>
+              <div className="text-zinc-600">Nenhuma viagem salva.</div>
             ) : (
               <ul className="space-y-2">
                 {savedTrips.map((it) => (
@@ -234,7 +234,7 @@ export default function GlobalSidebar() {
                       <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={async () => {
                         try { await removeTrip(it.id); } catch {}
                         try { const trips = await getSavedTrips(); setSavedTrips(trips.filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
-                      }}>{t("deleteLabel")}</Button>
+                      }}>Apagar</Button>
                     </div>
                   </li>
                 ))}
@@ -242,7 +242,7 @@ export default function GlobalSidebar() {
             )}
           </div>
           <DialogFooter>
-            <Button type="button" onClick={() => setSavedOpen(false)}>{t("close")}</Button>
+            <Button type="button" onClick={() => setSavedOpen(false)}>Fechar</Button>
           </DialogFooter>
         </div>
       </Dialog>
