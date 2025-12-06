@@ -515,7 +515,8 @@ export default function FinalCalendarPage() {
         const trips: TripItem[] = await getSavedTripsDb();
         const current = trips.length ? trips[0] : null;
         if (!current) return;
-        const premium = isTripPremium(current.id);
+        const isDemo = (session?.user?.email || "").toLowerCase() === "demo@calentrip.com";
+        const premium = isTripPremium(current.id) || isDemo;
         setCurrentTripId(current.id);
         setCurrentSavedName(current.savedCalendarName || "");
         setPremiumFlag(premium);
