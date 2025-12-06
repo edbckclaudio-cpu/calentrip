@@ -255,7 +255,7 @@ export default function MonthCalendarPage() {
       setEvents(unique);
     } catch {}
     })();
-  }, [status]);
+  }, [status, currentTripId]);
 
   useEffect(() => {
     (async () => {
@@ -408,9 +408,7 @@ export default function MonthCalendarPage() {
                   const origin = isSame ? ts.origin : ts.outbound?.origin;
                   const destination = isSame ? ts.destination : ts.outbound?.destination;
                   const date = isSame ? ts.departDate : ts.outbound?.date;
-                  const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
                   if (origin && destination && date) {
-                    const title = `${origin} → ${destination}`;
                     if (currentTripId) { await updateTrip(currentTripId, { reachedFinalCalendar: true }); }
                   }
                 }

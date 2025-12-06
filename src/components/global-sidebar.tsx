@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
-import { getSavedTrips, getTripEvents, removeTrip, TripItem, migrateFromLocalStorage, initDatabase, addTrip, FlightNote } from "@/lib/trips-db";
+import { getSavedTrips, getTripEvents, removeTrip, TripItem, addTrip, FlightNote } from "@/lib/trips-db";
 import { useTrip } from "@/lib/trip-context";
 import { findAirportByIata } from "@/lib/airports";
 
@@ -19,19 +19,6 @@ export default function GlobalSidebar() {
   const { lang, t } = useI18n();
   const { tripSearch, setTripSearch } = useTrip();
 
-  async function openSaved() {
-    try { await initDatabase(); await migrateFromLocalStorage(); } catch {}
-    try {
-      const trips = await getSavedTrips();
-      setSavedTrips(trips.filter((t) => t.reachedFinalCalendar));
-    } catch { setSavedTrips([]); }
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
-      const list = raw ? (JSON.parse(raw) as SavedCalendar[]) : [];
-      setSavedCalendars(list);
-    } catch { setSavedCalendars([]); }
-    setSavedOpen(true);
-  }
 
   return (
     <>

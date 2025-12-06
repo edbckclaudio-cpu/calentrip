@@ -28,13 +28,13 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="hidden">
-      <ul className="grid grid-cols-4">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 sm:hidden border-t border-[var(--border)] bg-white/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+      <ul className="grid grid-cols-4 px-2 py-2">
         {items.map((it) => {
-          const active = pathname.startsWith(it.href);
+          const active = (pathname || "").startsWith(it.href);
           return (
-            <li key={it.href} className="flex items-center justify-center py-2">
-              <Link href={it.href} prefetch={it.href === "/flights/search" ? false : undefined} className="flex flex-col items-center gap-1 text-xs">
+            <li key={it.href} className="flex items-center justify-center">
+              <Link href={it.href} prefetch={it.href === "/flights/search" ? false : undefined} aria-current={active ? "page" : undefined} className="flex flex-col items-center gap-1 text-xs">
                 <NavIcon name={it.name} active={active} />
                 <span className={active ? "text-[var(--brand)]" : "text-zinc-600"}>{it.label}</span>
               </Link>

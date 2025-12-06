@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
-import { isTripPremium, setTripPremium, computeExpiryFromData } from "@/lib/premium";
+import { isTripPremium } from "@/lib/premium";
  
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,13 +70,13 @@ export default function FinalCalendarPage() {
   const [arrivalInfo, setArrivalInfo] = useState<{ city?: string; address?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
   const { show } = useToast();
   const toastOnce = useRef<Set<string>>(new Set());
-  const showOnce = (message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) => {
+  const showOnce = useCallback((message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) => {
     if (toastOnce.current.has(message)) return 0;
     toastOnce.current.add(message);
     const id = show(message, opts);
     try { setTimeout(() => { try { toastOnce.current.delete(message); } catch {} }, 15000); } catch {}
     return id;
-  };
+  }, [show]);
   const [locConsent, setLocConsent] = useState<"granted" | "denied" | "skipped" | "default">("default");
   const [locModalOpen, setLocModalOpen] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
@@ -97,7 +97,6 @@ export default function FinalCalendarPage() {
   const [sideOpen, setSideOpen] = useState(false);
   const [calendarHelpOpen, setCalendarHelpOpen] = useState(false);
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
-  const [savedCalendar, setSavedCalendar] = useState<{ events?: EventItem[] } | null>(null);
   const [savedTripsList, setSavedTripsList] = useState<TripItem[]>([]);
   const [savedCalendarsList, setSavedCalendarsList] = useState<Array<{ name: string; events: EventItem[]; savedAt?: string }>>([]);
   const [filesDrawerOpen, setFilesDrawerOpen] = useState(false);
@@ -127,14 +126,14 @@ export default function FinalCalendarPage() {
     } catch { show("Erro ao salvar arquivo", { variant: "error" }); }
   }
 
-  async function openFilesDrawer() {
+  const openFilesDrawer = useCallback(async () => {
     try {
       if (Capacitor.getPlatform() !== "android") { show("Disponível no app Android", { variant: "info" }); return; }
       const r = await StorageFiles.list();
       setFilesList(r?.files || []);
       setFilesDrawerOpen(true);
     } catch { setFilesList([]); setFilesDrawerOpen(true); }
-  }
+  }, [show]);
 
   async function loadFile(name: string) {
     try {
@@ -290,18 +289,13 @@ export default function FinalCalendarPage() {
         openFilesDrawer();
       }
     } catch {}
-  }, []);
+  }, [openFilesDrawer]);
 
   useEffect(() => {
     try {
       const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_saved_drawer") : null;
       if (flag === "1") {
         localStorage.removeItem("calentrip:open_saved_drawer");
-        try {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
-          const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
-          setSavedCalendar(sc);
-        } catch { setSavedCalendar(null); }
         (async () => {
           try {
             await initDatabaseDb();
@@ -318,7 +312,7 @@ export default function FinalCalendarPage() {
         setSavedDrawerOpen(true);
       }
     } catch {}
-  }, []);
+  }, [openFilesDrawer]);
 
   useEffect(() => {
     try {
@@ -536,7 +530,7 @@ export default function FinalCalendarPage() {
         else setGating(null);
       } catch {}
     })();
-  }, [status]);
+  }, [status, session]);
 
   const lastInboundSignature = useMemo(() => {
     let sig = "";
@@ -914,13 +908,6 @@ export default function FinalCalendarPage() {
               seenFlights.add(sig);
               list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
             }
-            const addDays = (d: string, days: number) => {
-              const dt = new Date(`${d}T00:00:00`);
-              if (Number.isNaN(dt.getTime())) return d;
-              dt.setDate(dt.getDate() + days);
-              const p = (n: number) => String(n).padStart(2, "0");
-              return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
-            };
             // Removemos a criação de eventos de chegada para evitar duplicação visual
           });
         }
@@ -1337,56 +1324,7 @@ export default function FinalCalendarPage() {
     }
   }
 
-  async function chooseStayCandidate(i: number, c: { name: string; lat: number; lon: number }) {
-    setStayChosenIdx(i);
-    try {
-      const pos = await new Promise((resolve) => {
-        try {
-          if (!ensureLocationConsent()) { resolve(null); return; }
-          navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
-        } catch { resolve(null); }
-      });
-      let gmapsUrl: string | undefined;
-      let uberUrl: string | undefined;
-      let distanceKm: number | undefined;
-      let drivingMin: number | undefined;
-      let walkingMin: number | undefined;
-      const cityForSearch = (stayInfo?.origin || "").split(",")[0] || "";
-      if (pos) {
-        const cur = { lat: (pos as GeolocationPosition).coords.latitude, lon: (pos as GeolocationPosition).coords.longitude };
-        const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`;
-        const resD = await fetch(osrmDrive); const jsD = await resD.json(); const rD = jsD?.routes?.[0];
-        if (rD) { distanceKm = Math.round((rD.distance ?? 0) / 1000); drivingMin = Math.round((rD.duration ?? 0) / 60); }
-        try { const resW = await fetch(`https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`); const jsW = await resW.json(); const rW = jsW?.routes?.[0]; if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60); } catch {}
-        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(c.name)}`;
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
-      } else {
-        gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.name)}`;
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
-      }
-      const trafficFactor = 1.3;
-      const drivingWithTrafficMin = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
-      let callTime: string | undefined; let notifyAt: string | undefined;
-      if (editIdx !== null) {
-        const ev = events[editIdx];
-        const [h, m] = (ev?.time || "00:00").split(":");
-        const depDT = new Date(`${ev?.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
-        const bufferMin = 60;
-        const travelMs = ((drivingWithTrafficMin ?? drivingMin ?? 30) + bufferMin) * 60 * 1000;
-        const callAt = new Date(depDT.getTime() - travelMs);
-        const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-        callTime = fmt(callAt);
-        notifyAt = `${callAt.toLocaleDateString()} ${fmt(callAt)}`;
-        try {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
-          const map = raw ? JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }> : {};
-          map[cityForSearch] = { name: c.name, lat: c.lat, lon: c.lon };
-          if (typeof window !== "undefined") localStorage.setItem("calentrip:bus_station_selection", JSON.stringify(map));
-        } catch {}
-      }
-      setStayInfo((prev) => ({ ...(prev || {}), destination: c.name, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, gmapsUrl, uberUrl, callTime, notifyAt }));
-    } catch {}
-  }
+  // Removed unused chooseStayCandidate to resolve lint warning
 
   async function openCheckinDrawer(item: EventItem) {
     if (item.type !== "stay") return;
@@ -1536,14 +1474,7 @@ export default function FinalCalendarPage() {
     }
   }
 
-  const lastCheckoutIdx = useMemo(() => {
-    let idx = -1;
-    events.forEach((e, i) => {
-      const m = e.meta as { kind?: string } | undefined;
-      if (e.type === "stay" && m?.kind === "checkout") idx = i;
-    });
-    return idx;
-  }, [events]);
+  // Removed unused lastCheckoutIdx to resolve lint warning
 
   const openReturnAirportDrawer = useCallback(async () => {
     if (!summaryCities.length) return;
@@ -1724,7 +1655,7 @@ export default function FinalCalendarPage() {
     } finally {
       setReturnLoading(false);
     }
-  }, [summaryCities]);
+  }, [summaryCities, ensureLocationConsent, showOnce]);
 
   useEffect(() => {
     if (!summaryCities.length) return;
@@ -1785,7 +1716,7 @@ export default function FinalCalendarPage() {
     return () => {
       if (returnTimer.current) { try { clearTimeout(returnTimer.current); } catch {} returnTimer.current = null; }
     };
-  }, [summaryCities, openReturnAirportDrawer]);
+  }, [summaryCities, openReturnAirportDrawer, showOnce]);
 
   useEffect(() => {
     const checkins = events.filter((e) => {
@@ -1882,7 +1813,7 @@ export default function FinalCalendarPage() {
       });
       arrivalWatchIds.current = {};
     };
-  }, [events]);
+  }, [events, ensureLocationConsent, show, showOnce]);
 
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
@@ -2335,7 +2266,7 @@ export default function FinalCalendarPage() {
               return parts.join("\r\n ");
             }
             const returnDetails = await computeReturnDetails();
-            const ua = uaHeader;
+            // removed unused ua variable
             const isAndroid = isAndroidHeader;
             const tzidHeader = tzHeader;
             const useTZID = !isAndroid;
@@ -2752,7 +2683,7 @@ export default function FinalCalendarPage() {
                             </Button>
                             <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
                               <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                              <span>Ir para aeroporto</span>
+                              <span>Aeroporto</span>
                             </Button>
                           </>
                         ) : null}
@@ -2896,7 +2827,7 @@ export default function FinalCalendarPage() {
                 <div>Calculando…</div>
               ) : (
                 <>
-                  <div>Destino: {transportInfo?.airportName || drawerData?.originIata}</div>
+                  <div>Destino: {drawerData?.originIata || "—"}</div>
               <div>Distância (a partir da sua localização): {transportInfo?.distanceKm ? `${transportInfo.distanceKm} km` : "—"}</div>
               {!transportInfo?.distanceKm && locConsent !== "granted" ? (
                 <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
@@ -2915,7 +2846,6 @@ export default function FinalCalendarPage() {
                     <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Uber</a>
                   </div>
                   <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
-                  <div>Chegar às: {transportInfo?.arrivalByTime || "—"}</div>
                   {outboundFiles.length ? (
                     <div>
                       <Button type="button" variant="outline" onClick={async () => {
@@ -2933,7 +2863,7 @@ export default function FinalCalendarPage() {
                       }}>Documentos salvos</Button>
                     </div>
                   ) : null}
-                  <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
+                  
                   <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
                   <div>Notificação programada: {transportInfo?.notifyAt ? `às ${transportInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">

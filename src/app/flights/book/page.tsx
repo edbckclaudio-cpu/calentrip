@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useTrip } from "@/lib/trip-context";
-import type { TripSearchSame, TripSearchDifferent } from "@/lib/trip-context";
 import { getCountryByIata } from "@/lib/airports";
 import { useRouter } from "next/navigation";
 import { useMemo, useEffect, useState, useRef } from "react";
@@ -41,7 +40,6 @@ function buildLinksSame(
   const google = `https://${gDomain}/travel/flights?q=${q}&d=${depart}&r=${ret}&cabin=ECONOMY&time=any&adults=${adults}`;
   const kayak = `https://www.kayak.com/flights/${origin}-${destination}/${depart}/${destination}-${origin}/${ret}?adults=${adults}&children=${children}&infants=${infants}`;
   const booking = `https://www.booking.com/flights/${origin}-${destination}/${depart}?return=${ret}&adults=${adults}`;
-  const viajanet = `https://www.viajanet.com.br/busca?origin=${origin}&destination=${destination}&depart=${depart}&ret=${ret}&adults=${adults}&children=${children}&infants=${infants}`;
   const skyscannerDate = (d: string) => d.replace(/-/g, "");
   const sky = `https://www.skyscanner.com.br/transporte/voos/${origin}/${destination}/${skyscannerDate(depart)}/${skyscannerDate(ret)}/?adults=${adults}&children=${children}&infants=${infants}`;
   return [
@@ -80,12 +78,6 @@ function buildLinksOne(
 }
 
  
-
-function addQuery(base: string, origin: string, destination: string, depart: string, ret: string, adults: number) {
-  const q = new URLSearchParams({ origin, destination, departureDate: depart, returnDate: ret, adults: String(adults) });
-  const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}${q.toString()}`;
-}
 
 export default function BookFlightsPage() {
   const { tripSearch, setTripSearch } = useTrip();

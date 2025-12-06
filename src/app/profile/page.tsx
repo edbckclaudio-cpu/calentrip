@@ -1,6 +1,5 @@
 "use client";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useTrip } from "@/lib/trip-context";
 import { getTrips, TripItem } from "@/lib/trips-store";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { useI18n } from "@/lib/i18n";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
-  const { tripSearch } = useTrip();
   const [trips, setTrips] = useState<TripItem[]>([]);
   const currentTrip = useMemo(() => {
     const all = trips;

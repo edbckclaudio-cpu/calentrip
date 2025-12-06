@@ -12,9 +12,9 @@ const ToastContext = createContext<{
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  const idRef = useRef(0);
   const [vvTop, setVvTop] = useState(0);
   const [vvLeft, setVvLeft] = useState(0);
-  const idRef = useRef(0);
   const canPortal = typeof document !== "undefined";
   useEffect(() => {
     try {
@@ -40,7 +40,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   function show(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) {
-    idRef.current += 1;
+    idRef.current = (idRef.current + 1) || 1;
     const id = idRef.current;
     const variant = opts?.variant ?? "info";
     const duration = opts?.sticky ? undefined : (opts?.duration ?? 13000);

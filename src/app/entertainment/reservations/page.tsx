@@ -20,7 +20,7 @@ export default function EntertainmentReservationsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { show, dismiss } = useToast();
-  const [cities, setCities] = useState<CityStay[]>(() => {
+  const [cities] = useState<CityStay[]>(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
       if (raw) {

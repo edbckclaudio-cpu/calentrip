@@ -3,21 +3,19 @@ import Link from "next/link";
 import { Select } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
-import { getTrips, removeTrip, addTrip, FlightNote } from "@/lib/trips-store";
+import { getTrips, removeTrip } from "@/lib/trips-store";
 import { Button } from "@/components/ui/button";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
 import Image from "next/image";
 import { useToast } from "@/components/ui/toast";
 import { useTrip } from "@/lib/trip-context";
-import { findAirportByIata } from "@/lib/airports";
 
 export default function Header() {
   const { lang, setLang, t } = useI18n();
   const { show } = useToast();
   const [now, setNow] = useState("");
   const [openNav, setOpenNav] = useState(false);
-  const { tripSearch, setTripSearch } = useTrip();
 
   function onLangChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const v = e.target.value as "pt" | "en" | "es";
@@ -138,12 +136,8 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
   const [savedTrips, setSavedTrips] = useState<ReturnType<typeof getTrips>>([]);
   const [profileOpen, setProfileOpen] = useState(false);
   const [policyType, setPolicyType] = useState<null | "privacy" | "terms" | "cookies" | "eula" | "data" | "support" | "licenses">(null);
-  const { tripSearch, setTripSearch } = useTrip();
+  const { setTripSearch } = useTrip();
 
-  function openSaved() {
-    try { setSavedTrips(getTrips().filter((t) => t.reachedFinalCalendar)); } catch { setSavedTrips([]); }
-    setSavedOpen(true);
-  }
 
   return (
     <>

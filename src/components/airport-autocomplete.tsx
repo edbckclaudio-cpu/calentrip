@@ -18,7 +18,6 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
   const portalRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const [dir, setDir] = useState<"down" | "up">("down");
-  const [dropdownH, setDropdownH] = useState<number>(240);
   const [dropdownMaxH, setDropdownMaxH] = useState<number>(240);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [kbOffset, setKbOffset] = useState<number>(0);
@@ -90,25 +89,32 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
   useEffect(() => {
     if (!open) return;
     const id = window.setTimeout(() => {
-      const box = portalRef.current;
-      if (box) {
-        const rect = box.getBoundingClientRect();
-        if (rect.height) setDropdownH(Math.min(Math.round(rect.height), dropdownMaxH));
-      }
+      try {
+        const box = portalRef.current;
+        if (box) {
+          const rect = box.getBoundingClientRect();
+          if (rect.height) setDropdownMaxH(Math.min(Math.round(rect.height), dropdownMaxH));
+        }
+      } catch {}
     }, 0);
     return () => window.clearTimeout(id);
   }, [open, items.length, pos, dropdownMaxH]);
 
   useEffect(() => {
     const id = setTimeout(async () => {
-      if (!q) {
+      try {
+        if (!q) {
+          setItems([]);
+          setOpen(false);
+          return;
+        }
+        const res = await searchAirportsAsync(q);
+        setItems(res);
+        setOpen(res.length > 0);
+      } catch {
         setItems([]);
         setOpen(false);
-        return;
       }
-      const res = await searchAirportsAsync(q);
-      setItems(res);
-      setOpen(res.length > 0);
     }, 200);
     return () => clearTimeout(id);
   }, [q]);
