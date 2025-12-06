@@ -135,7 +135,10 @@ export default function FinalCalendarPage() {
       } catch {}
       const evs = await getTripEventsDb(String(id));
       if (Array.isArray(evs) && evs.length) {
-        const list = evs.map((e: any) => ({ type: (e.type || "activity") as any, label: e.label || e.name || "", date: e.date, time: e.time || undefined }));
+        const list = evs.map((e: { type?: string; label?: string; name?: string; date: string; time?: string }) => {
+          const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
+          return { type: typeMap as EventItem["type"], label: e.label || e.name || "", date: e.date, time: e.time || undefined };
+        });
         setCurrentTripId(String(id));
         setEvents(list);
         return true;
@@ -208,8 +211,8 @@ export default function FinalCalendarPage() {
       try {
         await initDatabaseDb();
         try { await migrateFromLocalStorageDb(); } catch {}
-        const all = await getSavedTripsDb();
-        let target: any = null;
+        const all: TripItem[] = await getSavedTripsDb();
+        let target: TripItem | null = null;
         try {
           const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
           const ts = raw ? JSON.parse(raw) : null;
@@ -220,15 +223,18 @@ export default function FinalCalendarPage() {
             const date = isSame ? ts.departDate : ts.outbound?.date;
             const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
             const title = origin && destination ? `${origin} → ${destination}` : "";
-            target = all.find((t: any) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+            target = all.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
           }
         } catch {}
-        if (!target) target = all.find((t: any) => t.reachedFinalCalendar) || (all.length ? all[0] : null);
+        if (!target) target = all.find((t) => t.reachedFinalCalendar) || (all.length ? all[0] : null);
         if (!target) return;
         setCurrentTripId(String(target.id));
         const dbEvents = await getTripEventsDb(String(target.id));
         if (Array.isArray(dbEvents) && dbEvents.length) {
-          const list = dbEvents.map((e: any) => ({ type: (e.type || "activity") as any, label: e.label || e.name || "", date: e.date, time: e.time || undefined }));
+          const list = dbEvents.map((e: { type?: string; label?: string; name?: string; date: string; time?: string }) => {
+            const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
+            return { type: typeMap as EventItem["type"], label: e.label || e.name || "", date: e.date, time: e.time || undefined };
+          });
           setEvents(list);
         }
       } catch {}
@@ -425,7 +431,8 @@ export default function FinalCalendarPage() {
             }
           }
           if (tripId) {
-            await saveCalendarEventsDb(tripId, evs);
+            const dbEventsPayload = evs.map((e) => ({ name: e.label || "Evento", label: e.label || undefined, date: e.date, time: e.time || undefined, type: e.type }));
+            await saveCalendarEventsDb(tripId, dbEventsPayload);
             await updateTripDb(tripId, { reachedFinalCalendar: true, savedCalendarName: name });
           }
         } catch {}
@@ -795,259 +802,7 @@ export default function FinalCalendarPage() {
     show("Arquivo .ics baixado. Abra o gerenciador de arquivos, vá em Download, toque em calentrip.ics e escolha salvar no Google Calendar.", { variant: "info" });
   }
 
-  async function saveCalendar() {
-    try { saveCalendarNamed(true); } catch {}
-    function fmtICS(d: Date) {
-      const y = String(d.getFullYear());
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const da = String(d.getDate()).padStart(2, "0");
-      const h = String(d.getHours()).padStart(2, "0");
-      const mi = String(d.getMinutes()).padStart(2, "0");
-      const s = "00";
-      return `${y}${m}${da}T${h}${mi}${s}`;
-    }
-    function parseDT(date: string, time?: string) {
-      const s = `${date || ""} ${time || "00:00"}`.trim().replace(/\//g, "-");
-      const d = new Date(s);
-      if (Number.isNaN(d.getTime())) return null;
-      return d;
-    }
-    async function geocode(q: string) {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
-      const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
-      return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
-    }
-    async function computeReturnDetails() {
-      if (!summaryCities.length) return null as null | {
-        airportName: string;
-        distanceKm?: number;
-        walkingMin?: number;
-        drivingMin?: number;
-        busMin?: number;
-        trainMin?: number;
-        priceEstimate?: number;
-        gmapsUrl?: string;
-        uberUrl?: string;
-        callTime?: string;
-        notifyAt?: string;
-        callAtISO?: string;
-        notifyAtISO?: string;
-      };
-      const trips: TripItem[] = getTrips();
-      const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
-      if (!notes.length) return null;
-      const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
-      const airport = await findAirportByIata(fn.origin);
-      const last = summaryCities[summaryCities.length - 1];
-      if (!last?.address) return null;
-      const o = await geocode(last.address);
-      const d = await geocode(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`);
-      let walkingMin: number | undefined;
-      let drivingMin: number | undefined;
-      let busMin: number | undefined;
-      let trainMin: number | undefined;
-      let distanceKm: number | undefined;
-      let gmapsUrl: string | undefined;
-      let uberUrl: string | undefined;
-      let callTime: string | undefined;
-      let notifyAt: string | undefined;
-      let priceEstimate: number | undefined;
-      let callAtISO: string | undefined;
-      let notifyAtISO: string | undefined;
-      if (o && d) {
-        try {
-          const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
-          const resD = await fetch(osrmDrive);
-          const jsD = await resD.json();
-          const rD = jsD?.routes?.[0];
-          if (rD) {
-            drivingMin = Math.round((rD.duration ?? 0) / 60);
-            distanceKm = Math.round((rD.distance ?? 0) / 1000);
-            priceEstimate = Math.round((distanceKm || 0) * 6 + 3);
-          }
-        } catch {}
-        try {
-          const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
-          const resW = await fetch(osrmWalk);
-          const jsW = await resW.json();
-          const rW = jsW?.routes?.[0];
-          if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60);
-        } catch {}
-        const trafficFactor = 1.3;
-        const driveWithTraffic = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
-        busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
-        trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
-        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(last.address)}&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
-        if (fn.departureTime && fn.date) {
-          const [h, m] = (fn.departureTime || "00:00").split(":");
-          const dt = new Date(`${fn.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
-          const mins = 240 + (driveWithTraffic ?? drivingMin ?? 60);
-          const callAt = new Date(dt.getTime() - mins * 60 * 1000);
-          const notifyAtDate = new Date(callAt.getTime() - 2 * 60 * 60 * 1000);
-          const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-          callTime = fmt(callAt);
-          notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
-          
-        }
-      }
-      return { airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, gmapsUrl, uberUrl, callTime, notifyAt, callAtISO, notifyAtISO };
-    }
-    const lines: string[] = [];
-    lines.push("BEGIN:VCALENDAR");
-    lines.push("VERSION:2.0");
-    lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
-    const returnDetails = await computeReturnDetails();
-    events.forEach((e, idx) => {
-      const start = parseDT(e.date, e.time);
-      const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
-      const desc = e.label;
-      lines.push("BEGIN:VEVENT");
-      if (start) lines.push(`DTSTART:${fmtICS(start)}`);
-      if (end) lines.push(`DTEND:${fmtICS(end)}`);
-      lines.push(`SUMMARY:${e.label}`);
-      if (e.type === "stay" && (e.meta as { kind?: string })?.kind === "checkout" && idx === (events.reduce((acc, cur, i) => ((cur.type === "stay" && (cur.meta as { kind?: string })?.kind === "checkout") ? i : acc), -1))) {
-        const extra = returnDetails;
-        const info: string[] = [];
-        info.push(desc);
-        if (extra?.airportName) info.push(`Destino: ${extra.airportName}`);
-        if (extra?.distanceKm !== undefined) info.push(`Distância: ${extra.distanceKm} km`);
-        const modes: string[] = [];
-        if (extra?.walkingMin) modes.push(`A pé: ${extra.walkingMin} min`);
-        if (extra?.busMin) modes.push(`Ônibus: ${extra.busMin} min (estimado)`);
-        if (extra?.trainMin) modes.push(`Trem/Metro: ${extra.trainMin} min (estimado)`);
-        if (extra?.drivingMin !== undefined) modes.push(`Uber/Táxi: ${extra.drivingMin} min${extra.priceEstimate !== undefined ? ` • R$${extra.priceEstimate}` : ""}`);
-        if (modes.length) info.push(modes.join(" | "));
-        if (extra?.gmapsUrl) info.push(`Google Maps: ${extra.gmapsUrl}`);
-        if (extra?.uberUrl) info.push(`Uber: ${extra.uberUrl}`);
-        if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
-        if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
-        lines.push(`DESCRIPTION:${info.join("\\n")}`);
-        if (extra?.callAtISO) {
-          const callAt = new Date(extra.callAtISO);
-          const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
-          lines.push("BEGIN:VEVENT");
-          lines.push(`DTSTART:${fmtICS(callAt)}`);
-          lines.push(`DTEND:${fmtICS(callEnd)}`);
-          lines.push(`SUMMARY:Chamar Uber`);
-          const descParts = [`Chamar Uber às: ${extra.callTime}`];
-          if (extra.uberUrl) descParts.push(`Uber: ${extra.uberUrl}`);
-          if (extra.gmapsUrl) descParts.push(`Google Maps: ${extra.gmapsUrl}`);
-          lines.push(`DESCRIPTION:${descParts.join("\\n")}`);
-          lines.push("BEGIN:VALARM");
-          lines.push("ACTION:DISPLAY");
-          lines.push("DESCRIPTION:Lembrete de transporte");
-          lines.push("TRIGGER:-PT120M");
-          lines.push("END:VALARM");
-          lines.push("END:VEVENT");
-        }
-      } else {
-        const info: string[] = [];
-        info.push(desc);
-        if (e.type === "flight") {
-          const fn = e.meta as FlightNote | undefined;
-          if (fn?.leg === "outbound") {
-            const destName = `${fn?.origin || ""} airport`;
-            const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
-            const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
-            const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
-            info.push(`Destino: ${destName}`);
-            info.push(`Google Maps: ${gmaps}`);
-            info.push(`Rome2Rio: ${r2r}`);
-            info.push(`Uber: ${uber}`);
-            info.push(`Chegar no aeroporto: 3h antes do voo.`);
-          }
-        } else if (e.type === "transport") {
-          const seg = e.meta as TransportSegmentMeta;
-          const originAddr = (seg?.originAddress || "").trim();
-          const depPoint = (seg?.dep || "").trim();
-          if (originAddr || depPoint) {
-            const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
-            const r2r = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
-            const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
-            info.push(`Origem: ${originAddr || "—"}`);
-            info.push(`Destino: ${depPoint || "—"}`);
-            info.push(`Google Maps: ${gmaps}`);
-            info.push(`Rome2Rio: ${r2r}`);
-            info.push(`Uber: ${uber}`);
-          }
-        } else if (e.type === "stay") {
-          const m = e.meta as { city?: string; address?: string; kind?: string } | undefined;
-          if (m?.kind === "checkin") {
-            const q = (m.address || m.city || "").trim();
-            const gmaps = q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : "";
-            const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
-            info.push(`Destino: ${q || "—"}`);
-            if (gmaps) info.push(`Google Maps: ${gmaps}`);
-            info.push(`Uber: ${uber}`);
-          }
-        } else if (e.type === "activity" || e.type === "restaurant") {
-          const rec = e.meta as RecordItem;
-          const query = `${rec?.title || ""} ${rec?.cityName || ""}`.trim();
-          const gmaps = query ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}` : "";
-          const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
-          info.push(`Destino: ${query || "—"}`);
-          if (gmaps) info.push(`Google Maps: ${gmaps}`);
-          info.push(`Uber: ${uber}`);
-        }
-        lines.push(`DESCRIPTION:${info.join("\\n")}`);
-      }
-      lines.push("END:VEVENT");
-    });
-    lines.push("END:VCALENDAR");
-    const blob = new Blob([lines.join("\n")], { type: "text/calendar;charset=utf-8" });
-    const file = new File([blob], "calentrip.ics", { type: "text/calendar" });
-    try {
-      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
-      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-      const isAndroid = /Android/.test(ua);
-      const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
-      if (isAndroid) {
-        try {
-          const intent = "intent://calendar.google.com/calendar/r#Intent;scheme=https;package=com.google.android.calendar;end";
-          window.location.href = intent;
-          setTimeout(() => { try { /* fallback: Play Store */ window.location.href = "market://details?id=com.google.android.calendar"; } catch {} }, 500);
-        } catch {}
-      }
-      if (canShareFiles && typeof nav.share === "function") {
-        await nav.share({ files: [file], title: "CalenTrip" });
-        const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
-        if (isIOS) {
-          show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
-        } else if (isAndroid) {
-          show("Calendário enviado. Escolha Google Calendar e confirme 'Salvar/Adicionar'.", { variant: "success" });
-        } else {
-          show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
-        }
-        return;
-      }
-    } catch {}
-    const url = URL.createObjectURL(blob);
-    try {
-      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-      const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
-      const isAndroid = /Android/.test(ua);
-      if (isIOS || isAndroid) {
-        window.open(url, "_blank");
-        setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 30000);
-        if (isIOS) {
-          show("Importação aberta. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
-        } else {
-          show("Importação aberta. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
-        }
-        return;
-      }
-    } catch {}
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "calentrip.ics";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    show("Arquivo .ics baixado. Abra com Google/Outlook/Apple Calendar para importar.", { variant: "info" });
-  }
+  
 
   useEffect(() => {
     try {
