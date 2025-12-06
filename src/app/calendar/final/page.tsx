@@ -864,13 +864,13 @@ export default function FinalCalendarPage() {
           const d = tsObj.destination?.trim();
           const dd = tsObj.departDate?.trim();
           const rd = tsObj.returnDate?.trim();
-          if (o && d && dd) list.push({ type: "flight", label: `Voo de ida: ${o} → ${d}` , date: dd, time: tsObj.departTime || undefined });
-          if (o && d && rd) list.push({ type: "flight", label: `Voo de volta: ${d} → ${o}` , date: rd, time: tsObj.returnTime || undefined });
+          if (o && d && dd) list.push({ type: "flight", label: `Voo de ida: ${o} → ${d}` , date: dd, time: tsObj.departTime || undefined, meta: { leg: "outbound", origin: o, destination: d, date: dd, departureTime: tsObj.departTime || undefined } });
+          if (o && d && rd) list.push({ type: "flight", label: `Voo de volta: ${d} → ${o}` , date: rd, time: tsObj.returnTime || undefined, meta: { leg: "inbound", origin: d, destination: o, date: rd, departureTime: tsObj.returnTime || undefined } });
         } else if (tsObj?.outbound && tsObj?.inbound) {
           const ob = tsObj.outbound;
           const ib = tsObj.inbound;
-          if (ob?.origin && ob?.destination && ob?.date) list.push({ type: "flight", label: `Voo de ida: ${ob.origin} → ${ob.destination}`, date: ob.date, time: ob.time || undefined });
-          if (ib?.origin && ib?.destination && ib?.date) list.push({ type: "flight", label: `Voo de volta: ${ib.origin} → ${ib.destination}`, date: ib.date, time: ib.time || undefined });
+          if (ob?.origin && ob?.destination && ob?.date) list.push({ type: "flight", label: `Voo de ida: ${ob.origin} → ${ob.destination}`, date: ob.date, time: ob.time || undefined, meta: { leg: "outbound", origin: ob.origin, destination: ob.destination, date: ob.date, departureTime: ob.time || undefined } });
+          if (ib?.origin && ib?.destination && ib?.date) list.push({ type: "flight", label: `Voo de volta: ${ib.origin} → ${ib.destination}`, date: ib.date, time: ib.time || undefined, meta: { leg: "inbound", origin: ib.origin, destination: ib.destination, date: ib.date, departureTime: ib.time || undefined } });
         }
       }
       const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
