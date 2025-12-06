@@ -445,7 +445,7 @@ export default function FinalCalendarPage() {
 
   const sorted = useMemo(() => {
     const dateOnly = (d: string) => (d || "").replace(/\//g, "-");
-    return [...events].sort((a, b) => {
+    const arr = [...events].sort((a, b) => {
       const da = dateOnly(a.date);
       const db = dateOnly(b.date);
       if (da !== db) return da.localeCompare(db);
@@ -461,8 +461,20 @@ export default function FinalCalendarPage() {
       if (bIsOutbound && aIsCheckin) return 1;
       if (aIsCheckout && bIsInbound) return -1;
       if (bIsCheckout && aIsInbound) return 1;
+      if (aIsInbound && !bIsInbound) return 1;
+      if (bIsInbound && !aIsInbound) return -1;
       return (a.time || "00:00").padStart(5, "0").localeCompare((b.time || "00:00").padStart(5, "0"));
     });
+    let lastInboundIdx = -1;
+    for (let i = 0; i < arr.length; i++) {
+      const n = arr[i].meta as FlightNote | undefined;
+      if (arr[i].type === "flight" && n?.leg === "inbound") lastInboundIdx = i;
+    }
+    if (lastInboundIdx >= 0 && lastInboundIdx !== arr.length - 1) {
+      const [inb] = arr.splice(lastInboundIdx, 1);
+      arr.push(inb);
+    }
+    return arr;
   }, [events]);
 
   useEffect(() => {
