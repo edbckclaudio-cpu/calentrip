@@ -14,6 +14,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const [vvTop, setVvTop] = useState(0);
   const [vvLeft, setVvLeft] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     try {
       const vv = (typeof window !== "undefined" ? window.visualViewport : null);
@@ -69,6 +71,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <div
       className="fixed top-0 left-0 right-0 z-[9999] w-full px-2 space-y-2 flex flex-col items-center pointer-events-none"
       style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)", transform: `translate3d(${vvLeft}px, ${vvTop}px, 0)` }}
+      suppressHydrationWarning
     >
       {items.map((t) => (
         <div
@@ -117,7 +120,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ show, dismiss, minimize }}>
       {children}
-      {items.length > 0 && typeof document !== "undefined" ? createPortal(portal, document.body) : null}
+      {mounted && typeof document !== "undefined" ? createPortal(portal, document.body) : null}
     </ToastContext.Provider>
   );
 }
