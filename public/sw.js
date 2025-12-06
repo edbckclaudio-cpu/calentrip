@@ -1,5 +1,5 @@
-const CACHE_NAME = "calentrip-cache-v1";
-const ASSETS = ["/", "/manifest.webmanifest", "/globe.svg", "/next.svg", "/vercel.svg", "/window.svg", "/file.svg"];
+const CACHE_NAME = "calentrip-cache-v2";
+const ASSETS = ["/manifest.webmanifest", "/globe.svg", "/next.svg", "/vercel.svg", "/window.svg", "/file.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -18,15 +18,25 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req).then((res) => {
+  const isHtml = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
+  if (isHtml) {
+    event.respondWith(
+      fetch(req).then((res) => {
         const copy = res.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
         return res;
-      }).catch(() => cached || Promise.reject("offline"));
-      return cached || fetchPromise;
-    })
-  );
+      }).catch(() => caches.match(req).then((cached) => cached || Promise.reject("offline")))
+    );
+  } else {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        const fetchPromise = fetch(req).then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+          return res;
+        }).catch(() => cached || Promise.reject("offline"));
+        return cached || fetchPromise;
+      })
+    );
+  }
 });
-

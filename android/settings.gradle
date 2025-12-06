@@ -1,4 +1,4 @@
-rootProject.name = 'calentrip-android'
+rootProject.name = 'calentrip-android-submodule'
 include ':app'
 def cordovaDir = new File('./capacitor-cordova-android-plugins/')
 if (cordovaDir.exists()) {
