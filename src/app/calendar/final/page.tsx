@@ -61,6 +61,7 @@ export default function FinalCalendarPage() {
   const [returnLoading, setReturnLoading] = useState(false);
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
+  const [outboundFiles, setOutboundFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
   const transportToastShown = useRef<{ arrival: boolean; return: boolean }>({ arrival: false, return: false });
   const [sideOpen, setSideOpen] = useState(false);
@@ -916,8 +917,8 @@ export default function FinalCalendarPage() {
   async function openTransportDrawer(item: EventItem) {
     if (item.type !== "flight") return;
     const fn = item.meta as FlightNote;
-    if (!fn || !fn.origin || !fn.date || !fn.departureTime) return;
-    setDrawerData({ originIata: fn.origin, departureDate: fn.date, departureTime: fn.departureTime });
+    if (!fn || !fn.origin || !fn.date) return;
+    setDrawerData({ originIata: fn.origin, departureDate: fn.date, departureTime: fn.departureTime || "" });
     setDrawerOpen(true);
     setLoading(true);
     try {
@@ -954,7 +955,7 @@ export default function FinalCalendarPage() {
       const gmapsUrl = pos
         ? `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude}%2C${pos.coords.longitude}&destination=${encodeURIComponent(originQ)}`
         : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(originQ)}`;
-      const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(originQ)}`;
+      const r2rUrl = `https://www.rome2rio.com/pt/?utm_source=google&utm_medium=cpc&utm_campaign=870540415&gad_source=1&gad_campaignid=870540415&gbraid=0AAAAADm27_aMYXdGlfhkQQ_WMGut2n6Gi&gclid=`;
       if (!uberUrl && airportLoc) {
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${airportLoc.lat}&dropoff[longitude]=${airportLoc.lon}&dropoff[formatted_address]=${encodeURIComponent(originQ)}`;
       }
@@ -987,10 +988,16 @@ export default function FinalCalendarPage() {
         } catch {}
       }
       setTransportInfo({ distanceKm, durationMin, durationWithTrafficMin, gmapsUrl, r2rUrl, uberUrl, airportName: originQ, callTime, notifyAt });
+      try {
+        const allTrips: TripItem[] = getTrips();
+        const match = allTrips.find((t) => (t.flightNotes || []).some((n) => n.leg === "outbound" && n.origin === fn.origin && n.destination === fn.destination && n.date === fn.date));
+        const files = (match?.attachments || []).filter((a) => (a.leg ?? "outbound") === "outbound");
+        setOutboundFiles(files as Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>);
+      } catch {}
     } catch {
       const dest = drawerData?.originIata ? `${drawerData.originIata} airport` : "aeroporto";
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
-      const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(dest)}`;
+      const r2rUrl = `https://www.rome2rio.com/pt/?utm_source=google&utm_medium=cpc&utm_campaign=870540415&gad_source=1&gad_campaignid=870540415&gbraid=0AAAAADm27_aMYXdGlfhkQQ_WMGut2n6Gi&gclid=`;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(dest)}`;
       setTransportInfo({ distanceKm: undefined, durationMin: undefined, durationWithTrafficMin: undefined, gmapsUrl, r2rUrl, uberUrl, airportName: dest });
       try { showOnce("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
@@ -2410,7 +2417,7 @@ export default function FinalCalendarPage() {
                         <div className="mt-1">{ev.label}</div>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" && (ev.meta as FlightNote)?.departureTime ? (
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
                             <span>Aeroporto</span>
@@ -2538,7 +2545,7 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Transporte até o aeroporto</DialogHeader>
+        <DialogHeader>Deslocamento até o aeroporto</DialogHeader>
             <div className="space-y-3 text-sm">
               {loading ? (
                 <div>Calculando…</div>
@@ -2551,14 +2558,31 @@ export default function FinalCalendarPage() {
               ) : null}
                   <div>Tempo estimado (com trânsito): {transportInfo?.durationWithTrafficMin ? `${transportInfo.durationWithTrafficMin} min` : transportInfo?.durationMin ? `${transportInfo.durationMin} min` : "—"}</div>
                   <div className="mt-2">
-                    <a className="underline" href={transportInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                    <a className="underline" href={transportInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Veja no Google Maps</a>
                   </div>
                   <div>
-                    <a className="underline" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
+                    <a className="underline" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Opções no Rome2Rio</a>
                   </div>
                   <div>
-                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Uber</a>
                   </div>
+                  {outboundFiles.length ? (
+                    <div>
+                      <Button type="button" variant="outline" onClick={async () => {
+                        setDocTitle(transportInfo?.airportName || "Voo de ida");
+                        const mod = await import("@/lib/attachments-store");
+                        const resolved = await Promise.all(outboundFiles.map(async (f) => {
+                          if (!f.dataUrl && f.id) {
+                            const url = await mod.getObjectUrl(f.id);
+                            return { ...f, dataUrl: url || undefined };
+                          }
+                          return f;
+                        }));
+                        setDocFiles(resolved);
+                        setDocOpen(true);
+                      }}>Documentos salvos</Button>
+                    </div>
+                  ) : null}
                   <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
                   <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
                   <div>Notificação programada: {transportInfo?.notifyAt ? `às ${transportInfo.notifyAt}` : "—"}</div>
