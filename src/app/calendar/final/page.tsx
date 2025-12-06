@@ -14,7 +14,6 @@ import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb, addTrip as addTripDb } from "@/lib/trips-db";
-import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb } from "@/lib/trips-db";
 import { findAirportByIata } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
