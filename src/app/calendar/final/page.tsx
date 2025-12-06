@@ -15,7 +15,7 @@ import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
 import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb, addTrip as addTripDb, getRefAttachments } from "@/lib/trips-db";
-import { findAirportByIata } from "@/lib/airports";
+import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
 type SavedFile = { name: string; type: string; size: number; id?: string; dataUrl?: string };
@@ -1117,6 +1117,24 @@ export default function FinalCalendarPage() {
           const key = `${Math.round(it.lat * 10000)}|${Math.round(it.lon * 10000)}`;
           if (!seen.has(key)) { seen.add(key); merged.push(it); }
         });
+        const cityLow = cityForSearch.toLowerCase();
+        const cityBusPrefs: Record<string, string[]> = {
+          ["são paulo"]: ["tietê", "terminal tietê"],
+          ["sao paulo"]: ["tiete", "terminal tiete"],
+          ["rio de janeiro"]: ["novo rio"],
+          ["porto"]: ["campo 24 de agosto"],
+        };
+        const rankBus = (n: string) => {
+          const s = (n || "").toLowerCase();
+          let score = 100;
+          if (s.includes(cityLow)) score -= 10;
+          if (/(central|centrale)/.test(s)) score -= 15;
+          if (/(rodovi|terminal|gare routière|autostazione)/.test(s)) score -= 10;
+          const prefs = cityBusPrefs[cityLow] || [];
+          for (const k of prefs) { if (s.includes(k)) score -= 40; }
+          return score;
+        };
+        merged.sort((a, b) => rankBus(a.name) - rankBus(b.name));
         if (merged.length) {
           setStayCandidates(merged.slice(0, 6));
           const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
@@ -1124,6 +1142,104 @@ export default function FinalCalendarPage() {
           const saved = map[cityForSearch];
           const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
           const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
+          destLabel = chosen.name;
+          destLatLon = { lat: chosen.lat, lon: chosen.lon };
+          setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
+        }
+      } catch {}
+    }
+    if (seg.mode === "train" && looksLikeCityOnly && cityForSearch) {
+      try {
+        const fetchList = async (q: string) => {
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8`;
+          const res = await fetch(url, { headers: { Accept: "application/json" } });
+          const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+          return js.map((r) => ({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon) }));
+        };
+        const list1 = await fetchList(`estação de trem ${cityForSearch}`);
+        const list2 = await fetchList(`train station ${cityForSearch}`);
+        const list3 = await fetchList(`gare ${cityForSearch}`);
+        const seen = new Set<string>();
+        const merged: Array<{ name: string; lat: number; lon: number }> = [];
+        [...list1, ...list2, ...list3].forEach((it) => {
+          const key = `${Math.round(it.lat * 10000)}|${Math.round(it.lon * 10000)}`;
+          if (!seen.has(key)) { seen.add(key); merged.push(it); }
+        });
+        const cityLow = cityForSearch.toLowerCase();
+        const cityTrainPrefs: Record<string, string[]> = {
+          ["firenze"]: ["santa maria novella", "smn"],
+          ["florence"]: ["santa maria novella", "smn"],
+          ["roma"]: ["termini"],
+          ["rome"]: ["termini"],
+          ["milano"]: ["centrale"],
+          ["milan"]: ["centrale", "central"],
+          ["venezia"]: ["santa lucia"],
+          ["venice"]: ["santa lucia"],
+          ["napoli"]: ["centrale"],
+          ["naples"]: ["centrale"],
+          ["torino"]: ["porta nuova"],
+          ["turin"]: ["porta nuova"],
+          ["bologna"]: ["centrale"],
+          ["pisa"]: ["centrale"],
+          ["paris"]: ["gare du nord", "gare de lyon"],
+          ["berlin"]: ["hauptbahnhof", "hbf"],
+          ["munich"]: ["hauptbahnhof", "hbf"],
+          ["münchen"]: ["hauptbahnhof", "hbf"],
+          ["madrid"]: ["atocha"],
+          ["barcelona"]: ["sants"],
+        };
+        const rank = (n: string) => {
+          const s = (n || "").toLowerCase();
+          let score = 100;
+          if (s.includes(cityLow)) score -= 20;
+          if (/termini/.test(s)) score -= 50;
+          if (/(centrale|central|hauptbahnhof|hbf)/.test(s)) score -= 40;
+          if (/(santa maria novella|smn)/.test(s)) score -= 45;
+          if (/(gare du nord|gare de lyon)/.test(s)) score -= 35;
+          if (/(stazione|station|gare)/.test(s)) score -= 10;
+          const prefs = cityTrainPrefs[cityLow] || [];
+          for (const k of prefs) { if (s.includes(k)) score -= 50; }
+          return score;
+        };
+        merged.sort((a, b) => rank(a.name) - rank(b.name));
+        if (merged.length) {
+          setStayCandidates(merged.slice(0, 6));
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:train_station_selection") : null;
+          const map = raw ? (JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }>) : {};
+          const saved = map[cityForSearch];
+          const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
+          const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
+          destLabel = chosen.name;
+          destLatLon = { lat: chosen.lat, lon: chosen.lon };
+          setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
+        }
+      } catch {}
+    }
+    if (seg.mode === "air" && looksLikeCityOnly && cityForSearch) {
+      try {
+        const airports = await searchAirportsAsync(cityForSearch);
+        const filtered = airports.filter((a) => a.city.toLowerCase() === cityForSearch.toLowerCase()).slice(0, 6);
+        const orderMap: Record<string, number> = {};
+        filtered.forEach((a, i) => { orderMap[`${a.city} – ${a.name} (${a.iata})`] = i; });
+        const names = filtered.map((a) => `${a.city} – ${a.name} (${a.iata})`);
+        const geos: Array<{ name: string; lat: number; lon: number; pref?: number }> = [];
+        for (const n of names) {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(n)}&format=json&limit=1`;
+            const res = await fetch(url, { headers: { Accept: "application/json" } });
+            const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+            const r = js[0];
+            if (r) geos.push({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon), pref: orderMap[n] ?? 999 });
+          } catch {}
+        }
+        if (geos.length) {
+          geos.sort((a, b) => (a.pref ?? 999) - (b.pref ?? 999));
+          setStayCandidates(geos.map((g) => ({ name: g.name, lat: g.lat, lon: g.lon })).slice(0, 6));
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:airport_selection") : null;
+          const map = raw ? (JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }>) : {};
+          const saved = map[cityForSearch];
+          const idxSaved = saved ? geos.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
+          const chosen = idxSaved >= 0 ? geos[idxSaved] : geos[0];
           destLabel = chosen.name;
           destLatLon = { lat: chosen.lat, lon: chosen.lon };
           setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
@@ -3120,7 +3236,7 @@ export default function FinalCalendarPage() {
                   <div>Destino: {stayInfo?.destination || "—"}</div>
                   {stayCandidates.length > 1 ? (
                     <div>
-                      <div className="text-xs text-zinc-600">Escolha a rodoviária:</div>
+                      <div className="text-xs text-zinc-600">{(() => { const ev = editIdx !== null ? events[editIdx] : null; const seg = ev?.meta as TransportSegmentMeta | undefined; return seg?.mode === "train" ? "Escolha a estação de trem:" : seg?.mode === "air" ? "Escolha o aeroporto:" : "Escolha a rodoviária:"; })()}</div>
                       <Select className="mt-1" value={String(stayChosenIdx ?? 0)} onChange={async (e) => {
                         const i = Number((e.target as HTMLSelectElement).value);
                         const c = stayCandidates[i];
@@ -3164,10 +3280,12 @@ export default function FinalCalendarPage() {
                             callTime = fmt(callAt);
                             notifyAt = `${callAt.toLocaleDateString()} ${fmt(callAt)}`;
                             try {
-                              const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
-                              const map = raw ? JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }> : {};
+                              const evSeg = ev?.meta as TransportSegmentMeta | undefined;
+                              const key = evSeg?.mode === "train" ? "calentrip:train_station_selection" : evSeg?.mode === "air" ? "calentrip:airport_selection" : "calentrip:bus_station_selection";
+                              const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null;
+                              const map = raw ? (JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }>) : {};
                               map[cityForSearch] = { name: c.name, lat: c.lat, lon: c.lon };
-                              if (typeof window !== "undefined") localStorage.setItem("calentrip:bus_station_selection", JSON.stringify(map));
+                              if (typeof window !== "undefined") localStorage.setItem(key, JSON.stringify(map));
                             } catch {}
                           }
                           setStayInfo((prev) => ({ ...(prev || {}), destination: c.name, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, gmapsUrl, uberUrl, callTime, notifyAt }));
@@ -3221,7 +3339,7 @@ export default function FinalCalendarPage() {
                             setDocFiles([]);
                             setDocOpen(true);
                           }
-                        }}>Documentos anexos</Button>
+                        }}>Documentos salvos</Button>
                       </div>
                     ) : null;
                   })()}

@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number; key?: string; minimized?: boolean };
@@ -14,6 +14,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const [vvTop, setVvTop] = useState(0);
   const [vvLeft, setVvLeft] = useState(0);
+  const idRef = useRef(0);
   const canPortal = typeof document !== "undefined";
   useEffect(() => {
     try {
@@ -39,9 +40,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   function show(message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) {
-    const id = Date.now() + Math.random();
+    idRef.current += 1;
+    const id = idRef.current;
     const variant = opts?.variant ?? "info";
-    const duration = opts?.sticky ? undefined : (opts?.duration ?? 5000);
+    const duration = opts?.sticky ? undefined : (opts?.duration ?? 13000);
     const k = opts?.key;
     setItems((prev) => {
       const cleared = k ? prev.filter((t) => t.key !== k) : [];
@@ -49,7 +51,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     });
     if (typeof duration === "number") {
       setTimeout(() => {
-        setItems((prev) => prev.filter((t) => t.id !== id));
+        minimize(id);
       }, duration);
     }
     return id;

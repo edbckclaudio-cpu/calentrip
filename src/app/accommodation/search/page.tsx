@@ -508,6 +508,10 @@ export default function AccommodationSearchPage() {
       setTransportArr("");
       setTransportDepTime("");
       setTransportArrTime("");
+      try { if (transportDepRef.current) transportDepRef.current.value = ""; } catch {}
+      try { if (transportArrRef.current) transportArrRef.current.value = ""; } catch {}
+      try { if (transportDepTimeRef.current) transportDepTimeRef.current.value = ""; } catch {}
+      try { if (transportArrTimeRef.current) transportArrTimeRef.current.value = ""; } catch {}
       setTransportDepOpts([]);
       setTransportArrOpts([]);
       const i = transportOpenIdx;
