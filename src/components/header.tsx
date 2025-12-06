@@ -23,7 +23,7 @@ export default function Header() {
     try {
       localStorage.setItem("calentrip:lang", v);
     } catch {}
-    show("Idioma alterado");
+    show(t("language") + ": " + v.toUpperCase());
   }
 
   useEffect(() => {
@@ -199,7 +199,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">travel_explore</span>
             </span>
-            <span className="text-sm font-medium">Iniciar nova pesquisa</span>
+            <span className="text-sm font-medium">{t("startNewSearch")}</span>
           </button>
 
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
@@ -209,7 +209,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
             </span>
-            <span className="text-sm font-medium">Pesquisas salvas</span>
+            <span className="text-sm font-medium">{t("savedSearchesTitle")}</span>
           </button>
 
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>

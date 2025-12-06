@@ -1324,7 +1324,7 @@ export default function FinalCalendarPage() {
     }
   }
 
-  // Removed unused chooseStayCandidate to resolve lint warning
+ 
 
   async function openCheckinDrawer(item: EventItem) {
     if (item.type !== "stay") return;
@@ -1474,7 +1474,7 @@ export default function FinalCalendarPage() {
     }
   }
 
-  // Removed unused lastCheckoutIdx to resolve lint warning
+ 
 
   const openReturnAirportDrawer = useCallback(async () => {
     if (!summaryCities.length) return;
@@ -2266,7 +2266,7 @@ export default function FinalCalendarPage() {
               return parts.join("\r\n ");
             }
             const returnDetails = await computeReturnDetails();
-            // removed unused ua variable
+ 
             const isAndroid = isAndroidHeader;
             const tzidHeader = tzHeader;
             const useTZID = !isAndroid;
