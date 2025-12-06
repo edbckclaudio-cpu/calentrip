@@ -399,7 +399,7 @@ export default function BookFlightsPage() {
             ) : tripSearch && tripSearch.mode === "different" ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
+                  {(() => { const ts = tripSearch as any; return (
                     <div className="mb-2">
                       <div className="inline-flex items-center gap-2 rounded-md px-2 py-1 border border-[#febb02] bg-[#febb02]/10 text-[#febb02]">
                         <span className="text-xs font-semibold">{t("outboundFlight")}</span>
@@ -410,7 +410,7 @@ export default function BookFlightsPage() {
                     </div>
                   ); })()}
                   <ul className="space-y-2">
-                    {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
+                    {(() => { const ts = tripSearch as any; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
                       <li key={`out-${item.name}`} className="flex items-center gap-1">
                         <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
@@ -432,7 +432,7 @@ export default function BookFlightsPage() {
                   </ul>
                 </div>
                 <div>
-                  {(() => { const ts = tripSearch as TripSearchDifferent; return (
+                  {(() => { const ts = tripSearch as any; return (
                     <div className="mb-2">
                       <div className="inline-flex items-center gap-2 rounded-md px-2 py-1 border border-[#febb02] bg-[#febb02]/10 text-[#febb02]">
                         <span className="text-xs font-semibold">{t("inboundFlight")}</span>
@@ -443,7 +443,7 @@ export default function BookFlightsPage() {
                     </div>
                   ); })()}
                   <ul className="space-y-2">
-                    {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
+                    {(() => { const ts = tripSearch as any; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
                       <li key={`in-${item.name}`} className="flex items-center gap-1">
                         <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
