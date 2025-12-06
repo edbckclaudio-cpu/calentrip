@@ -12,7 +12,9 @@ import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { TripItem, FlightNote, getSavedTrips, updateTrip, saveCalendarEvents, getTripEvents, getTripAttachments, getRefAttachments, migrateFromLocalStorage } from "@/lib/trips-db";
+import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
+import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb, addTrip as addTripDb } from "@/lib/trips-db";
+import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb } from "@/lib/trips-db";
 import { findAirportByIata } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
@@ -58,7 +60,6 @@ export default function FinalCalendarPage() {
   const [summaryCities, setSummaryCities] = useState<Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>>([]);
   const [returnDrawerOpen, setReturnDrawerOpen] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
-  const [transportDocsCount, setTransportDocsCount] = useState<Record<string, number>>({});
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
@@ -74,32 +75,14 @@ export default function FinalCalendarPage() {
   const { data: session, status } = useSession();
   const { lang, t } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium"; tripId?: string } | null>(null);
-  
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [premiumFlag, setPremiumFlag] = useState<boolean>(false);
   const [premiumUntil, setPremiumUntil] = useState<string>("");
+  const [currentSavedName, setCurrentSavedName] = useState<string>("");
   const [editOpen, setEditOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
-  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      try { await migrateFromLocalStorage(); } catch {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const all: TripItem[] = await getSavedTrips();
-        if (!all.length) { setCurrentTripId(null); return; }
-        const sorted = [...all].sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0));
-        const sel = sorted.find((t) => t.reachedFinalCalendar) || sorted[0];
-        setCurrentTripId(sel.id);
-      } catch { setCurrentTripId(null); }
-    })();
-  }, []);
 
   async function saveCalendarToFile() {
     try {
@@ -107,8 +90,7 @@ export default function FinalCalendarPage() {
       const name = typeof window !== "undefined" ? prompt("Nome do arquivo (até 9 letras)") || "" : "";
       const safe = name.replace(/[^A-Za-z]/g, "").slice(0, 9);
       if (!safe) { show("Nome inválido", { variant: "error" }); return; }
-      const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
-      const payload = { name: safe, version: 1, createdAt: new Date().toISOString(), events: dbEvents.length ? dbEvents.map((e) => ({ label: e.label || e.name, date: e.date, time: e.time })) : events, summaryCities };
+      const payload = { name: safe, version: 1, createdAt: new Date().toISOString(), events, summaryCities };
       const json = JSON.stringify(payload);
       const r = await StorageFiles.save({ name: safe, json });
       if (r?.ok) { show("Arquivo salvo no dispositivo", { variant: "success" }); } else { show("Erro ao salvar arquivo", { variant: "error" }); }
@@ -143,54 +125,116 @@ export default function FinalCalendarPage() {
     } catch { show("Erro ao excluir", { variant: "error" }); }
   }
 
-  useEffect(() => {
-    (async () => {
+  async function loadTripEventsFromDbById(id: string) {
+    try {
+      await initDatabaseDb();
+      try { await migrateFromLocalStorageDb(); } catch {}
+      try {
+        const allTrips: TripItem[] = await getSavedTripsDb();
+        const cur = allTrips.find((t) => t.id === id);
+        if (cur) setCurrentSavedName(cur.savedCalendarName || "");
+      } catch {}
+      const evs = await getTripEventsDb(String(id));
+      if (Array.isArray(evs) && evs.length) {
+        const list = evs.map((e: any) => ({ type: (e.type || "activity") as any, label: e.label || e.name || "", date: e.date, time: e.time || undefined }));
+        setCurrentTripId(String(id));
+        setEvents(list);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  async function loadLatestCalendarFromDb() {
+    try {
+      await initDatabaseDb();
+      try { await migrateFromLocalStorageDb(); } catch {}
+      const all: TripItem[] = await getSavedTripsDb();
+      let target: TripItem | null = null;
       try {
         const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
         const ts = raw ? JSON.parse(raw) : null;
-        if (!ts) return;
-        const isSame = ts.mode === "same";
-        const origin = isSame ? ts.origin : ts.outbound?.origin;
-        const destination = isSame ? ts.destination : ts.outbound?.destination;
-        const date = isSame ? ts.departDate : ts.outbound?.date;
-        const pax = (() => {
-          const p = ts.passengers || {};
-          return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
-        })();
-        if (!origin || !destination || !date) return;
-        const title = `${origin} → ${destination}`;
-        const trips: TripItem[] = await getSavedTrips();
-        const idx = trips.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-        if (idx < 0) return;
-        setCurrentTripId(trips[idx].id);
-        await updateTrip(trips[idx].id, { reachedFinalCalendar: true });
+        if (ts) {
+          const isSame = ts.mode === "same";
+          const origin = isSame ? ts.origin : ts.outbound?.origin;
+          const destination = isSame ? ts.destination : ts.outbound?.destination;
+          const date = isSame ? ts.departDate : ts.outbound?.date;
+          const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+          const title = origin && destination ? `${origin} → ${destination}` : "";
+          target = all.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+        }
       } catch {}
-    })();
+      if (!target) {
+        const actives = all.filter((t) => t.reachedFinalCalendar);
+        target = actives.length ? actives[actives.length - 1] : (all.length ? all[0] : null);
+      }
+      if (!target) { show("Nenhum calendário salvo", { variant: "info" }); return; }
+      setCurrentSavedName(target.savedCalendarName || "");
+      const ok = await loadTripEventsFromDbById(target.id);
+      if (ok) { show("Calendário carregado", { variant: "success" }); }
+    } catch { show("Erro ao carregar calendário", { variant: "error" }); }
+  }
+
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+      const ts = raw ? JSON.parse(raw) : null;
+      if (!ts) return;
+      const isSame = ts.mode === "same";
+      const origin = isSame ? ts.origin : ts.outbound?.origin;
+      const destination = isSame ? ts.destination : ts.outbound?.destination;
+      const date = isSame ? ts.departDate : ts.outbound?.date;
+      const pax = (() => {
+        const p = ts.passengers || {};
+        return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
+      })();
+      if (!origin || !destination || !date) return;
+      const title = `${origin} → ${destination}`;
+      (async () => {
+        try {
+          await initDatabaseDb();
+          try { await migrateFromLocalStorageDb(); } catch {}
+          const all: TripItem[] = await getSavedTripsDb();
+          const it = all.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax);
+          if (it) await updateTripDb(it.id, { reachedFinalCalendar: true });
+        } catch {}
+      })();
+    } catch {}
   }, []);
 
   useEffect(() => {
     (async () => {
       try {
-        const map: Record<string, number> = {};
-        const items = events.filter((e) => e.type === "transport");
-        for (const e of items) {
-          const m = String(e.label || "");
-          const m2 = m.replace(/^Transporte:\s*/, "");
-          const base = m2.split(" • ")[0] || "";
-          const parts = base.split("→").map((s) => s.trim());
-          const ref = parts.length >= 2 ? `${parts[0]}->${parts[1]}` : base.replace(" → ", "->");
-          const localCount = ((e.meta as TransportSegmentMeta & { files?: SavedFile[] })?.files || []).length;
-          let dbCount = 0;
-          if (currentTripId) {
-            const more = await getRefAttachments(currentTripId, "transport", ref);
-            dbCount = more.length;
+        await initDatabaseDb();
+        try { await migrateFromLocalStorageDb(); } catch {}
+        const all = await getSavedTripsDb();
+        let target: any = null;
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const ts = raw ? JSON.parse(raw) : null;
+          if (ts) {
+            const isSame = ts.mode === "same";
+            const origin = isSame ? ts.origin : ts.outbound?.origin;
+            const destination = isSame ? ts.destination : ts.outbound?.destination;
+            const date = isSame ? ts.departDate : ts.outbound?.date;
+            const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+            const title = origin && destination ? `${origin} → ${destination}` : "";
+            target = all.find((t: any) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
           }
-          map[ref] = localCount + dbCount;
+        } catch {}
+        if (!target) target = all.find((t: any) => t.reachedFinalCalendar) || (all.length ? all[0] : null);
+        if (!target) return;
+        setCurrentTripId(String(target.id));
+        const dbEvents = await getTripEventsDb(String(target.id));
+        if (Array.isArray(dbEvents) && dbEvents.length) {
+          const list = dbEvents.map((e: any) => ({ type: (e.type || "activity") as any, label: e.label || e.name || "", date: e.date, time: e.time || undefined }));
+          setEvents(list);
         }
-        setTransportDocsCount(map);
       } catch {}
     })();
-  }, [events, currentTripId]);
+  }, []);
 
   useEffect(() => {
     try {
@@ -213,29 +257,31 @@ export default function FinalCalendarPage() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_saved_drawer") : null;
-        if (flag === "1") {
-          localStorage.removeItem("calentrip:open_saved_drawer");
+    try {
+      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_saved_drawer") : null;
+      if (flag === "1") {
+        localStorage.removeItem("calentrip:open_saved_drawer");
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+          const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
+          setSavedCalendar(sc);
+        } catch { setSavedCalendar(null); }
+        (async () => {
           try {
-            const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
-            const sc = raw ? (JSON.parse(raw) as { events?: EventItem[] }) : null;
-            setSavedCalendar(sc);
-          } catch { setSavedCalendar(null); }
-          try {
-            const trips = await getSavedTrips();
+            await initDatabaseDb();
+            try { await migrateFromLocalStorageDb(); } catch {}
+            const trips = await getSavedTripsDb();
             setSavedTripsList(trips);
           } catch { setSavedTripsList([]); }
-          try {
-            const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
-            const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
-            setSavedCalendarsList(list);
-          } catch { setSavedCalendarsList([]); }
-          setSavedDrawerOpen(true);
-        }
-      } catch {}
-    })();
+        })();
+        try {
+          const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+          const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+          setSavedCalendarsList(list);
+        } catch { setSavedCalendarsList([]); }
+        setSavedDrawerOpen(true);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -264,7 +310,7 @@ export default function FinalCalendarPage() {
     return false;
   }, [locConsent]);
 
-  async function saveCalendarNamed(silent?: boolean, fixedName?: string) {
+  function saveCalendarNamed(silent?: boolean, fixedName?: string) {
     try {
       const rawName = silent ? "" : (typeof window !== "undefined" ? (prompt("Nome do calendário (apenas letras, até 9)") || "") : "");
       let name = (fixedName || rawName || "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
@@ -286,7 +332,7 @@ export default function FinalCalendarPage() {
       let evs = events;
       if (!evs.length) {
         try {
-          const all: TripItem[] = await getSavedTrips();
+          const all: TripItem[] = getTrips();
           const list: EventItem[] = [];
           const seenFlights = new Set<string>();
           all.forEach((t) => {
@@ -327,22 +373,7 @@ export default function FinalCalendarPage() {
           }
           const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
           const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
-          (recs || []).forEach((r) => {
-            const dSrc = (r.date || "").trim().replace(/\//g, "-");
-            const parts = dSrc.split("-");
-            const d = parts.length === 3 && parts[0].length !== 4 ? `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}` : dSrc;
-            const tSrc = (r.time || "");
-            let t: string | undefined;
-            if (tSrc) {
-              const p = tSrc.split(":");
-              if (p.length === 2) t = `${p[0].padStart(2, "0")}:${p[1].padStart(2, "0").slice(0, 2)}`;
-              else {
-                const digits = tSrc.replace(/\D/g, "");
-                t = digits.length >= 4 ? `${digits.slice(0, 2).padStart(2, "0")}:${digits.slice(2, 4).padEnd(2, "0").slice(0, 2)}` : undefined;
-              }
-            }
-            list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: d, time: t, meta: r });
-          });
+          (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
           const seen = new Set<string>();
           evs = list.filter((e) => {
             const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
@@ -353,13 +384,53 @@ export default function FinalCalendarPage() {
           setEvents(evs);
         } catch {}
       }
-      if (currentTripId) {
-        await saveCalendarEvents(currentTripId, evs.map((e) => ({ name: e.label, label: e.label, date: e.date, time: e.time, type: e.type })));
-        await updateTrip(currentTripId, { reachedFinalCalendar: true, savedCalendarName: name });
-      }
+      const payload = { name, events: evs };
+      if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
       try {
-        if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name, events: evs }));
+        const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
+        const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+        const entry = { name, events, savedAt: new Date().toISOString() };
+        const idx = list.findIndex((c) => (c?.name || "") === name);
+        if (idx >= 0) list[idx] = entry; else list.push(entry);
+        localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(list));
       } catch {}
+      (async () => {
+        try {
+          await initDatabaseDb();
+          try { await migrateFromLocalStorageDb(); } catch {}
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const ts = raw ? JSON.parse(raw) : null;
+          let tripId = currentTripId;
+          if (!tripId) {
+            const all: TripItem[] = await getSavedTripsDb();
+            if (ts) {
+              const isSame = ts.mode === "same";
+              const origin = isSame ? ts.origin : ts.outbound?.origin;
+              const destination = isSame ? ts.destination : ts.outbound?.destination;
+              const date = isSame ? ts.departDate : ts.outbound?.date;
+              const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+              const title = origin && destination ? `${origin} → ${destination}` : "";
+              const target = all.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+              if (target) tripId = target.id;
+            }
+            if (!tripId && ts) {
+              const isSame = ts.mode === "same";
+              const origin = isSame ? ts.origin : ts.outbound?.origin;
+              const destination = isSame ? ts.destination : ts.outbound?.destination;
+              const date = isSame ? ts.departDate : ts.outbound?.date;
+              const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+              const id = String(Date.now());
+              await addTripDb({ id, title: `${origin} → ${destination}`, date, passengers: pax, reachedFinalCalendar: true, savedCalendarName: name });
+              setCurrentTripId(id);
+              tripId = id;
+            }
+          }
+          if (tripId) {
+            await saveCalendarEventsDb(tripId, evs);
+            await updateTripDb(tripId, { reachedFinalCalendar: true, savedCalendarName: name });
+          }
+        } catch {}
+      })();
       show("Salvo em pesquisas salvas", { variant: "success" });
       return true;
     } catch { show("Erro ao salvar", { variant: "error" }); return false; }
@@ -390,11 +461,14 @@ export default function FinalCalendarPage() {
   useEffect(() => {
     (async () => {
       try {
-        const trips: TripItem[] = await getSavedTrips();
+        await initDatabaseDb();
+        try { await migrateFromLocalStorageDb(); } catch {}
+        const trips: TripItem[] = await getSavedTripsDb();
         const current = trips.length ? trips[0] : null;
         if (!current) return;
         const premium = isTripPremium(current.id);
         setCurrentTripId(current.id);
+        setCurrentSavedName(current.savedCalendarName || "");
         setPremiumFlag(premium);
         try {
           const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
@@ -413,139 +487,6 @@ export default function FinalCalendarPage() {
       } catch {}
     })();
   }, [status]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-        const ts = raw ? JSON.parse(raw) : null;
-        if (!ts) return;
-        const isSame = ts.mode === "same";
-        const origin = isSame ? ts.origin : ts.outbound?.origin;
-        const destination = isSame ? ts.destination : ts.outbound?.destination;
-        const date = isSame ? ts.departDate : ts.outbound?.date;
-        const pax = (() => {
-          const p = ts.passengers || {};
-          return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0);
-        })();
-        if (!origin || !destination || !date) return;
-        const title = `${origin} → ${destination}`;
-        const all: TripItem[] = await getSavedTrips();
-        const idx = all.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-        if (idx < 0) return;
-        const it = all[idx];
-        await updateTrip(it.id, { reachedFinalCalendar: true });
-      } catch {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        if (events.length) return;
-        const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
-        if (rawSaved) {
-          try {
-            const sc = JSON.parse(rawSaved) as { events?: EventItem[] };
-            if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
-          } catch {}
-        }
-        const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
-        if (dbEvents.length) {
-          const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
-          setEvents(mapped);
-          return;
-        }
-        const all: TripItem[] = await getSavedTrips();
-        let trips: TripItem[] = [];
-        try {
-          const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-          const ts = rawTs ? JSON.parse(rawTs) : null;
-          if (ts) {
-            const isSame = ts.mode === "same";
-            const origin = isSame ? ts.origin : ts.outbound?.origin;
-            const destination = isSame ? ts.destination : ts.outbound?.destination;
-            const date = isSame ? ts.departDate : ts.outbound?.date;
-            const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
-            const title = origin && destination ? `${origin} → ${destination}` : "";
-            const matchIdx = all.findIndex((t) => t.title === title && t.date === date && t.passengers === pax);
-            if (matchIdx >= 0) trips = [all[matchIdx]];
-          }
-        } catch {}
-        if (!trips.length) {
-          const actives = all.filter((t) => t.reachedFinalCalendar);
-          trips = actives.length ? [actives[actives.length - 1]] : (all.length ? [all[all.length - 1]] : []);
-        }
-        const list: EventItem[] = [];
-        const seenFlights = new Set<string>();
-        trips.forEach((t) => {
-          if (t.flightNotes && t.flightNotes.length) {
-            t.flightNotes.forEach((fn) => {
-              const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
-              const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
-              if (!seenFlights.has(sig)) {
-                seenFlights.add(sig);
-                list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
-              }
-            });
-          }
-        });
-        const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-        const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
-        const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
-        setSummaryCities(cities as Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>);
-        cities.forEach((c, i) => {
-          const cityName = c.name || `Cidade ${i + 1}`;
-          const addr = c.address || "(endereço não informado)";
-          if (c.checkin) {
-            let ciTime = i === 0 ? "23:59" : "17:00";
-            try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
-            list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
-          }
-          if (c.checkout) {
-            list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
-          }
-        });
-        for (let i = 0; i < cities.length - 1; i++) {
-          const c = cities[i];
-          const n = cities[i + 1];
-          const seg = c.transportToNext;
-          if (seg) {
-            const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
-            const date = c.checkout || n?.checkin || "";
-            const time = seg.depTime || "11:00";
-            list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
-          }
-        }
-        const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
-        const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
-        (recs || []).forEach((r) => {
-          const dSrc = (r.date || "").trim().replace(/\//g, "-");
-          const parts = dSrc.split("-");
-          const d = parts.length === 3 && parts[0].length !== 4 ? `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}` : dSrc;
-          const tSrc = (r.time || "");
-          let t: string | undefined;
-          if (tSrc) {
-            const p = tSrc.split(":");
-            if (p.length === 2) t = `${p[0].padStart(2, "0")}:${p[1].padStart(2, "0").slice(0, 2)}`;
-            else {
-              const digits = tSrc.replace(/\D/g, "");
-              t = digits.length >= 4 ? `${digits.slice(0, 2).padStart(2, "0")}:${digits.slice(2, 4).padEnd(2, "0").slice(0, 2)}` : undefined;
-            }
-          }
-          list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: d, time: t, meta: r });
-        });
-        const seen = new Set<string>();
-        const unique = list.filter((e) => {
-          const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        setEvents(unique);
-      } catch {}
-    })();
-  }, [events.length, currentTripId]);
 
   const lastInboundSignature = useMemo(() => {
     let sig = "";
@@ -655,7 +596,7 @@ export default function FinalCalendarPage() {
     }
     async function computeReturnDetails() {
       if (!summaryCities.length) return null as null | { airportName: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; gmapsUrl?: string; uberUrl?: string; callTime?: string; notifyAt?: string; callAtISO?: string; notifyAtISO?: string };
-      const trips: TripItem[] = await getSavedTrips();
+      const trips: TripItem[] = await getSavedTripsDb();
       const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
       if (!notes.length) return null;
       const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
@@ -721,7 +662,7 @@ export default function FinalCalendarPage() {
     const lines: string[] = [];
     lines.push("BEGIN:VCALENDAR");
     lines.push("VERSION:2.0");
-    lines.push(`PRODID:-//CalenTrip//Calendar Export//${lang.toUpperCase()}`);
+    lines.push("PRODID:-//CalenTrip//Calendar Export//PT");
     lines.push("CALSCALE:GREGORIAN");
     lines.push("METHOD:PUBLISH");
     lines.push("X-WR-CALNAME:CalenTrip");
@@ -894,7 +835,7 @@ export default function FinalCalendarPage() {
         callAtISO?: string;
         notifyAtISO?: string;
       };
-      const trips: TripItem[] = await getSavedTrips();
+      const trips: TripItem[] = getTrips();
       const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
       if (!notes.length) return null;
       const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
@@ -971,18 +912,18 @@ export default function FinalCalendarPage() {
         const extra = returnDetails;
         const info: string[] = [];
         info.push(desc);
-        if (extra?.airportName) info.push(`${t("destinationLabel")}: ${extra.airportName}`);
-        if (extra?.distanceKm !== undefined) info.push(`${t("distanceLabel")}: ${extra.distanceKm} km`);
+        if (extra?.airportName) info.push(`Destino: ${extra.airportName}`);
+        if (extra?.distanceKm !== undefined) info.push(`Distância: ${extra.distanceKm} km`);
         const modes: string[] = [];
-        if (extra?.walkingMin) modes.push(`${t("walkLabel")}: ${extra.walkingMin} ${t("minutesShort")}`);
-        if (extra?.busMin) modes.push(`${t("busLabel")}: ${extra.busMin} ${t("minutesShort")} ${t("estimatedSuffix")}`);
-        if (extra?.trainMin) modes.push(`${t("trainMetroLabel")}: ${extra.trainMin} ${t("minutesShort")} ${t("estimatedSuffix")}`);
-        if (extra?.drivingMin !== undefined) modes.push(`${t("drivingTaxiLabel")}: ${extra.drivingMin} ${t("minutesShort")}${extra.priceEstimate !== undefined ? ` • R$${extra.priceEstimate}` : ""}`);
+        if (extra?.walkingMin) modes.push(`A pé: ${extra.walkingMin} min`);
+        if (extra?.busMin) modes.push(`Ônibus: ${extra.busMin} min (estimado)`);
+        if (extra?.trainMin) modes.push(`Trem/Metro: ${extra.trainMin} min (estimado)`);
+        if (extra?.drivingMin !== undefined) modes.push(`Uber/Táxi: ${extra.drivingMin} min${extra.priceEstimate !== undefined ? ` • R$${extra.priceEstimate}` : ""}`);
         if (modes.length) info.push(modes.join(" | "));
-        if (extra?.gmapsUrl) info.push(`${t("googleMapsLabel")}: ${extra.gmapsUrl}`);
-        if (extra?.uberUrl) info.push(`${t("uberLabel")}: ${extra.uberUrl}`);
-        if (extra?.callTime) info.push(`${t("callUberAtLabel")}: ${extra.callTime}`);
-        if (extra?.notifyAt) info.push(`${t("notificationScheduledLabel")}: ${extra.notifyAt}`);
+        if (extra?.gmapsUrl) info.push(`Google Maps: ${extra.gmapsUrl}`);
+        if (extra?.uberUrl) info.push(`Uber: ${extra.uberUrl}`);
+        if (extra?.callTime) info.push(`Chamar Uber às: ${extra.callTime}`);
+        if (extra?.notifyAt) info.push(`Notificação programada: ${extra.notifyAt}`);
         lines.push(`DESCRIPTION:${info.join("\\n")}`);
         if (extra?.callAtISO) {
           const callAt = new Date(extra.callAtISO);
@@ -990,14 +931,14 @@ export default function FinalCalendarPage() {
           lines.push("BEGIN:VEVENT");
           lines.push(`DTSTART:${fmtICS(callAt)}`);
           lines.push(`DTEND:${fmtICS(callEnd)}`);
-          lines.push(`SUMMARY:${t("callUberSummaryLabel")}`);
-          const descParts = [`${t("callUberAtLabel")}: ${extra.callTime}`];
-          if (extra.uberUrl) descParts.push(`${t("uberLabel")}: ${extra.uberUrl}`);
-          if (extra.gmapsUrl) descParts.push(`${t("googleMapsLabel")}: ${extra.gmapsUrl}`);
+          lines.push(`SUMMARY:Chamar Uber`);
+          const descParts = [`Chamar Uber às: ${extra.callTime}`];
+          if (extra.uberUrl) descParts.push(`Uber: ${extra.uberUrl}`);
+          if (extra.gmapsUrl) descParts.push(`Google Maps: ${extra.gmapsUrl}`);
           lines.push(`DESCRIPTION:${descParts.join("\\n")}`);
           lines.push("BEGIN:VALARM");
           lines.push("ACTION:DISPLAY");
-          lines.push(`DESCRIPTION:${t("transportReminderLabel")}`);
+          lines.push("DESCRIPTION:Lembrete de transporte");
           lines.push("TRIGGER:-PT120M");
           lines.push("END:VALARM");
           lines.push("END:VEVENT");
@@ -1012,11 +953,11 @@ export default function FinalCalendarPage() {
             const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
             const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
             const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
-            info.push(`${t("destinationLabel")}: ${destName}`);
-            info.push(`${t("googleMapsLabel")}: ${gmaps}`);
-            info.push(`${t("rome2rioLabel")}: ${r2r}`);
-            info.push(`${t("uberLabel")}: ${uber}`);
-            info.push(`${t("arriveAirportAdvice")}`);
+            info.push(`Destino: ${destName}`);
+            info.push(`Google Maps: ${gmaps}`);
+            info.push(`Rome2Rio: ${r2r}`);
+            info.push(`Uber: ${uber}`);
+            info.push(`Chegar no aeroporto: 3h antes do voo.`);
           }
         } else if (e.type === "transport") {
           const seg = e.meta as TransportSegmentMeta;
@@ -1110,8 +1051,7 @@ export default function FinalCalendarPage() {
   }
 
   useEffect(() => {
-    (async () => {
-      try {
+    try {
       const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (rawSaved) {
         try {
@@ -1119,13 +1059,7 @@ export default function FinalCalendarPage() {
           if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
         } catch {}
       }
-      const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
-      if (dbEvents.length) {
-        const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
-        setEvents(mapped);
-        return;
-      }
-      const all: TripItem[] = await getSavedTrips();
+      const all: TripItem[] = getTrips();
       let trips: TripItem[] = [];
       try {
         const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
@@ -1196,22 +1130,7 @@ export default function FinalCalendarPage() {
       }
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
       const recs: RecordItem[] = raw ? JSON.parse(raw) : [];
-      (recs || []).forEach((r) => {
-        const dSrc = (r.date || "").trim().replace(/\//g, "-");
-        const parts = dSrc.split("-");
-        const d = parts.length === 3 && parts[0].length !== 4 ? `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}` : dSrc;
-        const tSrc = (r.time || "");
-        let t: string | undefined;
-        if (tSrc) {
-          const p = tSrc.split(":");
-          if (p.length === 2) t = `${p[0].padStart(2, "0")}:${p[1].padStart(2, "0").slice(0, 2)}`;
-          else {
-            const digits = tSrc.replace(/\D/g, "");
-            t = digits.length >= 4 ? `${digits.slice(0, 2).padStart(2, "0")}:${digits.slice(2, 4).padEnd(2, "0").slice(0, 2)}` : undefined;
-          }
-        }
-        list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: d, time: t, meta: r });
-      });
+      (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
       const seen = new Set<string>();
       const unique = list.filter((e) => {
         const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
@@ -1220,9 +1139,8 @@ export default function FinalCalendarPage() {
         return true;
       });
       setEvents(unique);
-      } catch {}
-    })();
-  }, [currentTripId]);
+    } catch {}
+  }, []);
 
   async function openTransportDrawer(item: EventItem) {
     if (item.type !== "flight") return;
@@ -1579,16 +1497,13 @@ export default function FinalCalendarPage() {
     setReturnDrawerOpen(true);
     setReturnLoading(true);
     try {
-      const trips = await getSavedTrips();
+      const trips: TripItem[] = getTrips();
       const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
       if (!notes.length) { setReturnInfo({ city: last.name, address: last.address }); return; }
       const sortedNotes = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime());
       const fn = sortedNotes[sortedNotes.length - 1];
-      try {
-        const trip = trips.find((t) => (t.flightNotes || []).some((n) => n.leg === "inbound" && n.origin === fn.origin && n.destination === fn.destination && n.date === fn.date && n.departureTime === fn.departureTime));
-        const atts = trip ? await getTripAttachments(trip.id, "inbound") : [];
-        setReturnFiles(atts.map((a) => ({ name: a.name, type: a.type, size: a.size, id: a.id })));
-      } catch { setReturnFiles([]); }
+      const trip = trips.find((t) => (t.flightNotes || []).some((n) => n.leg === "inbound" && n.origin === fn.origin && n.destination === fn.destination && n.date === fn.date && n.departureTime === fn.departureTime));
+      setReturnFiles((trip?.attachments || []).filter((a) => a.leg === "inbound").map((a) => ({ name: a.name, type: a.type, size: a.size, dataUrl: a.dataUrl })));
       const airport = await findAirportByIata(fn.origin);
       const geocode = async (q: string) => {
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
@@ -1716,10 +1631,10 @@ export default function FinalCalendarPage() {
     if (!summaryCities.length) return;
     const last = summaryCities[summaryCities.length - 1];
     if (!last.address) return;
+    const trips: TripItem[] = getTrips();
+    const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
+    if (!notes.length) return;
     (async () => {
-      const trips = await getSavedTrips();
-      const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
-      if (!notes.length) return;
       const sortedNotes = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime());
       const fn = sortedNotes[sortedNotes.length - 1];
       const airport = await findAirportByIata(fn.origin);
@@ -1941,8 +1856,8 @@ export default function FinalCalendarPage() {
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
                 <>
-                  <Button type="button" onClick={() => signIn("google", { callbackUrl: typeof window !== "undefined" ? window.location.href : "/calendar/final" })}>{t("signInWithGoogle")}</Button>
-                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: typeof window !== "undefined" ? window.location.href : "/calendar/final" })}>{t("signInDemo")}</Button>
+                  <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
+                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/final" })}>{t("signInDemo")}</Button>
                 </>
               ) : (
                 <Button
@@ -2065,14 +1980,14 @@ export default function FinalCalendarPage() {
             </span>
             {sideOpen ? <span className="text-sm font-medium">Iniciar nova pesquisa</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             try {
               const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
               const sc = raw ? JSON.parse(raw) as { events?: EventItem[] } : null;
               setSavedCalendar(sc);
             } catch { setSavedCalendar(null); }
             try {
-              const trips = await getSavedTrips();
+              const trips = getTrips();
               setSavedTripsList(trips);
             } catch { setSavedTripsList([]); }
             try {
@@ -2095,7 +2010,7 @@ export default function FinalCalendarPage() {
           </button>
           
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
-            const ok = await saveCalendarNamed(false);
+            const ok = saveCalendarNamed(false);
             if (ok) {
               try { await saveCalendarFull(); } catch {}
               setCalendarHelpOpen(true);
@@ -2124,7 +2039,7 @@ export default function FinalCalendarPage() {
           </button>
           {false && (<button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             try {
-              const ok = await saveCalendarNamed();
+              const ok = saveCalendarNamed();
               if (ok) { setCalendarHelpOpen(true); return; }
             } catch {}
             setCalendarHelpOpen(true);
@@ -2189,7 +2104,7 @@ export default function FinalCalendarPage() {
                 callAtISO?: string;
                 notifyAtISO?: string;
               };
-              const trips = await getSavedTrips();
+              const trips: TripItem[] = getTrips();
               const notes = trips.flatMap((t) => (t.flightNotes || [])).filter((n) => n.leg === "inbound" && n.origin && n.date && n.departureTime);
               if (!notes.length) return null;
               const fn = [...notes].sort((a, b) => new Date(`${a.date}T${(a.departureTime || "00:00").padStart(5, "0")}:00`).getTime() - new Date(`${b.date}T${(b.departureTime || "00:00").padStart(5, "0")}:00`).getTime()).slice(-1)[0];
@@ -2663,7 +2578,12 @@ export default function FinalCalendarPage() {
         <div className="fixed top-0 right-0 bottom-0 left-56 z-30 bg-black/10" onClick={() => setSideOpen(false)} />
       ) : null}
       <div className="container-page">
-        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário final</h1>
+        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">
+          Calendário final
+          {currentSavedName ? (
+            <span className="ml-2 text-xs rounded px-2 py-0.5 bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700">{currentSavedName}</span>
+          ) : null}
+        </h1>
         <p className="text-sm text-zinc-600">Veja todas as atividades em ordem cronológica.</p>
       </div>
 
@@ -2682,8 +2602,7 @@ export default function FinalCalendarPage() {
             disabled={!premiumFlag}
             onClick={async () => {
               try {
-                const ok = await saveCalendarNamed();
-                if (ok) setCalendarHelpOpen(true);
+                if (saveCalendarNamed()) setCalendarHelpOpen(true);
                 await saveCalendarToFile();
               } catch {}
             }}
@@ -2694,6 +2613,10 @@ export default function FinalCalendarPage() {
           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">Calendário</span>
+          </Button>
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { loadLatestCalendarFromDb(); } catch {} }}>
+            <span className="material-symbols-outlined text-[16px]">restore</span>
+            <span className="hidden sm:inline">Carregar último calendário</span>
           </Button>
         </div>
         <Card>
@@ -2729,50 +2652,10 @@ export default function FinalCalendarPage() {
                           </Button>
                         ) : null}
                         {ev.type === "transport" ? (
-                          <>
-                            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
-                              <span className="material-symbols-outlined text-[16px]">directions</span>
-                              <span>Rota</span>
-                            </Button>
-                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
-                              try {
-                                const mod = await import("@/lib/attachments-store");
-                                const files = (ev.meta as (TransportSegmentMeta & { files?: SavedFile[] }))?.files || [];
-                                let list = files as Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>;
-                                if (currentTripId) {
-                                  const m = String(ev.label || "");
-                                  const m2 = m.replace(/^Transporte:\s*/, "");
-                                  const base = m2.split(" • ")[0] || "";
-                                  const parts = base.split("→").map((s) => s.trim());
-                                  const ref = parts.length >= 2 ? `${parts[0]}->${parts[1]}` : base.replace(" → ", "->");
-                                  const more = await getRefAttachments(currentTripId, "transport", ref);
-                                  list = list.concat(more.map((a) => ({ name: a.name, type: a.type, size: a.size, id: a.id })));
-                                }
-                                const resolved = await Promise.all(list.map(async (f) => {
-                                  if (!f.dataUrl && f.id) {
-                                    const url = await mod.getObjectUrl(f.id);
-                                    return { ...f, dataUrl: url || undefined };
-                                  }
-                                  return f;
-                                }));
-                                setDocTitle(String(ev.label || "Transporte"));
-                                setDocFiles(resolved);
-                                setDocOpen(true);
-                              } catch {}
-                            }}>
-                              <span className="material-symbols-outlined text-[16px]">description</span>
-                              <span>Docs</span>
-                            </Button>
-                            {(() => {
-                              const m = String(ev.label || "");
-                              const m2 = m.replace(/^Transporte:\s*/, "");
-                              const base = m2.split(" • ")[0] || "";
-                              const parts = base.split("→").map((s) => s.trim());
-                              const ref = parts.length >= 2 ? `${parts[0]}->${parts[1]}` : base.replace(" → ", "->");
-                              const c = transportDocsCount[ref] || 0;
-                              return c ? <span className="text-[11px] text-zinc-600">{c} docs</span> : null;
-                            })()}
-                          </>
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
+                            <span className="material-symbols-outlined text-[16px]">directions</span>
+                            <span>Rota</span>
+                          </Button>
                         ) : null}
                         {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(ev)}>
@@ -2903,11 +2786,11 @@ export default function FinalCalendarPage() {
                     <a className="underline" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
                   </div>
                   <div>
-                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
+                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
                   </div>
-                  <div className="mt-2">{t("arriveAirportAdvice")}</div>
-                  <div>{t("callUberAtLabel")}: {transportInfo?.callTime || "—"}</div>
-                  <div>{t("notificationScheduledLabel")}: {transportInfo?.notifyAt ? `${lang === "es" ? "a las" : lang === "en" ? "at" : "às"} ${transportInfo.notifyAt}` : "—"}</div>
+                  <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
+                  <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
+                  <div>Notificação programada: {transportInfo?.notifyAt ? `às ${transportInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">
                     <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }}>{t("close")}</Button>
                   </div>
@@ -2921,7 +2804,7 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => setSavedDrawerOpen(false)} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>{t("savedSearchesTitle")} & {t("savedCalendarsTitle")}</DialogHeader>
+        <DialogHeader>Pesquisas e calendários salvos</DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="rounded border p-3">
             <div className="font-semibold mb-1">{t("savedCalendarsTitle")}</div>
@@ -2930,16 +2813,34 @@ export default function FinalCalendarPage() {
                 {savedCalendarsList.map((c, idx) => (
                   <li key={`${c.name}-${idx}`} className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="font-medium">{c.name}</div>
-                      <div className="text-xs text-zinc-600">{(c.events || []).length} {t("eventsWord")}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        <span>{c.name}</span>
+                        {((((savedTripsList.find((t) => t.id === currentTripId)?.savedCalendarName) || currentSavedName) || "") === (c.name || "")) ? (
+                          <span className="ml-1 rounded px-2 py-0.5 text-[11px] bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/30">Atual</span>
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-zinc-600">{(c.events || []).length} eventos</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" onClick={() => { setEvents(c.events); setSavedDrawerOpen(false); }}>{t("loadLabel")}</Button>
+                      <Button type="button" variant="outline" onClick={async () => {
+                        try {
+                          await initDatabaseDb();
+                          try { await migrateFromLocalStorageDb(); } catch {}
+                          const trips = await getSavedTripsDb();
+                          const match = trips.find((t) => (t.savedCalendarName || "") === (c.name || ""));
+                          if (match) {
+                            const ok = await loadTripEventsFromDbById(match.id);
+                            if (ok) { setSavedDrawerOpen(false); return; }
+                          }
+                        } catch {}
+                        setEvents(c.events);
+                        setSavedDrawerOpen(false);
+                      }}>{t("loadLabel")}</Button>
                       <Button type="button" variant="outline" onClick={() => {
                         try {
-                          const ok1 = confirm(t("confirmDeleteCalendar").replace("{name}", c.name));
+                          const ok1 = confirm(`Deseja excluir o calendário "${c.name}"?`);
                           if (!ok1) return;
-                          const ok2 = confirm(t("confirmAreYouSure"));
+                          const ok2 = confirm("Tem certeza? Esta ação não pode ser desfeita.");
                           if (!ok2) return;
                           const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
                           const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
@@ -2951,8 +2852,8 @@ export default function FinalCalendarPage() {
                             const one = rawOne ? JSON.parse(rawOne) as { name?: string; events?: EventItem[] } : null;
                             if ((one?.name || "") === (c?.name || "")) localStorage.removeItem("calentrip:saved_calendar");
                           } catch {}
-                          show(t("calendarDeletedMsg"), { variant: "success" });
-                        } catch { show(t("deleteError"), { variant: "error" }); }
+                          show("Calendário excluído", { variant: "success" });
+                        } catch { show("Erro ao excluir", { variant: "error" }); }
                       }}>{t("deleteLabel")}</Button>
                     </div>
                   </li>
@@ -2969,14 +2870,25 @@ export default function FinalCalendarPage() {
                 {savedTripsList.map((trip) => (
                   <li key={trip.id} className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="font-medium">{trip.title}</div>
-                      <div className="text-xs text-zinc-600">{trip.date} • {trip.passengers} pax</div>
+                      <div className="font-medium flex items-center gap-2">
+                        <span>{trip.title}</span>
+                        {trip.id === currentTripId ? (
+                          <span className="ml-1 rounded px-2 py-0.5 text-[11px] bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/30">Atual</span>
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-zinc-600">
+                        {trip.date} • {trip.passengers} pax{trip.savedCalendarName ? ` • ${trip.savedCalendarName}` : ""}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button type="button" variant="outline" onClick={() => {
-                        const legs = (trip.flightNotes || []).map((n) => `${n.leg === "outbound" ? (lang === "es" ? "Ida" : lang === "en" ? "Outbound" : "Ida") : (lang === "es" ? "Vuelta" : lang === "en" ? "Return" : "Volta")}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
+                        const legs = (trip.flightNotes || []).map((n) => `${n.leg === "outbound" ? "Ida" : "Volta"}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
                         alert(legs.join("\n"));
                       }}>{t("viewLabel")}</Button>
+                      <Button type="button" variant="outline" onClick={async () => {
+                        const ok = await loadTripEventsFromDbById(trip.id);
+                        if (ok) setSavedDrawerOpen(false);
+                      }}>{t("loadLabel")}</Button>
                     </div>
                   </li>
                 ))}
@@ -3027,25 +2939,25 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>{t("arrivalDrawerTitle")}</DialogHeader>
+        <DialogHeader>Chegada e deslocamento até hospedagem</DialogHeader>
         <div className="space-y-3 text-sm">
-          <div>{t("cityLabel")}: {arrivalInfo?.city || "—"}</div>
-          <div>{t("stayRouteToAddressLabel")}: {arrivalInfo?.address || "—"}</div>
-          <div>{t("distanceFromYourLocationLabel")}: {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
+          <div>Cidade: {arrivalInfo?.city || "—"}</div>
+          <div>Destino: {arrivalInfo?.address || "—"}</div>
+          <div>Distância (a partir da sua localização): {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
           {!arrivalInfo?.distanceKm && locConsent !== "granted" ? (
-            <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
+            <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
           ) : null}
             <div className="grid grid-cols-2 gap-2">
-              <div>{t("walkLabel")}: {arrivalInfo?.walkingMin ? `${arrivalInfo.walkingMin} ${t("minutesShort")}` : "—"}</div>
-              <div>{t("busLabel")}: {arrivalInfo?.busMin ? `${arrivalInfo.busMin} ${t("minutesShort")} ${t("estimatedSuffix")}` : "—"}</div>
-              <div>{t("trainMetroLabel")}: {arrivalInfo?.trainMin ? `${arrivalInfo.trainMin} ${t("minutesShort")} ${t("estimatedSuffix")}` : "—"}</div>
-              <div>{t("drivingTaxiLabel")}: {arrivalInfo?.drivingMin ? `${arrivalInfo.drivingMin} ${t("minutesShort")}` : "—"}{arrivalInfo?.priceEstimate !== undefined ? ` • R$${arrivalInfo.priceEstimate}` : ""}</div>
+              <div>A pé: {arrivalInfo?.walkingMin ? `${arrivalInfo.walkingMin} min` : "—"}</div>
+              <div>Ônibus: {arrivalInfo?.busMin ? `${arrivalInfo.busMin} min (estimado)` : "—"}</div>
+              <div>Trem/Metro: {arrivalInfo?.trainMin ? `${arrivalInfo.trainMin} min (estimado)` : "—"}</div>
+              <div>Uber/Táxi: {arrivalInfo?.drivingMin ? `${arrivalInfo.drivingMin} min` : "—"}{arrivalInfo?.priceEstimate !== undefined ? ` • R$${arrivalInfo.priceEstimate}` : ""}</div>
           </div>
           <div>
-            <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
+            <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
           </div>
           <div>
-            <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
+            <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
           </div>
           {(() => {
             const files = summaryCities.find((c) => {
@@ -3055,27 +2967,19 @@ export default function FinalCalendarPage() {
             })?.stayFiles || [];
             return files.length ? (
               <div>
-                  <Button type="button" variant="outline" onClick={async () => {
-                    setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem");
-                    const mod = await import("@/lib/attachments-store");
-                    let list = files;
-                    try {
-                      if (currentTripId) {
-                        const ref = `${arrivalInfo?.city || ""}|${arrivalInfo?.address || ""}`;
-                        const more = await getRefAttachments(currentTripId, "stay", ref);
-                        list = list.concat(more.map((m) => ({ name: m.name, type: m.type, size: m.size, id: m.id })));
-                      }
-                    } catch {}
-                    const resolved = await Promise.all(list.map(async (f) => {
-                      if (!f.dataUrl && f.id) {
-                        const url = await mod.getObjectUrl(f.id);
-                        return { ...f, dataUrl: url || undefined };
-                      }
-                      return f;
-                    }));
-                    setDocFiles(resolved);
-                    setDocOpen(true);
-                  }}>{t("savedFilesTitle")}</Button>
+                <Button type="button" variant="outline" onClick={async () => {
+                  setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem");
+                  const mod = await import("@/lib/attachments-store");
+                  const resolved = await Promise.all(files.map(async (f) => {
+                    if (!f.dataUrl && f.id) {
+                      const url = await mod.getObjectUrl(f.id);
+                      return { ...f, dataUrl: url || undefined };
+                    }
+                    return f;
+                  }));
+                  setDocFiles(resolved);
+                  setDocOpen(true);
+                }}>Arquivos salvos</Button>
               </div>
             ) : null;
           })()}
@@ -3090,37 +2994,29 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => { setGoDrawerOpen(false); setGoInfo(null); setGoRecord(null); }} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>{t("goDrawerTitle")}</DialogHeader>
+        <DialogHeader>Como ir até o destino</DialogHeader>
         <div className="space-y-3 text-sm">
           {goLoading ? (
-            <div>{t("loading")}</div>
+            <div>Calculando…</div>
           ) : (
             <>
-              <div>{t("destinationLabel")}: {goInfo?.destination || "—"}</div>
-              <div>{t("distanceFromYourLocationLabel")}: {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
+              <div>Destino: {goInfo?.destination || "—"}</div>
+              <div>Distância (a partir da sua localização): {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
               {!goInfo?.distanceKm && locConsent !== "granted" ? (
-                <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
+                <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
               ) : null}
               <div>
-                <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
+                <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
               </div>
               <div>
-                <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
+                <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
               </div>
               {goRecord?.files && goRecord.files.length ? (
                 <div>
                   <Button type="button" variant="outline" onClick={async () => {
                     setDocTitle(goRecord!.title);
                     const mod = await import("@/lib/attachments-store");
-                    let list = goRecord!.files || [];
-                    try {
-                      if (currentTripId && goRecord) {
-                        const ref = `${goRecord.title}|${goRecord.date}|${goRecord.cityName}`;
-                        const more = await getRefAttachments(currentTripId, goRecord.kind, ref);
-                        list = list.concat(more.map((m) => ({ name: m.name, type: m.type, size: m.size, id: m.id })));
-                      }
-                    } catch {}
-                    const resolved = await Promise.all(list.map(async (f) => {
+                    const resolved = await Promise.all((goRecord!.files || []).map(async (f) => {
                       if (!f.dataUrl && f.id) {
                         const url = await mod.getObjectUrl(f.id);
                         return { ...f, dataUrl: url || undefined };
@@ -3129,7 +3025,7 @@ export default function FinalCalendarPage() {
                     }));
                     setDocFiles(resolved);
                     setDocOpen(true);
-                  }}>{t("savedFilesTitle")}</Button>
+                  }}>Arquivos salvos</Button>
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
@@ -3145,26 +3041,26 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => { setReturnDrawerOpen(false); setReturnInfo(null); }} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>{t("returnDrawerTitle")}</DialogHeader>
+        <DialogHeader>Transporte até o aeroporto final da viagem</DialogHeader>
         <div className="space-y-3 text-sm">
           {returnLoading ? (
-            <div>{t("loading")}</div>
+            <div>Calculando…</div>
           ) : (
             <>
-              <div>{t("destinationLabel")}: {returnInfo?.airportName || "—"}</div>
-              <div>{t("originLabel")}: {returnInfo?.address || returnInfo?.city || "—"}</div>
-              <div>{t("distanceFromYourLocationLabel")}: {returnInfo?.distanceKm ? `${returnInfo.distanceKm} km` : "—"}</div>
+              <div>Destino: {returnInfo?.airportName || "—"}</div>
+              <div>Origem: {returnInfo?.address || returnInfo?.city || "—"}</div>
+              <div>Distância (a partir da sua localização): {returnInfo?.distanceKm ? `${returnInfo.distanceKm} km` : "—"}</div>
               {!returnInfo?.distanceKm && locConsent !== "granted" ? (
-                <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
+                <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
               ) : null}
               <div>
-                <a className="underline" href={returnInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
+                <a className="underline" href={returnInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
               </div>
               <div>
-                <a className="underline" href={returnInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
+                <a className="underline" href={returnInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
               </div>
-              <div className="mt-2">{t("callUberAtLabel")}: {returnInfo?.callTime || "—"}</div>
-              <div>{t("notificationScheduledLabel")}: {returnInfo?.notifyAt ? `${lang === "es" ? "a las" : lang === "en" ? "at" : "às"} ${returnInfo.notifyAt}` : "—"}</div>
+              <div className="mt-2">Chamar Uber às: {returnInfo?.callTime || "—"}</div>
+              <div>Notificação programada: {returnInfo?.notifyAt ? `às ${returnInfo.notifyAt}` : "—"}</div>
               {returnFiles.length ? (
                 <div>
                   <Button type="button" variant="outline" onClick={async () => {
@@ -3179,7 +3075,7 @@ export default function FinalCalendarPage() {
                     }));
                     setDocFiles(resolved);
                     setDocOpen(true);
-                  }}>{t("viewDocumentsButton")}</Button>
+                  }}>Visualizar documentos</Button>
                 </div>
               ) : null}
               <div className="mt-3 flex justify-end">
@@ -3195,32 +3091,32 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-            <DialogHeader>{t("stayDrawerTitle")}</DialogHeader>
+            <DialogHeader>Como chegar da hospedagem de checkout até o transporte para a próxima cidade</DialogHeader>
             <div className="space-y-3 text-sm">
               {stayLoading ? (
-                <div>{t("loading")}</div>
+                <div>Calculando…</div>
               ) : (
                 <>
-                  <div>{t("originLabel")}: {stayInfo?.origin || "—"}</div>
-                  <div>{t("destinationLabel")}: {stayInfo?.destination || "—"}</div>
-                  <div>{t("distanceFromYourLocationLabel")}: {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
+                  <div>Origem: {stayInfo?.origin || "—"}</div>
+                  <div>Destino: {stayInfo?.destination || "—"}</div>
+                  <div>Distância (a partir da sua localização): {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
                   {!stayInfo?.distanceKm && locConsent !== "granted" ? (
-                    <div className="text-xs text-zinc-500">{t("enableLocationToComputeLabel")}</div>
+                    <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
                   ) : null}
                   {stayInfo?.mapUrl ? (
                     <iframe title="map" src={stayInfo.mapUrl} className="mt-2 h-40 w-full rounded-md border" />
                   ) : null}
                   <div className="mt-2">
-                    <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("openRouteOnGoogleMaps")}</a>
+                    <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
                   </div>
                   <div>
-                    <a className="underline" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">{t("seeOptionsOnRome2Rio")}</a>
+                    <a className="underline" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
                   </div>
                   <div>
-                    <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">{t("callUberWord")}</a>
+                    <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
                   </div>
-                  <div className="mt-2">{t("callUberAtLabel")}: {stayInfo?.callTime || "—"}</div>
-                  <div>{t("notificationScheduledLabel")}: {stayInfo?.notifyAt ? `${lang === "es" ? "a las" : lang === "en" ? "at" : "às"} ${stayInfo.notifyAt}` : "—"}</div>
+                  <div className="mt-2">Chamar Uber às: {stayInfo?.callTime || "—"}</div>
+                  <div>Notificação programada: {stayInfo?.notifyAt ? `às ${stayInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">
                     <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }}>{t("close")}</Button>
                   </div>
@@ -3234,7 +3130,7 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDocOpen(false); setDocFiles([]); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-            <DialogHeader>{t("documentsWord")}: {docTitle}</DialogHeader>
+            <DialogHeader>Documentos: {docTitle}</DialogHeader>
             <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
               {docFiles.length ? (
                 <ul className="space-y-2">
@@ -3251,10 +3147,10 @@ export default function FinalCalendarPage() {
                           ) : f.type === "application/pdf" ? (
                             <iframe src={f.dataUrl} title={f.name} className="w-full h-48 rounded border" />
                           ) : (
-                            <div className="text-xs text-zinc-600">{t("fileAvailableOnDevice")}</div>
+                            <div className="text-xs text-zinc-600">Arquivo disponível no dispositivo.</div>
                           )}
                           <div>
-                            <a className="underline" href={f.dataUrl}>{t("openOnDevice")}</a>
+                            <a className="underline" href={f.dataUrl}>Abrir no dispositivo</a>
                           </div>
                         </div>
                       )}
@@ -3262,7 +3158,7 @@ export default function FinalCalendarPage() {
                   ))}
                 </ul>
               ) : (
-                <div className="text-zinc-600">{t("noDocumentsSaved")}</div>
+                <div className="text-zinc-600">Nenhum documento salvo.</div>
               )}
               <div className="mt-3 flex justify-end">
                 <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDocOpen(false); setDocFiles([]); }}>{t("close")}</Button>
