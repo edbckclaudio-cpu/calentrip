@@ -14,8 +14,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const [vvTop, setVvTop] = useState(0);
   const [vvLeft, setVvLeft] = useState(0);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const canPortal = typeof document !== "undefined";
   useEffect(() => {
     try {
       const vv = (typeof window !== "undefined" ? window.visualViewport : null);
@@ -120,7 +119,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ show, dismiss, minimize }}>
       {children}
-      {mounted && typeof document !== "undefined" ? createPortal(portal, document.body) : null}
+      {canPortal ? createPortal(portal, document.body) : null}
     </ToastContext.Provider>
   );
 }

@@ -8,12 +8,13 @@ import { isTripPremium, setTripPremium, computeExpiryFromData } from "@/lib/prem
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
-import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb, addTrip as addTripDb } from "@/lib/trips-db";
+import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb, addTrip as addTripDb, getRefAttachments } from "@/lib/trips-db";
 import { findAirportByIata } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
@@ -23,6 +24,33 @@ type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: 
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
 type CityPersist = { name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] };
+
+type TripSearchPersist = {
+  mode: "same" | "different";
+  origin?: string;
+  destination?: string;
+  departDate?: string;
+  returnDate?: string;
+  departTime?: string;
+  returnTime?: string;
+  passengers?: { adults?: number; children?: number; infants?: number };
+  outbound?: { origin?: string; destination?: string; date?: string; time?: string };
+  inbound?: { origin?: string; destination?: string; date?: string; time?: string };
+};
+
+function buildRome2RioUrl(args: { originName: string; destName: string; originLat?: number; originLon?: number; destLat?: number; destLon?: number; date?: string; time?: string; passengers?: number; lang?: string; currency?: string }) {
+  const p = new URLSearchParams();
+  p.set("lang", args.lang || "pt-BR");
+  p.set("currency", args.currency || "BRL");
+  if (args.date) p.set("date", args.date);
+  if (args.time) p.set("time", args.time);
+  if (args.passengers) p.set("passengers", String(args.passengers));
+  if (args.originLat && args.originLon) { p.set("sLat", String(args.originLat)); p.set("sLng", String(args.originLon)); }
+  if (args.destLat && args.destLon) { p.set("dLat", String(args.destLat)); p.set("dLng", String(args.destLon)); }
+  const base = `https://www.rome2rio.com/s/${encodeURIComponent(args.originName)}/${encodeURIComponent(args.destName)}`;
+  const q = p.toString();
+  return q ? `${base}?${q}` : base;
+}
 
 export default function FinalCalendarPage() {
   
@@ -34,6 +62,8 @@ export default function FinalCalendarPage() {
   const [stayDrawerOpen, setStayDrawerOpen] = useState(false);
   const [stayLoading, setStayLoading] = useState(false);
   const [stayInfo, setStayInfo] = useState<{ origin?: string; destination?: string; distanceKm?: number; drivingMin?: number; walkingMin?: number; busMin?: number; trainMin?: number; uberUrl?: string; gmapsUrl?: string; r2rUrl?: string; mapUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
+  const [stayCandidates, setStayCandidates] = useState<Array<{ name: string; lat: number; lon: number }>>([]);
+  const [stayChosenIdx, setStayChosenIdx] = useState<number | null>(null);
   const arrivalWatchIds = useRef<Record<string, number>>({});
   const arrivalNotified = useRef<Record<string, boolean>>({});
   const [arrivalDrawerOpen, setArrivalDrawerOpen] = useState(false);
@@ -59,7 +89,7 @@ export default function FinalCalendarPage() {
   const [summaryCities, setSummaryCities] = useState<Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>>([]);
   const [returnDrawerOpen, setReturnDrawerOpen] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
-  const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
+  const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; r2rUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const [outboundFiles, setOutboundFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
@@ -703,7 +733,8 @@ export default function FinalCalendarPage() {
       lines.push("END:VTIMEZONE");
     }
     const returnDetails = await computeReturnDetails();
-    events.forEach((e, idx) => {
+    for (let idx = 0; idx < events.length; idx++) {
+      const e = events[idx];
       const start = parseDT(e.date, e.time);
       const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
       const desc = e.label;
@@ -746,10 +777,34 @@ export default function FinalCalendarPage() {
           extraCall = { callAt, callEnd, callTime: extra.callTime, uberUrl: extra.uberUrl, gmapsUrl: extra.gmapsUrl };
         }
       } else {
-        const baseDesc = isAndroidHeader ? limit(desc, 160) : limit(desc, 280);
-        lines.push(`DESCRIPTION:${escText(baseDesc)}`);
-        const alarmLines = alarmForEvent(e.type, !!(e.time && e.time.trim()), start);
-        for (const L of alarmLines) lines.push(L);
+        if (e.type === "transport" && start) {
+          const sig = `${e.date}|${e.time || ""}`;
+          let tn: { callTime?: string; notifyAt?: string; callAtISO?: string; uberUrl?: string; gmapsUrl?: string } | null = null;
+          try {
+            const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:transport_notify") : null;
+            const map = raw ? JSON.parse(raw) as Record<string, { callTime: string; notifyAt: string; callAtISO: string; uberUrl?: string; gmapsUrl?: string }> : {};
+            tn = map[sig] || null;
+          } catch {}
+          const baseDesc = isAndroidHeader ? limit(desc, 160) : limit(desc, 280);
+          const extra: string[] = [baseDesc];
+          if (tn?.callTime) extra.push(`Chamar Uber às: ${tn.callTime}`);
+          if (tn?.notifyAt) extra.push(`Notificação programada: ${tn.notifyAt}`);
+          if (tn?.uberUrl) extra.push(`Uber: ${tn.uberUrl}`);
+          if (tn?.gmapsUrl) extra.push(`Google Maps: ${tn.gmapsUrl}`);
+          lines.push(`DESCRIPTION:${escText(extra.join("\n"))}`);
+          const alarmLines = alarmForEvent(e.type, !!(e.time && e.time.trim()), start);
+          for (const L of alarmLines) lines.push(L);
+          if (tn?.callAtISO) {
+            const callAt = new Date(tn.callAtISO);
+            const callEnd = new Date(callAt.getTime() + 30 * 60 * 1000);
+            extraCall = { callAt, callEnd, callTime: tn.callTime, uberUrl: tn.uberUrl, gmapsUrl: tn.gmapsUrl };
+          }
+        } else {
+          const baseDesc = isAndroidHeader ? limit(desc, 160) : limit(desc, 280);
+          lines.push(`DESCRIPTION:${escText(baseDesc)}`);
+          const alarmLines = alarmForEvent(e.type, !!(e.time && e.time.trim()), start);
+          for (const L of alarmLines) lines.push(L);
+        }
       }
       lines.push("END:VEVENT");
       if (extraCall) {
@@ -776,11 +831,11 @@ export default function FinalCalendarPage() {
         lines.push("BEGIN:VALARM");
         lines.push("ACTION:DISPLAY");
         lines.push("DESCRIPTION:Lembrete de transporte");
-        lines.push("TRIGGER:-PT120M");
+        lines.push("TRIGGER:-PT0M");
         lines.push("END:VALARM");
         lines.push("END:VEVENT");
       }
-    });
+    }
     lines.push("END:VCALENDAR");
     const crlf = lines.map(foldLine).join("\r\n") + "\r\n";
     const blob = new Blob([crlf], { type: "text/calendar;charset=utf-8" });
@@ -828,7 +883,7 @@ export default function FinalCalendarPage() {
       }
       const all: TripItem[] = getTrips();
       let trips: TripItem[] = [];
-      let tsObj: any = null;
+      let tsObj: TripSearchPersist | null = null;
       try {
         const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
         tsObj = rawTs ? JSON.parse(rawTs) : null;
@@ -967,7 +1022,7 @@ export default function FinalCalendarPage() {
       const gmapsUrl = pos
         ? `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude}%2C${pos.coords.longitude}&destination=${encodeURIComponent(originQ)}`
         : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(originQ)}`;
-      const r2rUrl = `https://www.rome2rio.com/pt/?utm_source=google&utm_medium=cpc&utm_campaign=870540415&gad_source=1&gad_campaignid=870540415&gbraid=0AAAAADm27_aMYXdGlfhkQQ_WMGut2n6Gi&gclid=`;
+      const r2rUrl = buildRome2RioUrl({ originName: pos ? `${pos.coords.latitude},${pos.coords.longitude}` : "my location", destName: originQ, originLat: pos?.coords.latitude, originLon: pos?.coords.longitude, destLat: airportLoc?.lat, destLon: airportLoc?.lon, date: fn.date, time: fn.departureTime, lang: "pt-BR", currency: "BRL" });
       if (!uberUrl && airportLoc) {
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${airportLoc.lat}&dropoff[longitude]=${airportLoc.lon}&dropoff[formatted_address]=${encodeURIComponent(originQ)}`;
       }
@@ -998,6 +1053,13 @@ export default function FinalCalendarPage() {
             }
           }
         } catch {}
+        try {
+          const sig = `${item.date}|${item.time || ""}`;
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:transport_notify") : null;
+          const map = raw ? JSON.parse(raw) as Record<string, { callTime: string; notifyAt: string; callAtISO: string; uberUrl?: string; gmapsUrl?: string }> : {};
+          map[sig] = { callTime, notifyAt, callAtISO: callAt.toISOString(), uberUrl, gmapsUrl };
+          if (typeof window !== "undefined") localStorage.setItem("calentrip:transport_notify", JSON.stringify(map));
+        } catch {}
       }
       setTransportInfo({ distanceKm, durationMin, durationWithTrafficMin, gmapsUrl, r2rUrl, uberUrl, airportName: originQ, callTime, notifyAt });
       try {
@@ -1009,7 +1071,7 @@ export default function FinalCalendarPage() {
     } catch {
       const dest = drawerData?.originIata ? `${drawerData.originIata} airport` : "aeroporto";
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
-      const r2rUrl = `https://www.rome2rio.com/pt/?utm_source=google&utm_medium=cpc&utm_campaign=870540415&gad_source=1&gad_campaignid=870540415&gbraid=0AAAAADm27_aMYXdGlfhkQQ_WMGut2n6Gi&gclid=`;
+      const r2rUrl = buildRome2RioUrl({ originName: "Origem", destName: dest, lang: "pt-BR", currency: "BRL" });
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(dest)}`;
       setTransportInfo({ distanceKm: undefined, durationMin: undefined, durationWithTrafficMin: undefined, gmapsUrl, r2rUrl, uberUrl, airportName: dest });
       try { showOnce("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
@@ -1034,7 +1096,40 @@ export default function FinalCalendarPage() {
         return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
       };
     const o = await geocode(originAddr);
-    const d = await geocode(depPoint + (seg.originCity ? ` ${seg.originCity}` : ""));
+    let destLabel = depPoint;
+    let destLatLon: { lat: number; lon: number } | null = null;
+    const cityForSearch = (seg.originCity || depPoint).trim();
+    const looksLikeCityOnly = !/[,\d]/.test(depPoint) && !/(rodovi|terminal|est(a|ã)\w+|bus|gare|station)/i.test(depPoint);
+    if (seg.mode === "bus" && looksLikeCityOnly && cityForSearch) {
+      try {
+        const fetchList = async (q: string) => {
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`;
+          const res = await fetch(url, { headers: { Accept: "application/json" } });
+          const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+          return js.map((r) => ({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon) }));
+        };
+        const list1 = await fetchList(`rodoviária ${cityForSearch}`);
+        const list2 = await fetchList(`bus station ${cityForSearch}`);
+        const seen = new Set<string>();
+        const merged: Array<{ name: string; lat: number; lon: number }> = [];
+        [...list1, ...list2].forEach((it) => {
+          const key = `${Math.round(it.lat * 10000)}|${Math.round(it.lon * 10000)}`;
+          if (!seen.has(key)) { seen.add(key); merged.push(it); }
+        });
+        if (merged.length) {
+          setStayCandidates(merged.slice(0, 6));
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
+          const map = raw ? JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }> : {};
+          const saved = map[cityForSearch];
+          const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
+          const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
+          destLabel = chosen.name;
+          destLatLon = { lat: chosen.lat, lon: chosen.lon };
+          setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
+        }
+      } catch {}
+    }
+    const d = destLatLon ? { lat: destLatLon.lat, lon: destLatLon.lon, display: destLabel } : await geocode(depPoint + (seg.originCity ? ` ${seg.originCity}` : ""));
     let distanceKm: number | undefined;
     let drivingMin: number | undefined;
     let walkingMin: number | undefined;
@@ -1066,21 +1161,21 @@ export default function FinalCalendarPage() {
           const rW = jsW?.routes?.[0];
           if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60);
         } catch {}
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
-        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(depPoint)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(destLabel || depPoint)}`;
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(destLabel || depPoint)}`;
       } else {
-        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
-        gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(depPoint)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(destLabel || depPoint)}`;
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destLabel || depPoint)}`;
       }
       if (o && d) {
         const bbox = [Math.min(o.lon, d.lon), Math.min(o.lat, d.lat), Math.max(o.lon, d.lon), Math.max(o.lat, d.lat)];
         mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox.join("%2C")}&layer=mapnik`;
       }
-      r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+      r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(destLabel || depPoint)}`;
     }
-    if (!gmapsUrl) gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(depPoint)}`;
-      if (!r2rUrl) r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
-      if (!uberUrl) uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+    if (!gmapsUrl) gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destLabel || depPoint)}`;
+      if (!r2rUrl) r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(destLabel || depPoint)}`;
+      if (!uberUrl) uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(destLabel || depPoint)}`;
       const trafficFactor = 1.3;
       const drivingWithTrafficMin = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
       const busMin = drivingWithTrafficMin ? Math.round(drivingWithTrafficMin * 1.8) : undefined;
@@ -1090,10 +1185,10 @@ export default function FinalCalendarPage() {
       if (item.date && item.time) {
         const [h, m] = (item.time || "00:00").split(":");
         const depDT = new Date(`${item.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
-        const bufferMin = 20;
+        const bufferMin = 60;
         const travelMs = ((drivingWithTrafficMin ?? drivingMin ?? 30) + bufferMin) * 60 * 1000;
         const callAt = new Date(depDT.getTime() - travelMs);
-        const notifyAtDate = new Date(callAt.getTime() - 60 * 60 * 1000);
+        const notifyAtDate = new Date(callAt.getTime());
         const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
         callTime = fmt(callAt);
         notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
@@ -1111,7 +1206,7 @@ export default function FinalCalendarPage() {
           }
         } catch {}
       }
-      setStayInfo({ origin: originAddr, destination: depPoint, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, busMin, trainMin, uberUrl, gmapsUrl, r2rUrl, mapUrl, callTime, notifyAt });
+      setStayInfo({ origin: originAddr, destination: destLabel || depPoint, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, busMin, trainMin, uberUrl, gmapsUrl, r2rUrl, mapUrl, callTime, notifyAt });
     } catch {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
@@ -1309,12 +1404,22 @@ export default function FinalCalendarPage() {
           navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
         } catch { resolve(null); }
       });
+      const reverseName = async (lat: number, lon: number) => {
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+          const res = await fetch(url, { headers: { Accept: "application/json" } });
+          const js = await res.json();
+          const name = js?.display_name as string | undefined;
+          return name;
+        } catch { return undefined; }
+      };
       let walkingMin: number | undefined;
       let drivingMin: number | undefined;
       let busMin: number | undefined;
       let trainMin: number | undefined;
       let distanceKm: number | undefined;
       let gmapsUrl: string | undefined;
+      let r2rUrl: string | undefined;
       let uberUrl: string | undefined;
       let callTime: string | undefined;
       let notifyAt: string | undefined;
@@ -1343,6 +1448,20 @@ export default function FinalCalendarPage() {
         busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
         trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        const originAddr = (await reverseName(cur.lat, cur.lon)) || `${cur.lat},${cur.lon}`;
+        r2rUrl = buildRome2RioUrl({
+          originName: originAddr,
+          destName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`,
+          originLat: cur.lat,
+          originLon: cur.lon,
+          destLat: d.lat,
+          destLon: d.lon,
+          date: fn.date,
+          time: fn.departureTime,
+          passengers: trip?.passengers,
+          lang: "pt-BR",
+          currency: "BRL",
+        });
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
         if (fn.departureTime && fn.date) {
           const [h, m] = (fn.departureTime || "00:00").split(":");
@@ -1389,6 +1508,19 @@ export default function FinalCalendarPage() {
         busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
         trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(last.address)}&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        r2rUrl = buildRome2RioUrl({
+          originName: last.address || "Origem",
+          destName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`,
+          originLat: o.lat,
+          originLon: o.lon,
+          destLat: d.lat,
+          destLon: d.lon,
+          date: fn.date,
+          time: fn.departureTime,
+          passengers: trip?.passengers,
+          lang: "pt-BR",
+          currency: "BRL",
+        });
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
         if (fn.departureTime && fn.date) {
           const [h, m] = (fn.departureTime || "00:00").split(":");
@@ -1403,14 +1535,21 @@ export default function FinalCalendarPage() {
         }
       } else {
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
+        r2rUrl = buildRome2RioUrl({
+          originName: last.address || "Origem",
+          destName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`,
+          lang: "pt-BR",
+          currency: "BRL",
+        });
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`)}`;
         try { showOnce("Destino não geocodificado. Usando links básicos.", { variant: "info" }); } catch {}
       }
-      setReturnInfo({ city: last.name, address: last.address, airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl, callTime, notifyAt });
+      setReturnInfo({ city: last.name, address: last.address, airportName: airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`, distanceKm, walkingMin, drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl, r2rUrl, callTime, notifyAt });
     } catch {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("aeroporto")}`;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(summaryCities[summaryCities.length - 1]?.address || "aeroporto")}`;
-      setReturnInfo({ city: summaryCities[summaryCities.length - 1]?.name, address: summaryCities[summaryCities.length - 1]?.address, gmapsUrl, uberUrl });
+      const r2rUrl = buildRome2RioUrl({ originName: summaryCities[summaryCities.length - 1]?.address || "Origem", destName: "aeroporto", lang: "pt-BR", currency: "BRL" });
+      setReturnInfo({ city: summaryCities[summaryCities.length - 1]?.name, address: summaryCities[summaryCities.length - 1]?.address, gmapsUrl, uberUrl, r2rUrl });
       try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
     } finally {
       setReturnLoading(false);
@@ -2117,7 +2256,7 @@ export default function FinalCalendarPage() {
                   if (fn?.leg === "outbound") {
                     const destName = `${fn?.origin || ""} airport`;
                     const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
-                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
+                    const r2r = buildRome2RioUrl({ originName: "my location", destName: destName, lang: "pt-BR", currency: "BRL" });
                     const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
                     info.push(`Destino: ${destName}`);
                     info.push(`Google Maps: ${gmaps}`);
@@ -2131,7 +2270,7 @@ export default function FinalCalendarPage() {
                   const depPoint = (seg?.dep || "").trim();
                   if (originAddr || depPoint) {
                     const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
-                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+                    const r2r = buildRome2RioUrl({ originName: originAddr, destName: depPoint, lang: "pt-BR", currency: "BRL" });
                     const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
                     info.push(`Origem: ${originAddr || "—"}`);
                     info.push(`Destino: ${depPoint || "—"}`);
@@ -2242,7 +2381,7 @@ export default function FinalCalendarPage() {
                   if (fn?.leg === "outbound") {
                     const destName = `${fn?.origin || ""} airport`;
                     const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;
-                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent("my location")}/${encodeURIComponent(destName)}`;
+                    const r2r = buildRome2RioUrl({ originName: "my location", destName: destName, lang: "pt-BR", currency: "BRL" });
                     const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
                     info.push(`Destino: ${destName}`);
                     info.push(`Google Maps: ${gmaps}`);
@@ -2256,7 +2395,7 @@ export default function FinalCalendarPage() {
                   const depPoint = (seg?.dep || "").trim();
                   if (originAddr || depPoint) {
                     const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
-                    const r2r = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+                    const r2r = buildRome2RioUrl({ originName: originAddr, destName: depPoint, lang: "pt-BR", currency: "BRL" });
                     const uber = `https://m.uber.com/ul/?action=setPickup&pickup=my_location`;
                     info.push(`Origem: ${originAddr || "—"}`);
                     info.push(`Destino: ${depPoint || "—"}`);
@@ -2438,13 +2577,31 @@ export default function FinalCalendarPage() {
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openReturnAirportDrawer()}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                            <span>Aeroporto</span>
+                            <span>Aeroporto retorno</span>
+                          </Button>
+                        ) : null}
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature && returnFiles.length ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
+                            setDocTitle(returnInfo?.airportName || "Voo de volta");
+                            const mod = await import("@/lib/attachments-store");
+                            const resolved = await Promise.all(returnFiles.map(async (f) => {
+                              if (!f.dataUrl && f.id) {
+                                const url = await mod.getObjectUrl(f.id);
+                                return { ...f, dataUrl: url || undefined };
+                              }
+                              return f;
+                            }));
+                            setDocFiles(resolved);
+                            setDocOpen(true);
+                          }}>
+                            <span className="material-symbols-outlined text-[16px]">description</span>
+                            <span>Docs</span>
                           </Button>
                         ) : null}
                         {ev.type === "transport" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
-                            <span className="material-symbols-outlined text-[16px]">directions</span>
-                            <span>Rota</span>
+                            <span className="material-symbols-outlined text-[16px] text-[#febb02]">alt_route</span>
+                            <span>Opções de rota</span>
                           </Button>
                         ) : null}
                         {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
@@ -2573,7 +2730,10 @@ export default function FinalCalendarPage() {
                     <a className="underline" href={transportInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Veja no Google Maps</a>
                   </div>
                   <div>
-                    <a className="underline" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Opções no Rome2Rio</a>
+                <a className="underline flex items-center gap-1" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">
+                  <span className="material-symbols-outlined text-[16px] text-[#febb02]">alt_route</span>
+                  <span>Opções de rota (Rome2Rio)</span>
+                </a>
                   </div>
                   <div>
                     <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Uber</a>
@@ -2754,12 +2914,6 @@ export default function FinalCalendarPage() {
           {!arrivalInfo?.distanceKm && locConsent !== "granted" ? (
             <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
           ) : null}
-            <div className="grid grid-cols-2 gap-2">
-              <div>A pé: {arrivalInfo?.walkingMin ? `${arrivalInfo.walkingMin} min` : "—"}</div>
-              <div>Ônibus: {arrivalInfo?.busMin ? `${arrivalInfo.busMin} min (estimado)` : "—"}</div>
-              <div>Trem/Metro: {arrivalInfo?.trainMin ? `${arrivalInfo.trainMin} min (estimado)` : "—"}</div>
-              <div>Uber/Táxi: {arrivalInfo?.drivingMin ? `${arrivalInfo.drivingMin} min` : "—"}{arrivalInfo?.priceEstimate !== undefined ? ` • R$${arrivalInfo.priceEstimate}` : ""}</div>
-          </div>
           <div>
             <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
           </div>
@@ -2786,7 +2940,7 @@ export default function FinalCalendarPage() {
                   }));
                   setDocFiles(resolved);
                   setDocOpen(true);
-                }}>Arquivos salvos</Button>
+                }}>Documentos anexos</Button>
               </div>
             ) : null;
           })()}
@@ -2864,6 +3018,12 @@ export default function FinalCalendarPage() {
                 <a className="underline" href={returnInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
               </div>
               <div>
+                <a className="underline flex items-center gap-1" href={returnInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">
+                  <span className="material-symbols-outlined text-[16px] text-[#febb02]">alt_route</span>
+                  <span>Opções de rota (Rome2Rio)</span>
+                </a>
+              </div>
+              <div>
                 <a className="underline" href={returnInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
               </div>
               <div className="mt-2">Chamar Uber às: {returnInfo?.callTime || "—"}</div>
@@ -2906,6 +3066,65 @@ export default function FinalCalendarPage() {
                 <>
                   <div>Origem: {stayInfo?.origin || "—"}</div>
                   <div>Destino: {stayInfo?.destination || "—"}</div>
+                  {stayCandidates.length > 1 ? (
+                    <div>
+                      <div className="text-xs text-zinc-600">Escolha a rodoviária:</div>
+                      <Select className="mt-1" value={String(stayChosenIdx ?? 0)} onChange={async (e) => {
+                        const i = Number((e.target as HTMLSelectElement).value);
+                        const c = stayCandidates[i];
+                        setStayChosenIdx(i);
+                        try {
+                          const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+                            try {
+                              if (!ensureLocationConsent()) { resolve(null); return; }
+                              navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+                            } catch { resolve(null); }
+                          });
+                          let gmapsUrl: string | undefined;
+                          let uberUrl: string | undefined;
+                          let distanceKm: number | undefined;
+                          let drivingMin: number | undefined;
+                          let walkingMin: number | undefined;
+                          const cityForSearch = (stayInfo?.origin || "").split(",")[0] || "";
+                          if (pos) {
+                            const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                            const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`;
+                            const resD = await fetch(osrmDrive); const jsD = await resD.json(); const rD = jsD?.routes?.[0];
+                            if (rD) { distanceKm = Math.round((rD.distance ?? 0) / 1000); drivingMin = Math.round((rD.duration ?? 0) / 60); }
+                            try { const resW = await fetch(`https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`); const jsW = await resW.json(); const rW = jsW?.routes?.[0]; if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60); } catch {}
+                            gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(c.name)}`;
+                            uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
+                          } else {
+                            gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.name)}`;
+                            uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
+                          }
+                          const trafficFactor = 1.3;
+                          const drivingWithTrafficMin = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+                          let callTime: string | undefined; let notifyAt: string | undefined;
+                          if (editIdx !== null) {
+                            const ev = events[editIdx];
+                            const [h, m] = (ev?.time || "00:00").split(":");
+                            const depDT = new Date(`${ev?.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
+                            const bufferMin = 60;
+                            const travelMs = ((drivingWithTrafficMin ?? drivingMin ?? 30) + bufferMin) * 60 * 1000;
+                            const callAt = new Date(depDT.getTime() - travelMs);
+                            const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                            callTime = fmt(callAt);
+                            notifyAt = `${callAt.toLocaleDateString()} ${fmt(callAt)}`;
+                            try {
+                              const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
+                              const map = raw ? JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }> : {};
+                              map[cityForSearch] = { name: c.name, lat: c.lat, lon: c.lon };
+                              if (typeof window !== "undefined") localStorage.setItem("calentrip:bus_station_selection", JSON.stringify(map));
+                            } catch {}
+                          }
+                          setStayInfo((prev) => ({ ...(prev || {}), destination: c.name, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, gmapsUrl, uberUrl, callTime, notifyAt }));
+                        } catch {}
+                      }}>
+                        {stayCandidates.map((c, i) => (<option key={`opt-${i}`} value={String(i)}>{c.name}</option>))}
+                      </Select>
+                    </div>
+                  ) : null}
                   <div>Distância (a partir da sua localização): {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
                   {!stayInfo?.distanceKm && locConsent !== "granted" ? (
                     <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
@@ -2917,11 +3136,43 @@ export default function FinalCalendarPage() {
                     <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
                   </div>
                   <div>
-                    <a className="underline" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">Ver opções em Rome2Rio</a>
+                    <a className="underline flex items-center gap-1" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">
+                      <span className="material-symbols-outlined text-[16px] text-[#febb02]">alt_route</span>
+                      <span>Opções de rota (Rome2Rio)</span>
+                    </a>
                   </div>
                   <div>
                     <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
                   </div>
+                  {(() => {
+                    const ev = editIdx !== null ? events[editIdx] : null;
+                    const seg = ev?.meta as TransportSegmentMeta | undefined;
+                    const ref = seg ? `${(seg.originCity || "").trim()} -> ${(seg.arr || "").trim()} @ ${(ev?.date || "").trim()}` : undefined;
+                    return currentTripId && ref ? (
+                      <div>
+                        <Button type="button" variant="outline" className="px-2 py-1 text-xs" onClick={async () => {
+                          try {
+                            const files = await getRefAttachments(currentTripId!, "transport", ref);
+                            const mod = await import("@/lib/attachments-store");
+                            const resolved = await Promise.all((files || []).map(async (f: SavedFile) => {
+                              if (!f.dataUrl && f.id) {
+                                const url = await mod.getObjectUrl(f.id);
+                                return { ...f, dataUrl: url || undefined } as SavedFile;
+                              }
+                              return f;
+                            }));
+                            setDocTitle("Documentos do transporte");
+                            setDocFiles(resolved as SavedFile[]);
+                            setDocOpen(true);
+                          } catch {
+                            setDocTitle("Documentos do transporte");
+                            setDocFiles([]);
+                            setDocOpen(true);
+                          }
+                        }}>Documentos anexos</Button>
+                      </div>
+                    ) : null;
+                  })()}
                   <div className="mt-2">Chamar Uber às: {stayInfo?.callTime || "—"}</div>
                   <div>Notificação programada: {stayInfo?.notifyAt ? `às ${stayInfo.notifyAt}` : "—"}</div>
                   <div className="mt-3 flex justify-end">
