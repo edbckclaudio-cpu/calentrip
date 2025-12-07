@@ -103,16 +103,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           >
             <span className="material-symbols-outlined text-[18px]">{t.minimized ? "expand_more" : "expand_less"}</span>
           </button>
-          {((typeof t.duration !== "number") || (t.message || "").length > 80) ? (
-            <button
-              type="button"
-              className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md/2 bg-white/10 hover:bg-white/20 text-white"
-              onClick={() => dismiss(t.id)}
-              aria-label="Fechar"
-            >
-              <span className="material-symbols-outlined text-[18px]">close</span>
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md/2 bg-white/10 hover:bg-white/20 text-white"
+            onClick={() => dismiss(t.id)}
+            aria-label="Fechar"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
         </div>
       ))}
     </div>
