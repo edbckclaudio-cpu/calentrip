@@ -2698,10 +2698,38 @@ export default function FinalCalendarPage() {
                           </Button>
                         ) : null}
                         {ev.type === "transport" ? (
-                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
-                            <span className="material-symbols-outlined text-[16px] text-[#febb02]">alt_route</span>
-                            <span>Opções de rota</span>
-                          </Button>
+                          <>
+                            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
+                              <span className="material-symbols-outlined text-[16px] text-[#febb02]">map</span>
+                              <span>Detalhes</span>
+                            </Button>
+                            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
+                              try {
+                                const seg = ev.meta as TransportSegmentMeta;
+                                const ref = `${(seg.originCity || "").trim()} -> ${(seg.arr || "").trim()} @ ${(ev.date || "").trim()}`;
+                                if (!currentTripId) { setDocTitle("Documentos do transporte"); setDocFiles([]); setDocOpen(true); return; }
+                                const files = await getRefAttachments(currentTripId!, "transport", ref);
+                                const mod = await import("@/lib/attachments-store");
+                                const resolved = await Promise.all((files || []).map(async (f: SavedFile) => {
+                                  if (!f.dataUrl && f.id) {
+                                    const url = await mod.getObjectUrl(f.id);
+                                    return { ...f, dataUrl: url || undefined } as SavedFile;
+                                  }
+                                  return f;
+                                }));
+                                setDocTitle("Documentos do transporte");
+                                setDocFiles(resolved as SavedFile[]);
+                                setDocOpen(true);
+                              } catch {
+                                setDocTitle("Documentos do transporte");
+                                setDocFiles([]);
+                                setDocOpen(true);
+                              }
+                            }}>
+                              <span className="material-symbols-outlined text-[16px]">description</span>
+                              <span>Docs</span>
+                            </Button>
+                          </>
                         ) : null}
                         {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(ev)}>

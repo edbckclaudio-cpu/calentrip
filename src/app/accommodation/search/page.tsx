@@ -45,7 +45,7 @@ export default function AccommodationSearchPage() {
   const [citySearchLoading, setCitySearchLoading] = useState(false);
   const [proceedingEntertainment, setProceedingEntertainment] = useState(false);
   const summaryRef = useRef<HTMLDivElement | null>(null);
-  const [summaryHighlight] = useState(false);
+  const [summaryHighlight, setSummaryHighlight] = useState(false);
   const [sameCityHighlight, setSameCityHighlight] = useState(() => !((initialCity || "").trim()));
   const [sameSearchHighlight, setSameSearchHighlight] = useState(() => Boolean((initialCity || "").trim()));
   const [proceedHighlight, setProceedHighlight] = useState(false);
@@ -404,6 +404,20 @@ export default function AccommodationSearchPage() {
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
     } catch {}
   }, [cities]);
+
+  useEffect(() => {
+    try {
+      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:show_summary") : null;
+      if (flag === "1") {
+        setSummaryHighlight(true);
+        setTimeout(() => setSummaryHighlight(false), 4000);
+        if (summaryRef.current) {
+          try { summaryRef.current.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {}
+        }
+        if (typeof window !== "undefined") localStorage.removeItem("calentrip:show_summary");
+      }
+    } catch {}
+  }, []);
 
   
 

@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 
 type TransportMode = "air" | "train" | "bus" | "car";
 type TransportRoute = { gmapsUrl?: string; r2rUrl?: string } | null;
-type TransportSegment = { mode: TransportMode; dep: string; arr: string; depTime: string; arrTime: string };
+type TransportFile = { name: string; type: string; size: number; dataUrl?: string };
+type TransportSegment = { mode: TransportMode; dep: string; arr: string; depTime: string; arrTime: string; files?: TransportFile[] };
 type CitySummary = { name: string; checkin: string; checkout: string; address?: string; checked?: boolean; transportToNext?: TransportSegment };
 
 export default function TransportPlanPage() {
@@ -49,6 +50,9 @@ export default function TransportPlanPage() {
   const [arrTime, setArrTime] = useState("");
   const depTimeRef = useRef<HTMLInputElement | null>(null);
   const arrTimeRef = useRef<HTMLInputElement | null>(null);
+  const [files, setFiles] = useState<TransportFile[]>([]);
+  const camInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     try {
@@ -101,12 +105,19 @@ export default function TransportPlanPage() {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
       const js: { cities?: CitySummary[] } | null = raw ? JSON.parse(raw) : null;
       const list: CitySummary[] = js?.cities || [];
-      const segment: TransportSegment = { mode, dep: depRef.current?.value ?? dep, arr: arrRef.current?.value ?? arr, depTime: depTimeRef.current?.value ?? depTime, arrTime: arrTimeRef.current?.value ?? arrTime };
+      const segment: TransportSegment = { mode, dep: depRef.current?.value ?? dep, arr: arrRef.current?.value ?? arr, depTime: depTimeRef.current?.value ?? depTime, arrTime: arrTimeRef.current?.value ?? arrTime, files };
       const updated = list.map((x, i) => (i === segIdx ? { ...x, transportToNext: segment } : x));
       const payload = { cities: updated };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
       showToast("Transporte salvo", { variant: "success" });
-      router.push("/accommodation/search");
+      const hasNext = segIdx + 1 < updated.length - 1;
+      if (hasNext) {
+        router.push(`/transport/plan?i=${segIdx + 1}`);
+        showToast("Próximo trecho", { duration: 5000 });
+      } else {
+        try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
+        router.push("/accommodation/search");
+      }
     } catch { showToast("Erro ao salvar", { variant: "error" }); }
   }
 
@@ -122,6 +133,7 @@ export default function TransportPlanPage() {
         if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
       } catch {}
       showToast("Transporte próprio selecionado. Indo para resumo.", { duration: 5000 });
+      try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
       router.push("/accommodation/search");
     }
   }, [mode, segIdx, router, showToast]);
@@ -275,6 +287,40 @@ export default function TransportPlanPage() {
                         onChange={(e) => setArrTime(formatTimeInput((e.target as HTMLInputElement).value))}
                       />
                     </div>
+                  </div>
+                  <div className="mt-2">
+                    <label className="mb-1 block text-sm">Documentos do transporte</label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => camInputRef.current?.click()}>Usar câmera</Button>
+                      <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => fileInputRef.current?.click()}>Escolher arquivos</Button>
+                      <span className="text-xs text-zinc-600">Anexos: {files.length}</span>
+                    </div>
+                    <input ref={camInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      try {
+                        const buf = await f.arrayBuffer();
+                        const b64 = typeof window !== "undefined" ? btoa(String.fromCharCode(...new Uint8Array(buf))) : "";
+                        const dataUrl = `data:${f.type};base64,${b64}`;
+                        setFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size, dataUrl }]);
+                      } catch {
+                        setFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size }]);
+                      } finally { try { (e.target as HTMLInputElement).value = ""; } catch {} }
+                    }} />
+                    <input ref={fileInputRef} type="file" multiple className="hidden" onChange={async (e) => {
+                      const list = Array.from(e.target.files || []);
+                      for (const f of list) {
+                        try {
+                          const buf = await f.arrayBuffer();
+                          const b64 = typeof window !== "undefined" ? btoa(String.fromCharCode(...new Uint8Array(buf))) : "";
+                          const dataUrl = `data:${f.type};base64,${b64}`;
+                          setFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size, dataUrl }]);
+                        } catch {
+                          setFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size }]);
+                        }
+                      }
+                      try { (e.target as HTMLInputElement).value = ""; } catch {}
+                    }} />
                   </div>
                 </div>
               ) : null}
