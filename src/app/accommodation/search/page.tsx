@@ -503,7 +503,7 @@ export default function AccommodationSearchPage() {
   useEffect(() => {
     (async () => {
       if (transportOpenIdx === null) return;
-      showToast("Escolha o transporte entre as cidades, preenchendo origem, destino e horários. Você pode anexar a passagem.", { duration: 8000 });
+      showToast("Escolha o transporte entre as cidades, preenchendo origem, destino e horários. Você pode anexar a passagem.", { duration: 7000 });
       setTransportDep("");
       setTransportArr("");
       setTransportDepTime("");
@@ -977,6 +977,7 @@ export default function AccommodationSearchPage() {
                       enterKeyHint="next"
                       style={{ touchAction: "manipulation" }}
                       ref={transportDepRef}
+                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => setTransportDep((e.target as HTMLInputElement).value)}
                       onFocus={() => {
@@ -1027,6 +1028,7 @@ export default function AccommodationSearchPage() {
                       enterKeyHint="next"
                       style={{ touchAction: "manipulation" }}
                       ref={transportArrRef}
+                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => setTransportArr((e.target as HTMLInputElement).value)}
                       onFocus={() => {
@@ -1072,9 +1074,11 @@ export default function AccommodationSearchPage() {
                       defaultValue={transportDepTime}
                       type="tel"
                       inputMode="numeric"
+                      pattern="[0-9]*"
                       enterKeyHint="next"
                       ref={transportDepTimeRef}
                       style={{ touchAction: "manipulation" }}
+                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => {
                         const v = formatTimeInput((e.target as HTMLInputElement).value);
@@ -1091,10 +1095,12 @@ export default function AccommodationSearchPage() {
                       defaultValue={transportArrTime}
                       type="tel"
                       inputMode="numeric"
+                      pattern="[0-9]*"
                       enterKeyHint="next"
                       disabled={transportMode === "car"}
                       ref={transportArrTimeRef}
                       style={{ touchAction: "manipulation" }}
+                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
                       onInput={(e) => {
                         const v = formatTimeInput((e.target as HTMLInputElement).value);
