@@ -53,6 +53,7 @@ export default function AccommodationSearchPage() {
   const [diffCheckHighlight, setDiffCheckHighlight] = useState(false);
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
   const [transportDocsCount, setTransportDocsCount] = useState<Record<number, number>>({});
+  const [transportIdx, setTransportIdx] = useState<number | null>(null);
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
@@ -615,7 +616,7 @@ export default function AccommodationSearchPage() {
                                 (cities[idx - 1]?.name && cities[idx]?.name && cities[idx - 1]?.checkout && cities[idx]?.checkin && cities[idx - 1]?.checked && cities[idx]?.checked)
                               )}
                               onClick={() => {
-                                try { router.push(`/transport/plan?i=${idx - 1}`); } catch {}
+                                try { setTransportIdx(idx - 1); } catch {}
                               }}
                             >
                               Transporte
@@ -662,6 +663,47 @@ export default function AccommodationSearchPage() {
                     </div>
                   </div>
                 </Dialog>
+                {transportIdx !== null ? (
+                  <Dialog open onOpenChange={() => setTransportIdx(null)}>
+                    <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
+                      <div className="p-4">
+                        <DialogHeader>Transporte</DialogHeader>
+                      </div>
+                      <div className="px-4 pb-4 flex-1 overflow-y-auto text-sm">
+                        {(() => {
+                          const i = transportIdx!;
+                          const from = cities[i]?.name || `Cidade ${i + 1}`;
+                          const to = cities[i + 1]?.name || `Cidade ${i + 2}`;
+                          const date = cities[i]?.checkout || "";
+                          const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}`;
+                          const p = new URLSearchParams({ lang: "pt-BR", currency: "BRL" });
+                          if (date) p.set("date", date);
+                          const r2rBase = `https://www.rome2rio.com/s/${encodeURIComponent(from)}/${encodeURIComponent(to)}`;
+                          const r2rUrl = p.toString() ? `${r2rBase}?${p.toString()}` : r2rBase;
+                          return (
+                            <div className="space-y-3">
+                              <div className="font-medium">{from} → {to}</div>
+                              <div className="text-zinc-600">Data de busca: {date || "—"}</div>
+                              <ul className="space-y-1">
+                                <li>
+                                  <a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700 flex items-center gap-1" href={r2rUrl} target="_blank" rel="noopener noreferrer">
+                                    <span className="material-symbols-outlined text-[16px]">alt_route</span>
+                                    <span>Opções de rota (Rome2Rio)</span>
+                                  </a>
+                                </li>
+                                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
+                              </ul>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="sticky bottom-0 p-4 border-t bg-white dark:bg-black flex items-center justify-end gap-2">
+                        <Button type="button" variant="secondary" onClick={() => { try { router.push(`/transport/plan?i=${transportIdx}`); } catch {} }}>Abrir página Transporte</Button>
+                        <Button type="button" onClick={() => setTransportIdx(null)}>Fechar</Button>
+                      </div>
+                    </div>
+                  </Dialog>
+                ) : null}
                 
               </div>
             )}
