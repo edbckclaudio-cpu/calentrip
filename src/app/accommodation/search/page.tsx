@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarInput } from "@/components/ui/calendar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
-import AirportAutocomplete from "@/components/airport-autocomplete";
 import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
-import { findAirportByIata, getCountryByIata } from "@/lib/airports";
+ 
 import { useToast } from "@/components/ui/toast";
 import { getSavedTrips, getRefAttachments } from "@/lib/trips-db";
 
@@ -151,10 +150,7 @@ export default function AccommodationSearchPage() {
     const dest = tripSearch.destination ?? "";
     const looksIata = /^[A-Za-z]{3}$/.test(dest);
     if (!looksIata) return;
-    if (city && city !== dest) return;
-    findAirportByIata(dest).then((a) => {
-      if (a && a.city) setCity(a.city);
-    });
+    if (!city) setCity(dest);
   }, [tripSearch, city]);
 
   function addDaysISO(d: string, days: number): string {
@@ -223,19 +219,6 @@ export default function AccommodationSearchPage() {
       const base = ([] as typeof baseLists[number]).concat(...baseLists);
       const seen = new Set<string>();
       const preferredCountries: string[] = [];
-      try {
-        if (tripSearch) {
-          if (tripSearch.mode === "same") {
-            const c = await getCountryByIata(tripSearch.destination);
-            if (c) preferredCountries.push(c);
-          } else {
-            const c1 = await getCountryByIata(tripSearch.outbound.destination);
-            const c2 = await getCountryByIata(tripSearch.inbound.destination);
-            if (c1) preferredCountries.push(c1);
-            if (c2) preferredCountries.push(c2);
-          }
-        }
-      } catch {}
       const itemsBase = base
         .map((a) => ({ city: a.city, name: `${a.city}, ${a.country} (${a.name})`, country: a.country }))
         .filter((x) => { const k = `${(x.city || "").toLowerCase()}|${(x.country || "").toLowerCase()}`; if (seen.has(k)) return false; seen.add(k); return Boolean(x.city); })
@@ -724,11 +707,11 @@ export default function AccommodationSearchPage() {
                                   <>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Aeroporto de origem</label>
-                                      <AirportAutocomplete value={seg.dep || ""} onSelect={(iata) => setSeg({ dep: iata })} placeholder="Digite ou escolha um aeroporto" />
+                                      <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
                                     </div>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Aeroporto de destino</label>
-                                      <AirportAutocomplete value={seg.arr || ""} onSelect={(iata) => setSeg({ arr: iata })} placeholder="Digite ou escolha um aeroporto" />
+                                      <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
                                     </div>
                                   </>
                                 ) : seg.mode === "train" ? (
