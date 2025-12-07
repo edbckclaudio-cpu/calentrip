@@ -42,25 +42,9 @@ export default function AccommodationSearchPage() {
   const [guideIdx, setGuideIdx] = useState<number | null>(null);
   const [guideStep, setGuideStep] = useState<"name" | "checkout" | "stay" | "address" | "check" | null>(null);
   const [citySearchLoading, setCitySearchLoading] = useState(false);
-  const [transportOpenIdx, setTransportOpenIdx] = useState<number | null>(null);
-  const [transportRoute, setTransportRoute] = useState<{ distanceKm?: number; durationMin?: number; gmapsUrl?: string; r2rUrl?: string; osmUrl?: string } | null>(null);
-  const [transportMode, setTransportMode] = useState<"air" | "train" | "bus" | "car">("train");
-  const [transportDep, setTransportDep] = useState("");
-  const [transportArr, setTransportArr] = useState("");
-  const transportDepRef = useRef<HTMLInputElement | null>(null);
-  const transportArrRef = useRef<HTMLInputElement | null>(null);
-  const [transportDepOpts, setTransportDepOpts] = useState<string[]>([]);
-  const [transportArrOpts, setTransportArrOpts] = useState<string[]>([]);
-  const [transportDepTime, setTransportDepTime] = useState("");
-  const [transportArrTime, setTransportArrTime] = useState("");
-  const transportDepTimeRef = useRef<HTMLInputElement | null>(null);
-  const transportArrTimeRef = useRef<HTMLInputElement | null>(null);
   const [proceedingEntertainment, setProceedingEntertainment] = useState(false);
-  const [transportFiles, setTransportFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
   const summaryRef = useRef<HTMLDivElement | null>(null);
-  const [transportNotice, setTransportNotice] = useState<string | null>(null);
-  const [transportHighlight, setTransportHighlight] = useState(false);
-  const [summaryHighlight, setSummaryHighlight] = useState(false);
+  const [summaryHighlight] = useState(false);
   const [sameCityHighlight, setSameCityHighlight] = useState(() => !((initialCity || "").trim()));
   const [sameSearchHighlight, setSameSearchHighlight] = useState(() => Boolean((initialCity || "").trim()));
   const [proceedHighlight, setProceedHighlight] = useState(false);
@@ -340,8 +324,8 @@ export default function AccommodationSearchPage() {
       setProceedHighlight(true);
     }
     if (allChecked && cities.length > 1) {
-      setTransportOpenIdx(0);
-      showToast("Agora escolha como ir de uma cidade para a outra. Anote os horários e salve foto/arquivo das passagens para consulta no calendário.", { duration: 8000 });
+      showToast("Agora escolha como ir de uma cidade para a outra.", { duration: 6000 });
+      try { router.push(`/transport/plan?i=0`); } catch {}
     }
     const next = idx + 1;
     if (next < cities.length) {
@@ -353,97 +337,6 @@ export default function AccommodationSearchPage() {
     }
   }
 
-  async function fetchTransportSuggestions(city: string, typed: string, mode: "air" | "train" | "bus"): Promise<string[]> {
-    const baseCity = (city || "").trim();
-    const q = (typed || "").trim();
-    if (!baseCity) return [];
-    try {
-      if (mode === "air") {
-        const { searchAirportsAsync } = await import("@/lib/airports");
-        const list = await searchAirportsAsync(q || baseCity);
-        const cityLow = baseCity.toLowerCase();
-        const seen = new Set<string>();
-        return list
-          .filter((a) => (a.city || "").toLowerCase() === cityLow)
-          .map((a) => `${a.city} – ${a.name} (${a.iata})`)
-          .filter((s) => { if (seen.has(s)) return false; seen.add(s); return true; })
-          .slice(0, 12);
-      }
-      const type = mode;
-      const q1 = `${baseCity} ${type} station`;
-      const q2 = q ? `${q} ${type} station ${baseCity}` : "";
-      const urls = [q1, q2].filter(Boolean).map((qq) => `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(qq)}&format=json&limit=15`);
-      const cityLow = baseCity.toLowerCase();
-      const seen = new Set<string>();
-      const results: string[] = [];
-      for (const u of urls) {
-        try {
-          const res = await fetch(u, { headers: { "Accept": "application/json", "Accept-Language": "pt-BR,en" } });
-          const js = (await res.json()) as Array<{ display_name: string }>;
-          for (const item of js) {
-            const name = (item.display_name || "").split(",")[0];
-            const s = name.toLowerCase();
-            if (!s) continue;
-            if (!s.includes(cityLow)) continue;
-            if (/shuttle/i.test(s)) continue;
-            if (/bus to/i.test(s)) continue;
-            if (type === "train" && /bus/i.test(s)) continue;
-            if (q && !s.includes(q.toLowerCase())) continue;
-            if (seen.has(name)) continue;
-            seen.add(name);
-            results.push(name);
-            if (results.length >= 12) break;
-          }
-          if (results.length >= 12) break;
-        } catch {}
-      }
-      return results;
-    } catch { return []; }
-  }
-
-  function formatTimeInput(s: string): string {
-    const d = (s || "").replace(/\D/g, "");
-    if (!d) return "";
-    if (d.length <= 2) return d;
-    const h = d.slice(0, 2);
-    const m = d.slice(2, 4);
-    return `${h}:${(m || "").padEnd(2, "0").slice(0, 2)}`;
-  }
-
-  function onSaveTransport() {
-    if (transportOpenIdx === null) return;
-    const i = transportOpenIdx;
-    const segment: TransportSegment = {
-      mode: transportMode,
-      dep: transportDepRef.current?.value ?? transportDep,
-      arr: transportArrRef.current?.value ?? transportArr,
-      depTime: transportDepTimeRef.current?.value ?? transportDepTime,
-      arrTime: transportArrTimeRef.current?.value ?? transportArrTime,
-      files: transportFiles.slice(),
-      route: transportRoute || undefined,
-    };
-    setCities((prev) => prev.map((x, idx) => (idx === i ? { ...x, transportToNext: segment } : x)));
-    setTransportFiles([]);
-    const next = i + 1;
-    if (next < cities.length - 1) {
-      setTransportOpenIdx(next);
-      const from = cities[next]?.name || `Cidade ${next + 1}`;
-      const to = cities[next + 1]?.name || `Cidade ${next + 2}`;
-      const msg = `Agora vamos configurar o transporte entre ${from} e ${to}.`;
-      setTransportNotice(msg);
-      setTransportHighlight(true);
-      showToast(`Agora buscar e comprar o transporte da cidade ${next + 1} para a cidade ${next + 2}`, { duration: 7000 });
-      setTimeout(() => { setTransportHighlight(false); }, 7000);
-    } else {
-      setTransportOpenIdx(null);
-      showToast(t("transportSavedGoSummary"), { variant: "success" });
-      summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setTransportNotice(null);
-      setTransportHighlight(false);
-      setSummaryHighlight(true);
-      setTimeout(() => { setSummaryHighlight(false); }, 5000);
-    }
-  }
 
   function proceedToEntertainment() {
     if (proceedingEntertainment) return;
@@ -518,94 +411,6 @@ export default function AccommodationSearchPage() {
     } catch {}
   }, [cities]);
 
-  useEffect(() => {
-    (async () => {
-      if (transportOpenIdx === null) return;
-      showToast("Escolha o transporte entre as cidades, preenchendo origem, destino e horários. Você pode anexar a passagem.", { duration: 7000 });
-      setTransportDep("");
-      setTransportArr("");
-      setTransportDepTime("");
-      setTransportArrTime("");
-      try { if (transportDepRef.current) transportDepRef.current.value = ""; } catch {}
-      try { if (transportArrRef.current) transportArrRef.current.value = ""; } catch {}
-      try { if (transportDepTimeRef.current) transportDepTimeRef.current.value = ""; } catch {}
-      try { if (transportArrTimeRef.current) transportArrTimeRef.current.value = ""; } catch {}
-      setTransportDepOpts([]);
-      setTransportArrOpts([]);
-      const i = transportOpenIdx;
-      const a = cities[i]?.name || "";
-      const b = cities[i+1]?.name || "";
-      if (!a || !b) return;
-      const originQ = `${a}`;
-      const destQ = `${b}`;
-      const geocode = async (q: string) => {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
-        const res = await fetch(url, { headers: { "Accept": "application/json" } });
-        const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
-        return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon) } : null;
-      };
-      const o = await geocode(originQ);
-      const d = await geocode(destQ);
-      let distanceKm: number | undefined;
-      let durationMin: number | undefined;
-      let osmUrl: string | undefined;
-      if (o && d) {
-        const osrm = `https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
-        const res = await fetch(osrm);
-        const js = await res.json();
-        const r = js?.routes?.[0];
-        if (r) {
-          distanceKm = Math.round((r.distance ?? 0) / 1000);
-          durationMin = Math.round((r.duration ?? 0) / 60);
-        }
-        const bbox = [Math.min(o.lon, d.lon), Math.min(o.lat, d.lat), Math.max(o.lon, d.lon), Math.max(o.lat, d.lat)];
-        osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox.join("%2C")}&layer=mapnik`;
-      }
-      const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originQ)}&destination=${encodeURIComponent(destQ)}`;
-      const r2rUrl = (() => {
-        return `https://www.rome2rio.com/s/${encodeURIComponent(originQ)}/${encodeURIComponent(destQ)}?lang=pt-BR&currency=BRL${o && d ? `&sLat=${o.lat}&sLng=${o.lon}&dLat=${d.lat}&dLng=${d.lon}` : ""}`;
-      })();
-      setTransportRoute({ distanceKm, durationMin, gmapsUrl, r2rUrl, osmUrl });
-      const suggestAir = async (city: string) => {
-        const { searchAirportsAsync } = await import("@/lib/airports");
-        const arr = await searchAirportsAsync(city);
-        return Array.from(new Set(arr.filter((a) => a.city.toLowerCase() === city.toLowerCase()).map((a) => `${a.city} – ${a.name} (${a.iata})`)));
-      };
-      const suggestPlace = async (city: string, type: "train" | "bus") => {
-        const q = `${city} ${type} station`;
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=12`;
-        try {
-          const res = await fetch(url, { headers: { "Accept": "application/json" } });
-          const js = (await res.json()) as Array<{ display_name: string }>;
-          const cityLow = city.toLowerCase();
-          return js
-            .map((x) => x.display_name.split(",")[0])
-            .filter((n) => {
-              const s = (n || "").toLowerCase();
-              if (!s) return false;
-              if (!s.includes(cityLow)) return false;
-              if (/shuttle/i.test(s)) return false;
-              if (/bus to/i.test(s)) return false;
-              if (type === "train" && /bus/i.test(s)) return false;
-              return true;
-            })
-            .slice(0, 12);
-        } catch { return []; }
-      };
-      const depCity = a;
-      const arrCity = b;
-      if (transportMode === "air") {
-        setTransportDepOpts(await suggestAir(depCity));
-        setTransportArrOpts(await suggestAir(arrCity));
-      } else if (transportMode === "train" || transportMode === "bus") {
-        setTransportDepOpts(await suggestPlace(depCity, transportMode));
-        setTransportArrOpts(await suggestPlace(arrCity, transportMode));
-      } else {
-        setTransportDepOpts([]);
-        setTransportArrOpts([]);
-      }
-    })();
-  }, [transportOpenIdx, cities, transportMode, showToast]);
 
   if (!tripSearch) {
     return (
@@ -793,7 +598,7 @@ export default function AccommodationSearchPage() {
                           <Button type="button" disabled={!enabled || !(c.name && (idx === cities.length - 1 || c.checkout))} className={guideIdx === idx && guideStep === "stay" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { showToast("Escolha a acomodação"); setCityDetailIdx(idx); setGuideStep("address"); }}>
                             Comprar hospedagem
                           </Button>
-                          <Button type="button" variant="secondary" disabled={idx !== 0 || !cities[cities.length - 1]?.checked} onClick={() => setTransportOpenIdx(idx)}>Transporte</Button>
+                          <Button type="button" variant="secondary" disabled={idx !== 0 || !cities[cities.length - 1]?.checked} onClick={() => { try { router.push(`/transport/plan?i=${idx}`); } catch {} }}>Transporte</Button>
                         </div>
                             </>
                           );
