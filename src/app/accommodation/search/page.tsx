@@ -969,7 +969,7 @@ export default function AccommodationSearchPage() {
                   <div className="relative">
                     <Input
                       placeholder={t("transportOriginPlaceholder")}
-                      defaultValue={transportDep}
+                      value={transportDep}
                       disabled={transportMode === "car"}
                       inputMode="text"
                       autoCapitalize="none"
@@ -977,8 +977,7 @@ export default function AccommodationSearchPage() {
                       enterKeyHint="next"
                       style={{ touchAction: "manipulation" }}
                       ref={transportDepRef}
-                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
-                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
+                      
                       onInput={(e) => setTransportDep((e.target as HTMLInputElement).value)}
                       onFocus={() => {
                         const cityName = cities[transportOpenIdx || 0]?.name || "";
@@ -1020,7 +1019,7 @@ export default function AccommodationSearchPage() {
                   <div className="relative">
                     <Input
                       placeholder={t("transportDestinationPlaceholder")}
-                      defaultValue={transportArr}
+                      value={transportArr}
                       disabled={transportMode === "car"}
                       inputMode="text"
                       autoCapitalize="none"
@@ -1028,8 +1027,7 @@ export default function AccommodationSearchPage() {
                       enterKeyHint="next"
                       style={{ touchAction: "manipulation" }}
                       ref={transportArrRef}
-                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
-                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
+                      
                       onInput={(e) => setTransportArr((e.target as HTMLInputElement).value)}
                       onFocus={() => {
                         const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
@@ -1071,18 +1069,16 @@ export default function AccommodationSearchPage() {
                     <label className="mb-1 block text-sm">{t("departureTime")}</label>
                     <Input
                       placeholder="hh:mm"
-                      defaultValue={transportDepTime}
+                      value={transportDepTime}
                       type="tel"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       enterKeyHint="next"
                       ref={transportDepTimeRef}
                       style={{ touchAction: "manipulation" }}
-                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
-                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
-                      onInput={(e) => {
+                      
+                      onChange={(e) => {
                         const v = formatTimeInput((e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = v;
                         setTransportDepTime(v);
                       }}
                     />
@@ -1092,7 +1088,7 @@ export default function AccommodationSearchPage() {
                     <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
                     <Input
                       placeholder="hh:mm"
-                      defaultValue={transportArrTime}
+                      value={transportArrTime}
                       type="tel"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -1100,11 +1096,9 @@ export default function AccommodationSearchPage() {
                       disabled={transportMode === "car"}
                       ref={transportArrTimeRef}
                       style={{ touchAction: "manipulation" }}
-                      onClick={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
-                      onTouchStart={(e) => { try { (e.currentTarget as HTMLInputElement).focus(); } catch {} }}
-                      onInput={(e) => {
+                      
+                      onChange={(e) => {
                         const v = formatTimeInput((e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = v;
                         setTransportArrTime(v);
                       }}
                     />
