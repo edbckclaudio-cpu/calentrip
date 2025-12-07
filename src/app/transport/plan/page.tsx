@@ -37,7 +37,7 @@ export default function TransportPlanPage() {
       const v = Number(sp.get("i") || "0");
       setSegIdx(Number.isFinite(v) && v >= 0 ? v : 0);
     } catch {}
-  }, [showToast]);
+  }, []);
 
   const [cities, setCities] = useState<CitySummary[]>([]);
   const [route, setRoute] = useState<TransportRoute>(null);
@@ -126,7 +126,7 @@ export default function TransportPlanPage() {
       const r2rUrl = params.toString() ? `${baseR2R}?${params.toString()}` : baseR2R;
       setRoute({ gmapsUrl, r2rUrl });
     })();
-  }, [fromCity, toCity, showToast]);
+  }, [fromCity, toCity]);
 
   async function suggestAir(city: string) {
     const { searchAirportsAsync } = await import("@/lib/airports");
@@ -161,9 +161,10 @@ export default function TransportPlanPage() {
       showToast("Transporte salvo", { variant: "success" });
       const hasNext = segIdx + 1 < updated.length - 1;
       if (hasNext) {
+        showToast("Abrindo o transporte das próximas viagens para comprar e preencher.", { duration: 7000 });
         router.push(`/transport/plan?i=${segIdx + 1}`);
-        showToast("Próximo trecho", { duration: 5000 });
       } else {
+        showToast("Indo para o resumo. Verifique as informações.", { duration: 5000 });
         try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
         router.push("/accommodation/search");
       }
