@@ -2639,10 +2639,7 @@ export default function FinalCalendarPage() {
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">Calendário</span>
           </Button>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { loadLatestCalendarFromDb(); } catch {} }}>
-            <span className="material-symbols-outlined text-[16px]">restore</span>
-            <span className="hidden sm:inline">Carregar último calendário</span>
-          </Button>
+          
         </div>
         <Card>
           <CardHeader>
@@ -2670,17 +2667,17 @@ export default function FinalCalendarPage() {
                             <span>Aeroporto</span>
                           </Button>
                         ) : null}
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
+                            <span className="material-symbols-outlined text-[16px]">local_taxi</span>
+                            <span>Aeroporto</span>
+                          </Button>
+                        ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
-                          <>
-                            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openReturnAirportDrawer()}>
-                              <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                              <span>Aeroporto retorno</span>
-                            </Button>
-                            <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
-                              <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                              <span>Aeroporto</span>
-                            </Button>
-                          </>
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openReturnAirportDrawer()}>
+                            <span className="material-symbols-outlined text-[16px]">local_taxi</span>
+                            <span>Aeroporto retorno</span>
+                          </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature && returnFiles.length ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {

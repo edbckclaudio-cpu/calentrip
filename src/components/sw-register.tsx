@@ -12,7 +12,7 @@ export default function SWRegister() {
     const url = "/sw.js";
     try {
       navigator.serviceWorker.register(url, { scope: "/" }).then((reg) => {
-        try { showRef.current("Offline habilitado", { variant: "success" }); } catch {}
+        try { showRef.current("Offline habilitado", { variant: "success", duration: 6000 }); } catch {}
         try {
           reg.onupdatefound = () => {
             try { showRef.current("Atualização disponível", { variant: "info" }); } catch {}

@@ -94,7 +94,7 @@ export default function FlightsSearchPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-6">
+    <div className="min-h-screen px-4 py-6 pb-24">
       <div className="container-page">
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">{t("searchFlightsTitle")}</h1>
         <p className="mb-4 text-sm text-zinc-600">{t("welcomeSearch")}</p>
