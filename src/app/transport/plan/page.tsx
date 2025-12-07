@@ -8,6 +8,8 @@ import { useI18n } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { initDatabase as initDatabaseDb, migrateFromLocalStorage as migrateFromLocalStorageDb, getSavedTrips as getSavedTripsDb, saveRefAttachments } from "@/lib/trips-db";
+import { saveFromDataUrl } from "@/lib/attachments-store";
 
 type TransportMode = "air" | "train" | "bus" | "car";
 type TransportRoute = { gmapsUrl?: string; r2rUrl?: string } | null;
@@ -54,6 +56,50 @@ export default function TransportPlanPage() {
   const camInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  async function resolveTripId(): Promise<string | null> {
+    try {
+      await initDatabaseDb();
+      try { await migrateFromLocalStorageDb(); } catch {}
+      const all = await getSavedTripsDb();
+      const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+      const ts = rawTs ? JSON.parse(rawTs) : null;
+      if (ts) {
+        const isSame = ts.mode === "same";
+        const origin = isSame ? ts.origin : ts.outbound?.origin;
+        const destination = isSame ? ts.destination : ts.outbound?.destination;
+        const date = isSame ? ts.departDate : ts.outbound?.date;
+        const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+        const title = origin && destination ? `${origin} → ${destination}` : "";
+        const it = all.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax);
+        if (it) return String(it.id);
+      }
+      const fallback = all.find((t) => t.reachedFinalCalendar) || (all.length ? all[0] : null);
+      return fallback ? String(fallback.id) : null;
+    } catch { return null; }
+  }
+
+  async function saveDocuments() {
+    try {
+      if (!files.length) { showToast("Nenhum arquivo selecionado", { variant: "info" }); return; }
+      const tripId = await resolveTripId();
+      if (!tripId) { showToast("Nenhuma viagem salva para anexar", { variant: "error" }); return; }
+      const dateRef = (cities[segIdx]?.checkout || cities[segIdx + 1]?.checkin || "").trim();
+      const originCity = (fromCity || "").trim();
+      const arrText = ((arrRef.current?.value ?? arr) || "").trim();
+      const ref = `${originCity} -> ${arrText} @ ${dateRef}`;
+      const saved = await Promise.all(files.map(async (f) => {
+        if (!f.dataUrl) return null;
+        const r = await saveFromDataUrl(f.dataUrl!, f.name);
+        return { name: f.name, type: f.type, size: f.size, id: r.id };
+      }));
+      const list = saved.filter(Boolean) as Array<{ name: string; type: string; size: number; id: string }>;
+      if (!list.length) { showToast("Erro ao salvar documentos", { variant: "error" }); return; }
+      await saveRefAttachments(tripId, "transport", ref, list);
+      setFiles([]);
+      showToast("Documentos salvos", { variant: "success" });
+    } catch { showToast("Erro ao salvar documentos", { variant: "error" }); }
+  }
+
   useEffect(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
@@ -74,7 +120,10 @@ export default function TransportPlanPage() {
     setDepOpts([]); setArrOpts([]);
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCity)}&destination=${encodeURIComponent(toCity)}`;
-      const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(fromCity)}/${encodeURIComponent(toCity)}?lang=pt-BR&currency=BRL`;
+      const params = new URLSearchParams({ lang: "pt-BR", currency: "BRL" });
+      try { const dt = cities[segIdx]?.checkout || ""; if (dt) params.set("date", dt); } catch {}
+      const baseR2R = `https://www.rome2rio.com/s/${encodeURIComponent(fromCity)}/${encodeURIComponent(toCity)}`;
+      const r2rUrl = params.toString() ? `${baseR2R}?${params.toString()}` : baseR2R;
       setRoute({ gmapsUrl, r2rUrl });
     })();
   }, [fromCity, toCity, showToast]);
@@ -293,6 +342,7 @@ export default function TransportPlanPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => camInputRef.current?.click()}>Usar câmera</Button>
                       <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => fileInputRef.current?.click()}>Escolher arquivos</Button>
+                      <Button type="button" variant="outline" className="px-2 py-1 text-xs" onClick={saveDocuments}>Salvar documentos</Button>
                       <span className="text-xs text-zinc-600">Anexos: {files.length}</span>
                     </div>
                     <input ref={camInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {

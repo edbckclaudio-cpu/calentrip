@@ -607,7 +607,20 @@ export default function AccommodationSearchPage() {
                           <Button type="button" disabled={!enabled || !(c.name && (idx === cities.length - 1 || c.checkout))} className={guideIdx === idx && guideStep === "stay" ? "ring-4 ring-amber-500 animate-pulse" : undefined} onClick={() => { showToast("Escolha a acomodação"); setCityDetailIdx(idx); setGuideStep("address"); }}>
                             Comprar hospedagem
                           </Button>
-                          <Button type="button" variant="secondary" disabled={idx !== 0 || !cities[cities.length - 1]?.checked} onClick={() => { try { router.push(`/transport/plan?i=${idx}`); } catch {} }}>Transporte</Button>
+                          {idx >= 1 ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={!(
+                                (cities[idx - 1]?.name && cities[idx]?.name && cities[idx - 1]?.checkout && cities[idx]?.checkin && cities[idx - 1]?.checked && cities[idx]?.checked)
+                              )}
+                              onClick={() => {
+                                try { router.push(`/transport/plan?i=${idx - 1}`); } catch {}
+                              }}
+                            >
+                              Transporte
+                            </Button>
+                          ) : null}
                         </div>
                             </>
                           );
