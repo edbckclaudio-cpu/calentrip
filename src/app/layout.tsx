@@ -104,7 +104,7 @@ export default function RootLayout({
         <Providers>
           <SWRegister />
           <Header />
-          {children}
+          <div className="sm:pb-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 64px)" }}>{children}</div>
           <BottomNav />
         </Providers>
       </body>
