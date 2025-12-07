@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarInput } from "@/components/ui/calendar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
+import AirportAutocomplete from "@/components/airport-autocomplete";
 import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { findAirportByIata, getCountryByIata } from "@/lib/airports";
@@ -54,6 +55,18 @@ export default function AccommodationSearchPage() {
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
   const [transportDocsCount, setTransportDocsCount] = useState<Record<number, number>>({});
   const [transportIdx, setTransportIdx] = useState<number | null>(null);
+  const [placeSuggestions, setPlaceSuggestions] = useState<Record<number, string[]>>({});
+  async function fetchPlaceSuggestions(city: string, type: "train" | "bus", idx: number) {
+    try {
+      const q = `${city} ${type} station`;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=12`;
+      const res = await fetch(url, { headers: { "Accept": "application/json" } });
+      const js = (await res.json()) as Array<{ display_name: string }>;
+      const cityLow = city.toLowerCase();
+      const list = Array.from(new Set(js.map((x) => x.display_name).filter((s) => s.toLowerCase().includes(cityLow))));
+      setPlaceSuggestions((prev) => ({ ...prev, [idx]: list }));
+    } catch {}
+  }
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
@@ -666,7 +679,7 @@ export default function AccommodationSearchPage() {
                   <Dialog open onOpenChange={() => setTransportIdx(null)}>
                     <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
                       <div className="p-4">
-                        <DialogHeader>Transporte</DialogHeader>
+                        <DialogHeader>Transporte entre cidades</DialogHeader>
                       </div>
                       <div className="px-4 pb-4 flex-1 overflow-y-auto text-sm">
                         {(() => {
@@ -679,10 +692,15 @@ export default function AccommodationSearchPage() {
                           if (date) p.set("date", date);
                           const r2rBase = `https://www.rome2rio.com/s/${encodeURIComponent(from)}/${encodeURIComponent(to)}`;
                           const r2rUrl = p.toString() ? `${r2rBase}?${p.toString()}` : r2rBase;
+                          const seg = cities[i]?.transportToNext || { mode: "air", dep: "", arr: "", depTime: "", arrTime: "", files: [] };
+                          const setSeg = (partial: Partial<TransportSegment>) => {
+                            setCities((prev) => prev.map((x, idx2) => (idx2 === i ? { ...x, transportToNext: { ...(x.transportToNext || { mode: "air", dep: "", arr: "", depTime: "", arrTime: "", files: [] }), ...partial } } : x)));
+                          };
                           return (
                             <div className="space-y-3">
                               <div className="font-medium">{from} → {to}</div>
                               <div className="text-zinc-600">Data de busca: {date || "—"}</div>
+                              <div className="rounded-md border p-2 text-xs">Clique no link abaixo e escolha e compre como você vai da cidade {i + 1} para a cidade {i + 2}.</div>
                               <ul className="space-y-1">
                                 <li>
                                   <a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700 flex items-center gap-1" href={r2rUrl} target="_blank" rel="noopener noreferrer">
@@ -692,14 +710,96 @@ export default function AccommodationSearchPage() {
                                 </li>
                                 <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
                               </ul>
+                              <div className="mt-2 rounded-lg border p-3">
+                                <div className="font-semibold mb-2">Dados do seu transporte comprado</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="mb-1 block text-sm">Modal</label>
+                                    <select className="w-full border rounded-md h-9 px-2" value={seg.mode} onChange={(e) => setSeg({ mode: e.target.value as TransportSegment["mode"] })}>
+                                      <option value="air">Avião</option>
+                                      <option value="train">Trem</option>
+                                      <option value="bus">Ônibus</option>
+                                      <option value="car">Carro</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="mb-1 block text-sm">Hora de partida</label>
+                                    <Input type="tel" inputMode="numeric" pattern="[0-9]*" value={seg.depTime || ""} onChange={(e) => setSeg({ depTime: e.target.value })} disabled={seg.mode === "car"} />
+                                  </div>
+                                  <div>
+                                    <label className="mb-1 block text-sm">Hora de chegada</label>
+                                    <Input type="tel" inputMode="numeric" pattern="[0-9]*" value={seg.arrTime || ""} onChange={(e) => setSeg({ arrTime: e.target.value })} disabled={seg.mode === "car"} />
+                                  </div>
+                                </div>
+                                {seg.mode === "air" ? (
+                                  <div className="mt-3">
+                                    <label className="mb-1 block text-sm">Aeroporto de origem</label>
+                                    <AirportAutocomplete value={seg.dep || ""} onSelect={(iata) => setSeg({ dep: iata })} placeholder="Digite ou escolha um aeroporto" />
+                                  </div>
+                                ) : seg.mode === "train" ? (
+                                  <div className="mt-3">
+                                    <label className="mb-1 block text-sm">Estação de trem de origem</label>
+                                    <Input value={seg.dep || ""} onFocus={() => fetchPlaceSuggestions(from, "train", i)} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite ou escolha" />
+                                    {Array.isArray(placeSuggestions[i]) && placeSuggestions[i]?.length ? (
+                                      <ul className="mt-2 max-h-40 overflow-auto divide-y rounded border">
+                                        {placeSuggestions[i]!.map((s, k) => (
+                                          <li key={`tr-${k}`}><button type="button" className="w-full px-3 py-1 text-left hover:bg-zinc-50" onClick={() => setSeg({ dep: s })}>{s}</button></li>
+                                        ))}
+                                      </ul>
+                                    ) : null}
+                                  </div>
+                                ) : seg.mode === "bus" ? (
+                                  <div className="mt-3">
+                                    <label className="mb-1 block text-sm">Rodoviária de origem</label>
+                                    <Input value={seg.dep || ""} onFocus={() => fetchPlaceSuggestions(from, "bus", i)} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite ou escolha" />
+                                    {Array.isArray(placeSuggestions[i]) && placeSuggestions[i]?.length ? (
+                                      <ul className="mt-2 max-h-40 overflow-auto divide-y rounded border">
+                                        {placeSuggestions[i]!.map((s, k) => (
+                                          <li key={`bus-${k}`}><button type="button" className="w-full px-3 py-1 text-left hover:bg-zinc-50" onClick={() => setSeg({ dep: s })}>{s}</button></li>
+                                        ))}
+                                      </ul>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                                <div className="mt-3">
+                                  <Button type="button" onClick={async () => {
+                                    const input = document.createElement("input");
+                                    input.type = "file";
+                                    input.accept = "image/*,application/pdf";
+                                    input.multiple = true;
+                                    input.onchange = async (ev) => {
+                                      const files = Array.from((ev.target as HTMLInputElement).files || []);
+                                      const mod = await import("@/lib/attachments-store");
+                                      const list = await Promise.all(files.map(async (f) => {
+                                        const saved = await mod.saveFromFile(f);
+                                        return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                                      }));
+                                      setSeg({ files: [...(seg.files || []), ...list] });
+                                    };
+                                    input.click();
+                                  }} disabled={seg.mode === "car"}>Anexar comprovante</Button>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex justify-end">
+                                <Button type="button" onClick={() => {
+                                  const params: Partial<TransportSegment> = { mode: seg.mode, dep: seg.dep, arr: seg.arr, depTime: seg.depTime, arrTime: seg.arrTime };
+                                  setSeg(params as TransportSegment);
+                                  const hasNext = i + 1 < cities.length - 1;
+                                  if (hasNext) {
+                                    showToast("Abrindo o transporte da próxima viagem para comprar e preencher.", { duration: 7000 });
+                                    setTransportIdx(i + 1);
+                                  } else {
+                                    showToast("Indo para o resumo. Verifique as informações.", { duration: 5000 });
+                                    setTransportIdx(null);
+                                    setSummaryHighlight(true);
+                                  }
+                                }}>Salvar transporte</Button>
+                              </div>
                             </div>
                           );
                         })()}
                       </div>
-                      <div className="sticky bottom-0 p-4 border-t bg-white dark:bg-black flex items-center justify-end gap-2">
-                        <Button type="button" variant="secondary" onClick={() => { try { router.push(`/transport/plan?i=${transportIdx}`); } catch {} }}>Abrir página Transporte</Button>
-                        <Button type="button" onClick={() => setTransportIdx(null)}>Fechar</Button>
-                      </div>
+                      
                     </div>
                   </Dialog>
                 ) : null}
