@@ -87,6 +87,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               ? "bg-red-600 text-white ring-red-700"
               : "bg-[#007AFF] text-white ring-[#005bbb]")
           }
+          onTouchStart={(e) => { try { (e.currentTarget as any)._startY = e.touches[0].clientY; } catch {} }}
+          onTouchMove={(e) => {
+            try {
+              const startY = (e.currentTarget as any)._startY || 0;
+              const dy = e.touches[0].clientY - startY;
+              if (dy < -40) dismiss(t.id);
+            } catch {}
+          }}
         >
           {t.minimized ? (
             <div className="flex items-center gap-2 pr-8">

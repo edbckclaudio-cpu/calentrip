@@ -115,9 +115,8 @@ export default function AccommodationSearchPage() {
     if (!tripSearch) return;
     if (tripSearch.mode === "different") {
       setDiffCityCountHighlight(true);
-      showToast("Informe quantas cidades precisarão de hospedagem e clique em Check.", { duration: 6000 });
     }
-  }, [tripSearch, showToast]);
+  }, [tripSearch]);
 
   useEffect(() => {
     if (cities.length > 0) {
