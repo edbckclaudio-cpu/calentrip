@@ -236,7 +236,8 @@ export default function TransportPlanPage() {
                     <div className="relative">
                       <Input
                         placeholder="Digite a origem"
-                        value={dep}
+                        defaultValue={dep}
+                        type="text"
                         inputMode="text"
                         autoCapitalize="none"
                         autoCorrect="off"
@@ -275,7 +276,8 @@ export default function TransportPlanPage() {
                     <div className="relative">
                       <Input
                         placeholder="Digite o destino"
-                        value={arr}
+                        defaultValue={arr}
+                        type="text"
                         inputMode="text"
                         autoCapitalize="none"
                         autoCorrect="off"
@@ -314,26 +316,26 @@ export default function TransportPlanPage() {
                       <label className="mb-1 block text-sm">Hora da Partida</label>
                       <Input
                         placeholder="hh:mm"
-                        value={depTime}
+                        defaultValue={depTime}
                         type="tel"
                         inputMode="numeric"
                         pattern="[0-9]*"
                         enterKeyHint="next"
                         ref={depTimeRef}
-                        onChange={(e) => setDepTime(formatTimeInput((e.target as HTMLInputElement).value))}
+                        onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setDepTime(v); try { if (depTimeRef.current) depTimeRef.current.value = v; } catch {} }}
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-sm">Hora de Chegada</label>
                       <Input
                         placeholder="hh:mm"
-                        value={arrTime}
+                        defaultValue={arrTime}
                         type="tel"
                         inputMode="numeric"
                         pattern="[0-9]*"
                         enterKeyHint="next"
                         ref={arrTimeRef}
-                        onChange={(e) => setArrTime(formatTimeInput((e.target as HTMLInputElement).value))}
+                        onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setArrTime(v); try { if (arrTimeRef.current) arrTimeRef.current.value = v; } catch {} }}
                       />
                     </div>
                   </div>
