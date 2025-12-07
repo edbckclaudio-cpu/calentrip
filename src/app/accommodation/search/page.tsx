@@ -55,18 +55,7 @@ export default function AccommodationSearchPage() {
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
   const [transportDocsCount, setTransportDocsCount] = useState<Record<number, number>>({});
   const [transportIdx, setTransportIdx] = useState<number | null>(null);
-  const [placeSuggestions, setPlaceSuggestions] = useState<Record<number, string[]>>({});
-  async function fetchPlaceSuggestions(city: string, type: "train" | "bus", idx: number) {
-    try {
-      const q = `${city} ${type} station`;
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=12`;
-      const res = await fetch(url, { headers: { "Accept": "application/json" } });
-      const js = (await res.json()) as Array<{ display_name: string }>;
-      const cityLow = city.toLowerCase();
-      const list = Array.from(new Set(js.map((x) => x.display_name).filter((s) => s.toLowerCase().includes(cityLow))));
-      setPlaceSuggestions((prev) => ({ ...prev, [idx]: list }));
-    } catch {}
-  }
+  
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
@@ -746,37 +735,23 @@ export default function AccommodationSearchPage() {
                                   <>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Estação de trem de origem</label>
-                                      <Input defaultValue={seg.dep || ""} onFocus={() => fetchPlaceSuggestions(from, "train", i)} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite ou escolha" />
-                                      {Array.isArray(placeSuggestions[i]) && placeSuggestions[i]?.length ? (
-                                        <ul className="mt-2 max-h-40 overflow-auto divide-y rounded border">
-                                          {placeSuggestions[i]!.map((s, k) => (
-                                            <li key={`tr-${k}`}><button type="button" className="w-full px-3 py-1 text-left hover:bg-zinc-50" onClick={() => setSeg({ dep: s })}>{s}</button></li>
-                                          ))}
-                                        </ul>
-                                      ) : null}
-                                    </div>
+                                    <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
+                                  </div>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Estação de trem de destino</label>
-                                      <Input defaultValue={seg.arr || ""} onFocus={() => fetchPlaceSuggestions(to, "train", i)} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite ou escolha" />
-                                    </div>
+                                    <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
+                                  </div>
                                   </>
                                 ) : seg.mode === "bus" ? (
                                   <>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Rodoviária de origem</label>
-                                      <Input defaultValue={seg.dep || ""} onFocus={() => fetchPlaceSuggestions(from, "bus", i)} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite ou escolha" />
-                                      {Array.isArray(placeSuggestions[i]) && placeSuggestions[i]?.length ? (
-                                        <ul className="mt-2 max-h-40 overflow-auto divide-y rounded border">
-                                          {placeSuggestions[i]!.map((s, k) => (
-                                            <li key={`bus-${k}`}><button type="button" className="w-full px-3 py-1 text-left hover:bg-zinc-50" onClick={() => setSeg({ dep: s })}>{s}</button></li>
-                                          ))}
-                                        </ul>
-                                      ) : null}
-                                    </div>
+                                    <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
+                                  </div>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Rodoviária de destino</label>
-                                      <Input defaultValue={seg.arr || ""} onFocus={() => fetchPlaceSuggestions(to, "bus", i)} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite ou escolha" />
-                                    </div>
+                                    <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
+                                  </div>
                                   </>
                                 ) : null}
                                 <div className="mt-3">
