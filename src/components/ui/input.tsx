@@ -17,7 +17,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       ref={ref}
       className={`${base} ${className}`}
       {...props}
-      value={clearActive ? "" : value}
+      {...(typeof value !== "undefined" ? { value: clearActive ? "" : value } : {})}
       onFocus={(e) => {
         focusValueRef.current = value;
         setClearActive(clearOnFocus && typeof value !== "undefined" && String(value) !== "");

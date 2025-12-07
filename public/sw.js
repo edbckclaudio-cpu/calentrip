@@ -1,4 +1,4 @@
-const CACHE_NAME = "calentrip-cache-v2";
+const CACHE_NAME = "calentrip-cache-v3";
 const ASSETS = ["/manifest.webmanifest", "/globe.svg", "/next.svg", "/vercel.svg", "/window.svg", "/file.svg"];
 
 self.addEventListener("install", (event) => {
