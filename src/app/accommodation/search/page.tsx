@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarInput } from "@/components/ui/calendar";
-import { Dialog, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { findAirportByIata, getCountryByIata } from "@/lib/airports";
@@ -68,6 +68,7 @@ export default function AccommodationSearchPage() {
   const [diffCheckHighlight, setDiffCheckHighlight] = useState(false);
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
   const [transportDocsCount, setTransportDocsCount] = useState<Record<number, number>>({});
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
     const allStays = cities.every((c) => Boolean(c.name && c.address && c.checked));
@@ -78,6 +79,23 @@ export default function AccommodationSearchPage() {
     try {
       const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 480px)").matches;
       setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      const vv = typeof window !== "undefined" ? window.visualViewport : null;
+      const handler = () => {
+        const ih = typeof window !== "undefined" ? window.innerHeight : 0;
+        const h = vv ? vv.height : ih;
+        setKeyboardOpen(Boolean(vv && h < ih - 100));
+      };
+      handler();
+      vv?.addEventListener("resize", handler);
+      window.addEventListener("resize", handler);
+      return () => {
+        vv?.removeEventListener("resize", handler);
+        window.removeEventListener("resize", handler);
+      };
     } catch {}
   }, []);
   useEffect(() => {
@@ -129,8 +147,8 @@ export default function AccommodationSearchPage() {
       setDiffCheckHighlight(false);
     }
   }, [cities.length]);
-
-  
+        
+        
 
   
 
@@ -908,240 +926,7 @@ export default function AccommodationSearchPage() {
           </Dialog>
         )}
         
-        <Dialog open={transportOpenIdx !== null} onOpenChange={(o) => { if (!o) { setTransportOpenIdx(null); setTransportNotice(null); setTransportHighlight(false); } }}>
-          <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
-            <div className="p-4">
-              <DialogHeader>
-                <div className={transportHighlight ? "rounded-md p-1 ring-4 ring-amber-500 pulse-ring" : undefined}>
-                  {t("transportBetween")} {transportOpenIdx !== null ? cities[transportOpenIdx]?.name : ""} {t("and")} {transportOpenIdx !== null ? cities[transportOpenIdx + 1]?.name : ""}
-                </div>
-              </DialogHeader>
-              {transportNotice ? (
-                <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-300 dark:bg-amber-900/20 dark:text-amber-200">
-                  <div className="flex items-start gap-2">
-                    <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-amber-100 text-[11px] font-semibold text-amber-800">i</span>
-                    <span>{transportNotice}</span>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <div className="px-4 pb-2 flex-1 overflow-y-auto text-sm">
-              <div className="mb-2">{t("stayRouteDistance")}: {transportRoute?.distanceKm ? `${transportRoute.distanceKm} km` : "—"}</div>
-              <div className="-mt-1 mb-2 text-xs text-zinc-500">Distância estimada entre as cidades selecionadas (não usa sua localização).</div>
-              <div className="mb-2">{t("stayRouteDuration")}: {transportRoute?.durationMin ? `${transportRoute.durationMin} min` : "—"}</div>
-              {transportRoute?.osmUrl ? (
-                <iframe title="map" src={transportRoute.osmUrl} className="mb-3 h-32 md:h-40 w-full rounded-md border" />
-              ) : null}
-              <ul className="space-y-1 mb-2">
-                <li>
-                  <a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700 flex items-center gap-1" href={transportRoute?.r2rUrl} target="_blank" rel="noopener noreferrer">
-                    <span className="material-symbols-outlined text-[16px]">alt_route</span>
-                    <span>Opções de rota (Rome2Rio)</span>
-                  </a>
-                </li>
-                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">Rentalcars</a></li>
-                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={transportRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
-              </ul>
-                <div className="mb-2">
-                <label className="mb-1 block text-sm">{t("transportModeLabel")}</label>
-                <select
-                  className="w-full rounded-md border px-2 py-1 text-sm"
-                  value={transportMode}
-                  onChange={(e) => {
-                    const mv = e.target.value as "air" | "train" | "bus" | "car";
-                    setTransportMode(mv);
-                    if (mv === "car") {
-                      setTransportDepOpts([]);
-                      setTransportArrOpts([]);
-                      showToast("Você selecionou transporte próprio (carro). Não é necessário preencher origem, destino ou horários. Siga as regras de check-out da hospedagem e, quando estiver pronto, clique em Salvar transporte para avançar para a próxima cidade.", { duration: 9000, key: "transport-info" });
-                    }
-                  }}
-                >
-                  <option value="air">{t("modeAir")}</option>
-                  <option value="train">{t("modeTrain")}</option>
-                  <option value="bus">{t("modeBus")}</option>
-                  <option value="car">{t("modeCar")}</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                <div>
-                  <label className="mb-1 block text-sm">{t("transportOriginLabel")}</label>
-                  <div className="relative">
-                    <Input
-                      placeholder={t("transportOriginPlaceholder")}
-                      value={transportDep}
-                      disabled={transportMode === "car"}
-                      inputMode="text"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      enterKeyHint="next"
-                      style={{ touchAction: "manipulation" }}
-                      ref={transportDepRef}
-                      
-                      onInput={(e) => setTransportDep((e.target as HTMLInputElement).value)}
-                      onFocus={() => {
-                        const cityName = cities[transportOpenIdx || 0]?.name || "";
-                        if (!cityName) return;
-                        if (transportMode === "car") { setTransportDepOpts([]); return; }
-                        const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                        fetchTransportSuggestions(cityName, transportDep, mode).then(setTransportDepOpts);
-                      }}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setTransportDep(v);
-                        const cityName = cities[transportOpenIdx || 0]?.name || "";
-                        if (!cityName) return;
-                        if (transportMode === "car") { setTransportDepOpts([]); return; }
-                        if (v.trim().length >= 1) {
-                          const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                          fetchTransportSuggestions(cityName, v, mode).then(setTransportDepOpts);
-                        }
-                      }}
-                    />
-                    {transportDepOpts.length ? (
-                      <Card className="absolute left-0 right-0 bottom-full mb-1 z-40 p-0">
-                        <ul className="max-h-24 overflow-auto divide-y">
-                          {transportDepOpts.map((o, i) => (
-                            <li key={`dep-${i}`}>
-                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => { setTransportDep(o); if (transportDepRef.current) transportDepRef.current.value = o; }}>
-                                <span>{o}</span>
-                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? t("airport") : transportMode === "train" ? t("trainStation") : t("busStation")}</span>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </Card>
-                    ) : null}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm">{t("transportDestinationLabel")}</label>
-                  <div className="relative">
-                    <Input
-                      placeholder={t("transportDestinationPlaceholder")}
-                      value={transportArr}
-                      disabled={transportMode === "car"}
-                      inputMode="text"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      enterKeyHint="next"
-                      style={{ touchAction: "manipulation" }}
-                      ref={transportArrRef}
-                      
-                      onInput={(e) => setTransportArr((e.target as HTMLInputElement).value)}
-                      onFocus={() => {
-                        const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
-                        if (!cityName) return;
-                        if (transportMode === "car") { setTransportArrOpts([]); return; }
-                        const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                        fetchTransportSuggestions(cityName, transportArr, mode).then(setTransportArrOpts);
-                      }}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setTransportArr(v);
-                        const cityName = cities[(transportOpenIdx || 0) + 1]?.name || "";
-                        if (!cityName) return;
-                        if (transportMode === "car") { setTransportArrOpts([]); return; }
-                        if (v.trim().length >= 1) {
-                          const mode = transportMode === "air" ? "air" : transportMode === "train" ? "train" : "bus";
-                          fetchTransportSuggestions(cityName, v, mode).then(setTransportArrOpts);
-                        }
-                      }}
-                    />
-                    {transportArrOpts.length ? (
-                      <Card className="absolute left-0 right-0 bottom-full mb-1 z-40 p-0">
-                        <ul className="max-h-24 overflow-auto divide-y">
-                          {transportArrOpts.map((o, i) => (
-                            <li key={`arr-${i}`}>
-                              <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => { setTransportArr(o); if (transportArrRef.current) transportArrRef.current.value = o; }}>
-                                <span>{o}</span>
-                                <span className="ml-1 text-xs text-zinc-500">{transportMode === "air" ? t("airport") : transportMode === "train" ? t("trainStation") : t("busStation")}</span>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </Card>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-sm">{t("departureTime")}</label>
-                    <Input
-                      placeholder="hh:mm"
-                      value={transportDepTime}
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      enterKeyHint="next"
-                      ref={transportDepTimeRef}
-                      style={{ touchAction: "manipulation" }}
-                      
-                      onChange={(e) => {
-                        const v = formatTimeInput((e.target as HTMLInputElement).value);
-                        setTransportDepTime(v);
-                      }}
-                    />
-                    
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
-                    <Input
-                      placeholder="hh:mm"
-                      value={transportArrTime}
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      enterKeyHint="next"
-                      disabled={transportMode === "car"}
-                      ref={transportArrTimeRef}
-                      style={{ touchAction: "manipulation" }}
-                      
-                      onChange={(e) => {
-                        const v = formatTimeInput((e.target as HTMLInputElement).value);
-                        setTransportArrTime(v);
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <input id="file-transport" type="file" accept="image/*,application/pdf" capture="environment" multiple className="hidden" onChange={(e) => {
-                    const list = Array.from(e.target.files ?? []);
-                    const limit = 2 * 1024 * 1024;
-                    const readers = list.map((f) => new Promise<{ name: string; type: string; size: number; dataUrl?: string }>((resolve) => {
-                      if (f.size > limit || !(f.type.startsWith("image/") || f.type === "application/pdf")) {
-                        resolve({ name: f.name, type: f.type, size: f.size });
-                      } else {
-                        const fr = new FileReader();
-                        fr.onload = () => resolve({ name: f.name, type: f.type, size: f.size, dataUrl: String(fr.result || "") });
-                        fr.onerror = () => resolve({ name: f.name, type: f.type, size: f.size });
-                        fr.readAsDataURL(f);
-                      }
-                    }));
-                    Promise.all(readers).then((items) => {
-                      setTransportFiles((prev) => [...prev, ...items]);
-                    });
-                  }} />
-                  <div className="flex items-center gap-2">
-                    <Button type="button" onClick={() => document.getElementById("file-transport")?.click()}>{t("attachProofButton")}</Button>
-                    <span className="text-xs text-zinc-600">Foto/arquivo da passagem ficará disponível no calendário.</span>
-                  </div>
-                  {transportFiles.length ? (
-                    <ul className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
-                      {transportFiles.map((f, idx) => (
-                        <li key={`tf-${idx}`}>{f.name} • {Math.round(f.size / 1024)} KB</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-            <div className="sticky bottom-0 p-4 border-t bg-white dark:bg-black">
-              <p className="mb-2 text-xs text-zinc-600">Compare opções: avião, trem, ônibus, carro. Alguns sites oferecem compra direta.</p>
-              <div className="flex justify-end"><Button type="button" onClick={onSaveTransport}>Salvar transporte</Button></div>
-            </div>
-          </div>
-        </Dialog>
+        
           <Card className={summaryComplete ? "border-2 border-[#34c759]" : undefined}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1217,7 +1002,7 @@ export default function AccommodationSearchPage() {
           </CardContent>
         </Card>
       </div>
-      
+
     </div>
   );
 }

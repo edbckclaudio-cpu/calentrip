@@ -27,10 +27,9 @@ export function Dialog({ open, onOpenChange, children, placement = "center", dis
         <div
           role="dialog"
           aria-modal="true"
-          className={`fixed bottom-0 left-0 right-0 z-[1000] w-full rounded-t-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-black max-h-[85vh] overflow-y-auto ${entered ? "" : "transform translate-y-full transition-transform duration-300 ease-out"}`}
-          style={entered ? { transform: "none" } : undefined}
+          className={`absolute bottom-0 left-0 right-0 z-[1000] w-full rounded-t-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-black`}
         >
-          {children}
+          <div className="max-h-[85vh] overflow-y-auto">{children}</div>
         </div>
       ) : (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
