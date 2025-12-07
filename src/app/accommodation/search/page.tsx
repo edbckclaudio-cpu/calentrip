@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarInput } from "@/components/ui/calendar";
-import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { findAirportByIata, getCountryByIata } from "@/lib/airports";
@@ -34,7 +34,8 @@ export default function AccommodationSearchPage() {
   
   const [cityCount, setCityCount] = useState(0);
   type TransportSegment = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime: string; arrTime: string; files: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>; route?: { distanceKm?: number; durationMin?: number; gmapsUrl?: string; r2rUrl?: string; osmUrl?: string } | null };
-  const [cities, setCities] = useState<Array<{ name: string; checkin: string; checkout: string; address?: string; checked?: boolean; stayFiles?: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>; transportToNext?: TransportSegment }>>([]);
+  type City = { name: string; checkin: string; checkout: string; address?: string; checked?: boolean; stayFiles?: Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>; transportToNext?: TransportSegment };
+  const [cities, setCities] = useState<City[]>([]);
   const [cityDetailIdx, setCityDetailIdx] = useState<number | null>(null);
   const [citySearchIdx, setCitySearchIdx] = useState<number | null>(null);
   const [citySearchQuery, setCitySearchQuery] = useState("");
@@ -52,7 +53,7 @@ export default function AccommodationSearchPage() {
   const [diffCheckHighlight, setDiffCheckHighlight] = useState(false);
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
   const [transportDocsCount, setTransportDocsCount] = useState<Record<number, number>>({});
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
     const allStays = cities.every((c) => Boolean(c.name && c.address && c.checked));
@@ -65,23 +66,7 @@ export default function AccommodationSearchPage() {
       setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
     } catch {}
   }, []);
-  useEffect(() => {
-    try {
-      const vv = typeof window !== "undefined" ? window.visualViewport : null;
-      const handler = () => {
-        const ih = typeof window !== "undefined" ? window.innerHeight : 0;
-        const h = vv ? vv.height : ih;
-        setKeyboardOpen(Boolean(vv && h < ih - 100));
-      };
-      handler();
-      vv?.addEventListener("resize", handler);
-      window.addEventListener("resize", handler);
-      return () => {
-        vv?.removeEventListener("resize", handler);
-        window.removeEventListener("resize", handler);
-      };
-    } catch {}
-  }, []);
+  
   useEffect(() => {
     (async () => {
       try {
@@ -100,6 +85,14 @@ export default function AccommodationSearchPage() {
           map[i] = localCount + dbCount;
         }
         setTransportDocsCount(map);
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+          const js: { cities?: City[] } | null = raw ? JSON.parse(raw) : null;
+          const list: City[] = js?.cities || [];
+          if (list.length && list.length === cities.length) {
+            setCities((prev) => prev.map((x, i) => ({ ...x, transportToNext: list[i]?.transportToNext ?? x.transportToNext })));
+          }
+        } catch {}
       } catch {}
     })();
   }, [cities]);
@@ -337,6 +330,7 @@ export default function AccommodationSearchPage() {
     }
   }
 
+  
 
   function proceedToEntertainment() {
     if (proceedingEntertainment) return;
@@ -411,6 +405,7 @@ export default function AccommodationSearchPage() {
     } catch {}
   }, [cities]);
 
+  
 
   if (!tripSearch) {
     return (
