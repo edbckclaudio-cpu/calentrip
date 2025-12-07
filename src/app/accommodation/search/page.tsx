@@ -91,13 +91,16 @@ export default function AccommodationSearchPage() {
           const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
           const js: { cities?: City[] } | null = raw ? JSON.parse(raw) : null;
           const list: City[] = js?.cities || [];
-          if (list.length && list.length === cities.length) {
+          if (list.length && cities.length === 0) {
+            setCities(list);
+            setCityCount(list.length);
+          } else if (list.length && list.length === cities.length) {
             setCities((prev) => prev.map((x, i) => ({ ...x, transportToNext: list[i]?.transportToNext ?? x.transportToNext })));
           }
         } catch {}
       } catch {}
     })();
-  }, [cities]);
+  }, [cities.length]);
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
@@ -385,6 +388,7 @@ export default function AccommodationSearchPage() {
 
   useEffect(() => {
     try {
+      if (!cities.length) return;
       const payload = { cities };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
     } catch {}
@@ -718,23 +722,23 @@ export default function AccommodationSearchPage() {
                                   <>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Estação de trem de origem</label>
-                                    <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
-                                  </div>
+                                      <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
+                                    </div>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Estação de trem de destino</label>
-                                    <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
-                                  </div>
+                                      <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
+                                    </div>
                                   </>
                                 ) : seg.mode === "bus" ? (
                                   <>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Rodoviária de origem</label>
-                                    <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
-                                  </div>
+                                      <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
+                                    </div>
                                     <div className="mt-3">
                                       <label className="mb-1 block text-sm">Rodoviária de destino</label>
-                                    <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
-                                  </div>
+                                      <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
+                                    </div>
                                   </>
                                 ) : null}
                                 <div className="mt-3">
@@ -775,7 +779,6 @@ export default function AccommodationSearchPage() {
                           );
                         })()}
                       </div>
-                      
                     </div>
                   </Dialog>
                 ) : null}
