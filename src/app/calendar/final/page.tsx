@@ -116,8 +116,8 @@ export default function FinalCalendarPage() {
   async function saveCalendarToFile() {
     try {
       if (Capacitor.getPlatform() !== "android") { show("Disponível no app Android", { variant: "info" }); return; }
-      const name = typeof window !== "undefined" ? prompt("Nome do arquivo (até 9 letras)") || "" : "";
-      const safe = name.replace(/[^A-Za-z]/g, "").slice(0, 9);
+      const name = typeof window !== "undefined" ? prompt("Nome do arquivo (até 32 letras/números/_)") || "" : "";
+      const safe = name.replace(/[^A-Za-z0-9_]/g, "").slice(0, 32);
       if (!safe) { show("Nome inválido", { variant: "error" }); return; }
       const payload = { name: safe, version: 1, createdAt: new Date().toISOString(), events, summaryCities };
       const json = JSON.stringify(payload);

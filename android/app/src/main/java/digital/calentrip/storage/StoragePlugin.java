@@ -25,8 +25,8 @@ public class StoragePlugin extends Plugin {
     String json = call.getString("json", "");
     if (name == null) name = "";
     if (json == null) json = "";
-    String safe = name.replaceAll("[^A-Za-z]", "");
-    if (safe.length() == 0 || safe.length() > 9) {
+    String safe = name.replaceAll("[^A-Za-z0-9_]", "");
+    if (safe.length() == 0 || safe.length() > 32) {
       JSObject ret = new JSObject();
       ret.put("ok", false);
       ret.put("error", "invalid_name");
@@ -83,8 +83,8 @@ public class StoragePlugin extends Plugin {
   public void read(PluginCall call) {
     String name = call.getString("name", "");
     if (name == null) name = "";
-    String safe = name.replaceAll("[^A-Za-z]", "");
-    if (safe.length() == 0 || safe.length() > 9) {
+    String safe = name.replaceAll("[^A-Za-z0-9_]", "");
+    if (safe.length() == 0 || safe.length() > 32) {
       JSObject ret = new JSObject();
       ret.put("ok", false);
       ret.put("error", "invalid_name");
@@ -123,8 +123,8 @@ public class StoragePlugin extends Plugin {
   public void delete(PluginCall call) {
     String name = call.getString("name", "");
     if (name == null) name = "";
-    String safe = name.replaceAll("[^A-Za-z]", "");
-    if (safe.length() == 0 || safe.length() > 9) {
+    String safe = name.replaceAll("[^A-Za-z0-9_]", "");
+    if (safe.length() == 0 || safe.length() > 32) {
       JSObject ret = new JSObject();
       ret.put("ok", false);
       ret.put("error", "invalid_name");
