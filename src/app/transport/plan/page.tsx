@@ -77,26 +77,22 @@ export default function TransportPlanPage() {
     } catch { return null; }
   }
 
-  async function saveDocuments() {
+  async function saveDocumentsToDbSimpleRef() {
     try {
-      if (!files.length) { showToast("Nenhum arquivo selecionado", { variant: "info" }); return; }
+      if (!files.length) return;
       const tripId = await resolveTripId();
-      if (!tripId) { showToast("Nenhuma viagem salva para anexar", { variant: "error" }); return; }
-      const dateRef = (cities[segIdx]?.checkout || cities[segIdx + 1]?.checkin || "").trim();
-      const originCity = (fromCity || "").trim();
-      const arrText = ((arrRef.current?.value ?? arr) || "").trim();
-      const ref = `${originCity} -> ${arrText} @ ${dateRef}`;
+      if (!tripId) return;
+      const ref = `${fromCity}->${toCity}`;
       const saved = await Promise.all(files.map(async (f) => {
         if (!f.dataUrl) return null;
         const r = await saveFromDataUrl(f.dataUrl!, f.name);
         return { name: f.name, type: f.type, size: f.size, id: r.id };
       }));
       const list = saved.filter(Boolean) as Array<{ name: string; type: string; size: number; id: string }>;
-      if (!list.length) { showToast("Erro ao salvar documentos", { variant: "error" }); return; }
+      if (!list.length) return;
       await saveRefAttachments(tripId, "transport", ref, list);
       setFiles([]);
-      showToast("Documentos salvos", { variant: "success" });
-    } catch { showToast("Erro ao salvar documentos", { variant: "error" }); }
+    } catch {}
   }
 
   useEffect(() => {
@@ -283,7 +279,6 @@ export default function TransportPlanPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => camInputRef.current?.click()}>Usar câmera</Button>
                       <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => fileInputRef.current?.click()}>Escolher arquivos</Button>
-                      <Button type="button" variant="outline" className="px-2 py-1 text-xs" onClick={saveDocuments}>Salvar documentos</Button>
                       <span className="text-xs text-zinc-600">Anexos: {files.length}</span>
                     </div>
                     <input ref={camInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
@@ -317,7 +312,7 @@ export default function TransportPlanPage() {
               ) : null}
               <div className="mt-3 flex justify-end">
                 {mode !== "car" ? (
-                  <Button type="button" onClick={saveTransport}>Salvar transporte</Button>
+                  <Button type="button" onClick={() => { saveTransport(); saveDocumentsToDbSimpleRef(); }}>Salvar transporte</Button>
                 ) : (
                   <Button type="button" onClick={() => router.push("/accommodation/search")}>Ir para resumo</Button>
                 )}
