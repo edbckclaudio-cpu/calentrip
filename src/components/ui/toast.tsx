@@ -43,7 +43,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     idRef.current = (idRef.current + 1) || 1;
     const id = idRef.current;
     const variant = opts?.variant ?? "info";
-    const duration = opts?.sticky ? undefined : (opts?.duration ?? 13000);
+    const isOfflineEnabled = (message || "").includes("Offline habilitado");
+    const isSelectDateTip = (message || "").includes("Selecione a Data e o Horário da sugestão");
+    const duration = isOfflineEnabled ? 4000 : (isSelectDateTip ? 6000 : (opts?.sticky ? undefined : (opts?.duration ?? 13000)));
     const k = opts?.key;
     setItems((prev) => {
       const cleared = k ? prev.filter((t) => t.key !== k) : [];
@@ -51,7 +53,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     });
     if (typeof duration === "number") {
       setTimeout(() => {
-        minimize(id);
+        if (isOfflineEnabled) {
+          dismiss(id);
+        } else {
+          minimize(id);
+        }
       }, duration);
     }
     return id;
@@ -87,10 +93,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               ? "bg-red-600 text-white ring-red-700"
               : "bg-[#007AFF] text-white ring-[#005bbb]")
           }
-          onTouchStart={(e) => { try { (e.currentTarget as any)._startY = e.touches[0].clientY; } catch {} }}
+          onTouchStart={(e) => {
+            try {
+              const el = e.currentTarget as HTMLDivElement & { _startY?: number };
+              el._startY = e.touches[0].clientY;
+            } catch {}
+          }}
           onTouchMove={(e) => {
             try {
-              const startY = (e.currentTarget as any)._startY || 0;
+              const el = e.currentTarget as HTMLDivElement & { _startY?: number };
+              const startY = el._startY || 0;
               const dy = e.touches[0].clientY - startY;
               if (dy < -40) dismiss(t.id);
             } catch {}

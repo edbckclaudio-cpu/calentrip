@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 
-function NavIcon({ name, active }: { name: "explore" | "trips" | "stays" | "profile"; active?: boolean }) {
+function NavIcon({ name, active }: { name: "explore" | "trips" | "stays" | "calendar" | "profile"; active?: boolean }) {
   const cls = `material-symbols-outlined text-[20px] ${active ? "text-[var(--brand)]" : "text-zinc-600"}`;
   switch (name) {
     case "explore":
@@ -12,6 +12,8 @@ function NavIcon({ name, active }: { name: "explore" | "trips" | "stays" | "prof
       return <span className={cls}>flight</span>;
     case "stays":
       return <span className={cls}>hotel</span>;
+    case "calendar":
+      return <span className={cls}>calendar_month</span>;
     case "profile":
       return <span className={cls}>account_circle</span>;
   }
@@ -24,12 +26,13 @@ export default function BottomNav() {
     { href: "/flights/search", name: "explore" as const, label: t("navExplore") },
     { href: "/flights/results", name: "trips" as const, label: t("navTrips") },
     { href: "/accommodation/search", name: "stays" as const, label: t("navStays") },
+    { href: "/calendar/final", name: "calendar" as const, label: t("navCalendar") },
     { href: "/profile", name: "profile" as const, label: t("navProfile") },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 sm:hidden border-t border-[var(--border)] bg-white/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-      <ul className="grid grid-cols-4 px-2 py-2">
+      <ul className="grid grid-cols-5 px-2 py-2">
         {items.map((it) => {
           const active = (pathname || "").startsWith(it.href);
           return (
