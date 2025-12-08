@@ -46,8 +46,7 @@ export default function TransportPlanPage() {
   const [arr, setArr] = useState("");
   const depRef = useRef<HTMLInputElement | null>(null);
   const arrRef = useRef<HTMLInputElement | null>(null);
-  const [depOpts, setDepOpts] = useState<string[]>([]);
-  const [arrOpts, setArrOpts] = useState<string[]>([]);
+  
   const [depTime, setDepTime] = useState("");
   const [arrTime, setArrTime] = useState("");
   const depTimeRef = useRef<HTMLInputElement | null>(null);
@@ -117,7 +116,7 @@ export default function TransportPlanPage() {
     if (!fromCity || !toCity) return;
     showToast("Escolha o transporte entre as cidades, preenchendo origem, destino e horários.", { duration: 7000 });
     setDep(""); setArr(""); setDepTime(""); setArrTime("");
-    setDepOpts([]); setArrOpts([]);
+    
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCity)}&destination=${encodeURIComponent(toCity)}`;
       const params = new URLSearchParams({ lang: "pt-BR", currency: "BRL" });
@@ -128,20 +127,7 @@ export default function TransportPlanPage() {
     })();
   }, [fromCity, toCity]);
 
-  async function suggestAir(city: string) {
-    const { searchAirportsAsync } = await import("@/lib/airports");
-    const arr = await searchAirportsAsync(city);
-    return Array.from(new Set(arr.filter((a) => a.city.toLowerCase() === city.toLowerCase()).map((a) => `${a.city} – ${a.name} (${a.iata})`)));
-  }
-
-  async function suggestPlace(city: string, type: "train" | "bus") {
-    const q = `${city} ${type} station`;
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=12`;
-    const res = await fetch(url, { headers: { "Accept": "application/json" } });
-    const js = (await res.json()) as Array<{ display_name: string }>;
-    const cityLow = city.toLowerCase();
-    return Array.from(new Set(js.map((x) => x.display_name).filter((s) => s.toLowerCase().includes(cityLow))));
-  }
+  
 
   function formatTimeInput(v: string) {
     const d = (v || "").replace(/[^0-9]/g, "").slice(0, 4);
@@ -244,32 +230,8 @@ export default function TransportPlanPage() {
                         autoCorrect="off"
                         enterKeyHint="next"
                         ref={depRef}
-                        onFocus={async () => {
-                          if (!fromCity) return;
-                          if (mode === "air") setDepOpts(await suggestAir(fromCity));
-                          else setDepOpts(await suggestPlace(fromCity, mode === "train" ? "train" : "bus"));
-                        }}
-                        onChange={async (e) => {
-                          const v = e.target.value; setDep(v);
-                          if (v.trim().length < 1) return;
-                          if (!fromCity) return;
-                          if (mode === "air") setDepOpts(await suggestAir(fromCity));
-                          else setDepOpts(await suggestPlace(fromCity, mode === "train" ? "train" : "bus"));
-                        }}
+                        onChange={(e) => { const v = e.target.value; setDep(v); }}
                       />
-                      {depOpts.length ? (
-                        <Card className="absolute left-0 right-0 bottom-full mb-1 z-40 p-0">
-                          <ul className="max-h-24 overflow-auto divide-y">
-                            {depOpts.map((o, i) => (
-                              <li key={`dep-${i}`}>
-                                <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => { setDep(o); if (depRef.current) depRef.current.value = o; }}>
-                                  <span>{o}</span>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </Card>
-                      ) : null}
                     </div>
                   </div>
                   <div>
@@ -284,32 +246,8 @@ export default function TransportPlanPage() {
                         autoCorrect="off"
                         enterKeyHint="next"
                         ref={arrRef}
-                        onFocus={async () => {
-                          if (!toCity) return;
-                          if (mode === "air") setArrOpts(await suggestAir(toCity));
-                          else setArrOpts(await suggestPlace(toCity, mode === "train" ? "train" : "bus"));
-                        }}
-                        onChange={async (e) => {
-                          const v = e.target.value; setArr(v);
-                          if (v.trim().length < 1) return;
-                          if (!toCity) return;
-                          if (mode === "air") setArrOpts(await suggestAir(toCity));
-                          else setArrOpts(await suggestPlace(toCity, mode === "train" ? "train" : "bus"));
-                        }}
+                        onChange={(e) => { const v = e.target.value; setArr(v); }}
                       />
-                      {arrOpts.length ? (
-                        <Card className="absolute left-0 right-0 bottom-full mb-1 z-40 p-0">
-                          <ul className="max-h-24 overflow-auto divide-y">
-                            {arrOpts.map((o, i) => (
-                              <li key={`arr-${i}`}>
-                                <button type="button" className="w-full px-2 py-1 text-left hover:bg-zinc-50" onClick={() => { setArr(o); if (arrRef.current) arrRef.current.value = o; }}>
-                                  <span>{o}</span>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </Card>
-                      ) : null}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
