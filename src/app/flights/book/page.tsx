@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableCell, TableBody } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { addTrip, saveTripAttachments } from "@/lib/trips-db";
 import { saveFromFile } from "@/lib/attachments-store";
 import { useI18n } from "@/lib/i18n";
@@ -501,12 +502,15 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
   const { show, dismiss } = useToast();
+  const [locatorInfoOpen, setLocatorInfoOpen] = useState(false);
   const [activeLeg, setActiveLeg] = useState<0 | 1>(0);
   const [proceedPulse, setProceedPulse] = useState(false);
   const [infoShown, setInfoShown] = useState(false);
   const [hintId, setHintId] = useState<number | null>(null);
   const proceedLockRef = useRef(false);
   const [proceeding, setProceeding] = useState(false);
+  const openLocatorInfo = () => setLocatorInfoOpen(true);
+  const closeLocatorInfo = () => setLocatorInfoOpen(false);
   function fmtTime(v: string) {
     const s = v.replace(/\D/g, "").slice(0, 4);
     if (!s) return "";
@@ -683,7 +687,19 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
               )}
             </div>
             <div>
-              <label className="mb-1 block text-sm">{t("flightNumberOptional")}</label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-sm">{t("flightNumberOptional")}</label>
+                <button
+                  type="button"
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                  title="Informações sobre localizador"
+                  aria-label="Informações sobre localizador"
+                  onClick={openLocatorInfo}
+                  onTouchStart={openLocatorInfo}
+                >
+                  <span className="material-symbols-outlined text-[12px]">info</span>
+                </button>
+              </div>
               <Input
                 placeholder=""
                 value={notes[i]?.code ?? ""}
@@ -789,6 +805,15 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
           )}
         </Button>
       </div>
+      <Dialog open={locatorInfoOpen} onOpenChange={setLocatorInfoOpen} placement="bottom">
+        <DialogHeader>{t("locatorInfoTitle")}</DialogHeader>
+        <div className="space-y-2 text-sm">
+          <p>{t("locatorInfoText")}</p>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={closeLocatorInfo}>{t("close")}</Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

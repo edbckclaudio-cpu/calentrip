@@ -10,7 +10,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
  
 import { useToast } from "@/components/ui/toast";
-import { getSavedTrips, getRefAttachments } from "@/lib/trips-db";
+import { getSavedTrips, getRefAttachments, getTripEvents, saveCalendarEvents } from "@/lib/trips-db";
 
 export default function AccommodationSearchPage() {
   const { tripSearch } = useTrip();
@@ -396,6 +396,67 @@ export default function AccommodationSearchPage() {
       const payload = { cities };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
     } catch {}
+    (async () => {
+      try {
+        if (!cities.length) return;
+        const trips = await getSavedTrips();
+        let cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0] || null;
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const ts = raw ? JSON.parse(raw) as { mode: "same" | "different"; origin?: string; destination?: string; departDate?: string; passengers?: { adults?: number; children?: number; infants?: number }; outbound?: { origin?: string; destination?: string; date?: string }; } : null;
+          if (ts) {
+            const isSame = ts.mode === "same";
+            const origin = isSame ? ts.origin : ts.outbound?.origin;
+            const destination = isSame ? ts.destination : ts.outbound?.destination;
+            const date = isSame ? ts.departDate : ts.outbound?.date;
+            const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+            const title = origin && destination ? `${origin} → ${destination}` : "";
+            const found = trips.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+            if (found) cur = found;
+          }
+        } catch {}
+        if (!cur) return;
+        const existing = await getTripEvents(cur.id);
+        const keep = (existing || []).filter((e) => e.type !== "stay" && e.type !== "transport");
+        const next = [...keep];
+        for (let i = 0; i < cities.length; i++) {
+          const c = cities[i];
+          const cityName = c.name || `Cidade ${i + 1}`;
+          const addr = c.address || "(endereço não informado)";
+          if (c.checkin) {
+            let ciTime = i === 0 ? "23:59" : "17:00";
+            try { if (i === 0 && typeof window !== "undefined" && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+            next.push({ name: "Check-in hospedagem", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, type: "stay" });
+          }
+          if (c.checkout) {
+            next.push({ name: "Checkout hospedagem", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", type: "stay" });
+          }
+        }
+        for (let i = 0; i < cities.length - 1; i++) {
+          const c = cities[i];
+          const n = cities[i + 1];
+          const seg = c.transportToNext;
+          if (seg) {
+            const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+            const date = c.checkout || n?.checkin || "";
+            const time = seg.depTime || "11:00";
+            next.push({ name: "Transporte", label, date, time, type: "transport" });
+          }
+        }
+        const seen = new Set<string>();
+        const merged = next.filter((e) => {
+          const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        await saveCalendarEvents(cur.id, merged);
+        try {
+          const payload = { name: cur.savedCalendarName || "", events: merged };
+          if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+        } catch {}
+      } catch {}
+    })();
   }, [cities]);
 
   useEffect(() => {
