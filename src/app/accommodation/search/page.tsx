@@ -20,7 +20,7 @@ export default function AccommodationSearchPage() {
   const pathname = usePathname();
   const initialCity = useMemo(() => {
     if (!tripSearch) return "";
-    if (tripSearch.mode === "same") return tripSearch.destination ?? "";
+    if (tripSearch.mode === "same") return "";
     return "";
   }, [tripSearch]);
   const [city, setCity] = useState(initialCity);
@@ -68,6 +68,17 @@ export default function AccommodationSearchPage() {
       setNoteAnim({ maxH: mobile ? 160 : 240, transition: mobile ? "opacity 200ms ease-out, max-height 200ms ease-out" : "opacity 250ms ease-out, max-height 250ms ease-out" });
     } catch {}
   }, []);
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+      const js: { cities?: City[] } | null = raw ? JSON.parse(raw) : null;
+      const list: City[] = js?.cities || [];
+      if (list.length) {
+        setCities(list);
+        setCityCount(list.length);
+      }
+    } catch {}
+  }, [pathname]);
   
   useEffect(() => {
     (async () => {
@@ -147,14 +158,7 @@ export default function AccommodationSearchPage() {
 
   
 
-  useEffect(() => {
-    if (!tripSearch) return;
-    if (tripSearch.mode !== "same") return;
-    const dest = tripSearch.destination ?? "";
-    const looksIata = /^[A-Za-z]{3}$/.test(dest);
-    if (!looksIata) return;
-    if (!city) setCity(dest);
-  }, [tripSearch, city]);
+  
 
   function addDaysISO(d: string, days: number): string {
     if (!d) return "";
