@@ -768,6 +768,10 @@ export default function AccommodationSearchPage() {
                                 <Button type="button" onClick={() => {
                                   const params: Partial<TransportSegment> = { mode: seg.mode, dep: seg.dep, arr: seg.arr, depTime: seg.depTime, arrTime: seg.arrTime };
                                   setSeg(params as TransportSegment);
+                                  try {
+                                    const payload = { cities };
+                                    if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
+                                  } catch {}
                                   const hasNext = i + 1 < cities.length - 1;
                                   if (hasNext) {
                                     showToast("Abrindo o transporte da próxima viagem para comprar e preencher.", { duration: 7000 });
@@ -776,6 +780,14 @@ export default function AccommodationSearchPage() {
                                     showToast("Indo para o resumo. Verifique as informações.", { duration: 5000 });
                                     setTransportIdx(null);
                                     setSummaryHighlight(true);
+                                    try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
+                                    try {
+                                      setTimeout(() => {
+                                        try {
+                                          if (summaryRef.current) summaryRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+                                        } catch {}
+                                      }, 300);
+                                    } catch {}
                                   }
                                 }}>Salvar transporte</Button>
                               </div>

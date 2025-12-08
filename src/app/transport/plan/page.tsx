@@ -149,6 +149,16 @@ export default function TransportPlanPage() {
         showToast("Indo para o resumo. Verifique as informações.", { duration: 5000 });
         try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
         router.push("/accommodation/search");
+        try {
+          setTimeout(() => {
+            try {
+              if (typeof window !== "undefined") {
+                const same = (window.location.pathname || "").includes("/accommodation/search");
+                if (!same) window.location.href = "/accommodation/search";
+              }
+            } catch {}
+          }, 600);
+        } catch {}
       }
     } catch { showToast("Erro ao salvar", { variant: "error" }); }
   }
