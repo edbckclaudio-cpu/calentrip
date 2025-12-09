@@ -2664,24 +2664,24 @@ export default function FinalCalendarPage() {
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                            <span>Aeroporto</span>
+                            <span>{t("airport")}</span>
                           </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                            <span>Aeroporto</span>
+                            <span>{t("airport")}</span>
                           </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openReturnAirportDrawer()}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                            <span>Aeroporto retorno</span>
+                            <span>{t("returnAirportLabel")}</span>
                           </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature && returnFiles.length ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
-                            setDocTitle(returnInfo?.airportName || "Voo de volta");
+                            setDocTitle(returnInfo?.airportName || t("inboundFlight"));
                             const mod = await import("@/lib/attachments-store");
                             const resolved = await Promise.all(returnFiles.map(async (f) => {
                               if (!f.dataUrl && f.id) {
@@ -2841,7 +2841,7 @@ export default function FinalCalendarPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Transporte para o Aeroporto</DialogHeader>
+        <DialogHeader>{t("returnDrawerTitle")}</DialogHeader>
             <div className="space-y-3 text-sm">
               {loading ? (
                 <div>Calculando…</div>
@@ -3159,7 +3159,7 @@ export default function FinalCalendarPage() {
               {returnFiles.length ? (
                 <div>
                   <Button type="button" variant="outline" onClick={async () => {
-                    setDocTitle(returnInfo?.airportName || "Voo de volta");
+                    setDocTitle(returnInfo?.airportName || t("inboundFlight"));
                     const mod = await import("@/lib/attachments-store");
                     const resolved = await Promise.all(returnFiles.map(async (f) => {
                       if (!f.dataUrl && f.id) {

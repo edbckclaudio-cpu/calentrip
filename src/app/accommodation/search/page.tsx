@@ -951,7 +951,7 @@ export default function AccommodationSearchPage() {
           <Card className={summaryComplete ? "border-2 border-[#34c759]" : undefined}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <span>Resumo de hospedagens e transportes</span>
+              <span>{t("staysTransportsSummaryTitle")}</span>
               {summaryComplete ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700">
                   <span className="material-symbols-outlined text-[14px]">task_alt</span>
