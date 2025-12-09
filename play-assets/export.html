@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Export CalenTrip Assets</title>
+<style>
+body{font-family:Inter,Arial,sans-serif;margin:24px;color:#111827}
+.row{display:flex;gap:24px;align-items:flex-start}
+.card{border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+.btn{border:1px solid #111827;border-radius:10px;padding:10px 14px;display:inline-flex;gap:8px;align-items:center;background:#fff;cursor:pointer}
+.btn:active{transform:translateY(1px)}
+.meta{color:#6b7280;font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>Exportar assets do Play Console</h1>
+<div class="row">
+<div class="card">
+<h2>Ícone 512×512</h2>
+<div id="iconPreview">
+  <!-- SVG inline para funcionar offline -->
+  <svg id="iconSvg" xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 512 512">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#f2f2f2"/>
+      </linearGradient>
+      <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#c9c9c9"/>
+        <stop offset="1" stop-color="#8f8f8f"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="512" height="512" fill="url(#bg)"/>
+    <g transform="translate(256,256)">
+      <circle r="220" fill="#ffffff" stroke="url(#ringGrad)" stroke-width="16"/>
+      <circle r="200" fill="#ffffff" stroke="#d9d9d9" stroke-width="6"/>
+      <g transform="rotate(-15)">
+        <polygon points="0,-160 22,-22 0,0 -22,-22" fill="#1f2937"/>
+        <polygon points="0,160 -22,22 0,0 22,22" fill="#f59e0b"/>
+        <polygon points="160,0 22,22 0,0 22,-22" fill="#1f2937"/>
+        <polygon points="-160,0 -22,-22 0,0 -22,22" fill="#1f2937"/>
+        <polygon points="0,-110 14,-14 0,0 -14,-14" fill="#1f2937"/>
+        <polygon points="0,110 -14,14 0,0 14,14" fill="#f59e0b"/>
+        <polygon points="110,0 14,14 0,0 14,-14" fill="#1f2937"/>
+        <polygon points="-110,0 -14,-14 0,0 -14,14" fill="#1f2937"/>
+      </g>
+      <circle r="10" fill="#1f2937"/>
+    </g>
+    <g transform="translate(32,420)" fill="#9aa0a6" font-family="Inter, Arial" font-size="28">
+      <text>MON</text>
+      <text x="105">TUE</text>
+      <text x="210">WED</text>
+      <text x="315">THU</text>
+      <text x="420">FRI</text>
+    </g>
+  </svg>
+ </div>
+ <button class="btn" id="iconBtn">Baixar PNG 512×512</button>
+ <div class="meta">Arquivo gerado localmente</div>
+ </div>
+ <div class="card">
+ <h2>Feature graphic 1024×500</h2>
+ <div id="featPreview">
+  <!-- SVG inline para funcionar offline -->
+  <svg id="featSvg" xmlns="http://www.w3.org/2000/svg" width="512" height="250" viewBox="0 0 1024 500">
+    <defs>
+      <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#f5f7fa"/>
+      </linearGradient>
+      <linearGradient id="ring2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#c9c9c9"/>
+        <stop offset="1" stop-color="#8f8f8f"/>
+      </linearGradient>
+    </defs>
+    <rect width="1024" height="500" fill="url(#bg2)"/>
+    <g transform="translate(250,250)">
+      <circle r="200" fill="#ffffff" stroke="url(#ring2)" stroke-width="14"/>
+      <circle r="182" fill="#ffffff" stroke="#dedede" stroke-width="5"/>
+      <g transform="rotate(-15)">
+        <polygon points="0,-150 20,-20 0,0 -20,-20" fill="#1f2937"/>
+        <polygon points="0,150 -20,20 0,0 20,20" fill="#f59e0b"/>
+        <polygon points="150,0 20,20 0,0 20,-20" fill="#1f2937"/>
+        <polygon points="-150,0 -20,-20 0,0 -20,20" fill="#1f2937"/>
+      </g>
+      <circle r="9" fill="#1f2937"/>
+    </g>
+    <g transform="translate(520,160)">
+      <rect x="0" y="0" width="430" height="190" rx="18" fill="#fff" stroke="#e6e9ef"/>
+      <text x="24" y="54" fill="#111827" font-family="Inter, Arial" font-size="40" font-weight="600">CalenTrip</text>
+      <text x="24" y="104" fill="#6b7280" font-family="Inter, Arial" font-size="26">Calendário de viagens</text>
+      <g transform="translate(24,130)" fill="#9aa0a6" font-family="Inter, Arial" font-size="20">
+        <text>MON</text>
+        <text x="80">TUE</text>
+        <text x="160">WED</text>
+        <text x="240">THU</text>
+        <text x="320">FRI</text>
+      </g>
+    </g>
+  </svg>
+ </div>
+ <button class="btn" id="featBtn">Baixar PNG 1024×500</button>
+ <div class="meta">Arquivo gerado localmente</div>
+ </div>
+ </div>
+<script>
+async function svgTextFromInline(id){
+ const el=document.getElementById(id);
+ const ser=new XMLSerializer();
+ return ser.serializeToString(el);
+}
+async function svgToPngFromText(svgText,width,height){
+ const blob=new Blob([svgText],{type:'image/svg+xml'});
+ const url=URL.createObjectURL(blob);
+ const img=new Image();
+ img.crossOrigin='anonymous';
+ await new Promise(res=>{img.onload=res;img.src=url});
+ const canv=document.createElement('canvas');
+ canv.width=width;canv.height=height;
+ const ctx=canv.getContext('2d');
+ ctx.fillStyle='#ffffff';ctx.fillRect(0,0,width,height);
+ ctx.drawImage(img,0,0,width,height);
+ const data=canv.toDataURL('image/png');
+ URL.revokeObjectURL(url);
+ return data;
+}
+function downloadDataUrl(dataUrl,name){
+ const a=document.createElement('a');
+ a.href=dataUrl;a.download=name;document.body.appendChild(a);a.click();a.remove();
+}
+async function init(){
+ document.getElementById('iconBtn').onclick=async()=>{
+  const iconSvg=await svgTextFromInline('iconSvg');
+  const png=await svgToPngFromText(iconSvg,512,512);
+  downloadDataUrl(png,'icon-512.png');
+ };
+ document.getElementById('featBtn').onclick=async()=>{
+  const featSvg=await svgTextFromInline('featSvg');
+  const png=await svgToPngFromText(featSvg,1024,500);
+  downloadDataUrl(png,'feature-graphic-1024x500.png');
+ };
+}
+init();
+</script>
+</body>
+</html>
