@@ -108,41 +108,27 @@ export default function BookFlightsPage() {
     ];
     if (!c) {
       return {
-        title: "Atenção para documentos de viagem",
-        lines: [
-          "Antes de comprar, verifique requisitos de passaporte, visto e vacinas conforme o país de destino.",
-          "Em geral, recomenda-se passaporte com validade mínima de 6 meses, e documentos em perfeito estado.",
-        ],
+        title: t("docInternationalTitle"),
+        lines: [t("docInternationalLine1"), t("docInternationalLine2"), t("docInternationalLine3")],
       };
     }
     if (c === "Brazil") {
       return {
-        title: `Requisitos para viagem no Brasil`,
-        lines: [
-          "Voo doméstico: passaporte não é exigido. Leve documento oficial com foto (RG ou CNH) válido e legível.",
-          "Vacinas: verifique orientações de saúde do destino. Em rotas específicas podem existir recomendações.",
-        ],
+        title: t("docBrazilTitle"),
+        lines: [t("docBrazilLine1"), t("docBrazilLine2")],
       };
     }
     if (mercosul.includes(c)) {
       return {
-        title: `Requisitos para viagem ao Mercosul (${c})`,
-        lines: [
-          "Para brasileiros, RG físico legível e em bom estado é aceito. Recomenda-se emissão há até 10 anos.",
-          "Passaporte pode ser utilizado. Visto: em geral não é exigido para turismo de curto prazo.",
-          "Vacinas: verifique exigências do país. Em algumas rotas pode ser solicitado comprovante de Febre Amarela.",
-        ],
+        title: `${t("docMercosurTitle")} (${c})`,
+        lines: [t("docMercosurLine1"), t("docMercosurLine2"), t("docMercosurLine3")],
       };
     }
     return {
-      title: `Requisitos para viagem internacional (${c})`,
-      lines: [
-        "Passaporte obrigatório, preferencialmente com validade mínima de 6 meses a partir da entrada.",
-        "Visto: pode ser necessário. Confirme regras do país de destino (ex.: EUA, Canadá, China, Índia, Austrália).",
-        "Vacinas: verifique se há exigência de certificado internacional (ex.: Febre Amarela) e demais requisitos de saúde.",
-      ],
+      title: `${t("docInternationalTitle")} (${c})`,
+      lines: [t("docInternationalLine1"), t("docInternationalLine2"), t("docInternationalLine3")],
     };
-  }, [countries.destination]);
+  }, [countries.destination, t]);
 
   useEffect(() => { setHydrated(true); }, []);
   useEffect(() => {
@@ -188,16 +174,10 @@ export default function BookFlightsPage() {
     if (!hydrated || loadingTrip || introShown) return;
     if (!tripSearch) return;
     if (tripSearch.mode === "same") {
-      const id = show(
-        "Hora de escolher e comprar o voo. Em \"Plataformas de busca\", use os links para comparar preço e horários. As buscas já vêm preenchidas, mas valide os dados e a quantidade de passageiros. Após a compra, registre os horários dos voos, anexe ou fotografe as passagens e salve o localizador/código de reserva.",
-        { variant: "info", sticky: true, key: "book-intro" }
-      );
+      const id = show(t("bookIntroSame"), { variant: "info", sticky: true, key: "book-intro" });
       setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     } else {
-      const id = show(
-        "Hora de escolher e comprar o voo. Vá no quadro Plataformas de busca, e acesse os links, alguns buscadores podem não reconhecer todos dados — valide os dados e garanta que a opção \"somente ida\" esteja ativa em cada trecho; confira também a quantidade de passageiros. Após a compra, registre os horários dos voos, anexe ou fotografe as passagens e salve o localizador/código de reserva.",
-        { variant: "info", sticky: true, key: "book-intro" }
-      );
+      const id = show(t("bookIntroDifferent"), { variant: "info", sticky: true, key: "book-intro" });
       setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     }
     setIntroShown(true);
@@ -246,7 +226,7 @@ export default function BookFlightsPage() {
             </CardHeader>
             <CardContent className="text-[11px] py-2">
             {!hydrated || loadingTrip ? (
-              <div className="text-sm text-zinc-600">Carregando busca…</div>
+              <div className="text-sm text-zinc-600">{t("loadingSearch")}</div>
             ) : missing ? (
               <div className="flex items-center justify-between">
                 <div className="text-sm text-zinc-600">{t("noTrips")}</div>
@@ -301,7 +281,7 @@ export default function BookFlightsPage() {
               <Button
                 type="button"
                 className="px-3 py-1 text-[11px]"
-                onClick={() => { show("Editando busca"); router.push("/flights/search"); }}
+                onClick={() => { show(t("editingSearchMsg")); router.push("/flights/search"); }}
               >
                 {t("editSearchTitle")}
               </Button>
@@ -321,7 +301,7 @@ export default function BookFlightsPage() {
               </CardTitle>
               <button
                 type="button"
-                aria-label="Nota de documentos para viagem"
+                aria-label={t("travelDocsNoteAria")}
                 className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200"
                 onMouseEnter={() => setNoteOpen(true)}
                 onMouseLeave={() => setNoteOpen(false)}
@@ -329,16 +309,13 @@ export default function BookFlightsPage() {
                 onBlur={() => setNoteOpen(false)}
                 onTouchStart={() => setNoteOpen(true)}
                 onTouchEnd={() => setNoteOpen(false)}
-                onClick={() => {
-                  const msg = `${noteText.title} • ${noteText.lines.join(" • ")}`;
-                  show(msg);
-                }}
+                onClick={() => { const msg = `${noteText.title} • ${noteText.lines.join(" • ")}`; show(msg); }}
               >
                 <span className="material-symbols-outlined text-[16px]">info</span>
               </button>
               <button
                 type="button"
-                aria-label="Dica sobre horário de chegada e check-in"
+                aria-label={t("arrivalTipAria")}
                 className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200"
                 onMouseEnter={() => setArrivalNoteOpen(true)}
                 onMouseLeave={() => setArrivalNoteOpen(false)}
@@ -361,7 +338,7 @@ export default function BookFlightsPage() {
                   {noteText.lines.map((l, i) => (
                     <div key={i} className="mt-1 text-zinc-700 dark:text-zinc-200">{l}</div>
                   ))}
-                  <div className="mt-2 text-xs text-zinc-500">Confirme sempre com o consulado/embaixada e autoridades de saúde do destino.</div>
+                  <div className="mt-2 text-xs text-zinc-500">{t("docDisclaimer")}</div>
                 </div>
               </div>
             )}
@@ -380,7 +357,7 @@ export default function BookFlightsPage() {
               <ul className="space-y-2">
                 {data.links.map((item) => (
                   <li key={item.name} className="flex items-center gap-1">
-                    <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
+                    <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
                       {item.name}
                     </Link>
                     {item.name === "Google Flights" ? (
@@ -408,13 +385,13 @@ export default function BookFlightsPage() {
                         <span className="text-sm font-semibold">{ts.outbound.origin}/{ts.outbound.destination}</span>
                         <span className="text-xs font-medium">• {formatDate(ts.outbound.date)}</span>
                       </div>
-                      <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">Links abaixo estão preenchidos com esse trecho (somente ida)</div>
+                      <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">{t("linksPreFilledOneWay")}</div>
                     </div>
                   ); })()}
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
                       <li key={`out-${item.name}`} className="flex items-center gap-1">
-                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
+                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
                         {item.name === "Google Flights" ? (
@@ -441,13 +418,13 @@ export default function BookFlightsPage() {
                         <span className="text-sm font-semibold">{ts.inbound.origin}/{ts.inbound.destination}</span>
                         <span className="text-xs font-medium">• {formatDate(ts.inbound.date)}</span>
                       </div>
-                      <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">Links abaixo estão preenchidos com esse trecho (somente ida)</div>
+                      <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">{t("linksPreFilledOneWay")}</div>
                     </div>
                   ); })()}
                   <ul className="space-y-2">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
                       <li key={`in-${item.name}`} className="flex items-center gap-1">
-                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(`Abrindo ${item.name}`); if (guide === "aggregators") setGuide("notes"); }}>
+                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
                         {item.name === "Google Flights" ? (
@@ -481,7 +458,7 @@ export default function BookFlightsPage() {
           </CardHeader>
           <CardContent>
             {!hydrated ? (
-              <div className="text-sm text-zinc-600">Carregando busca…</div>
+              <div className="text-sm text-zinc-600">{t("loadingSearch")}</div>
             ) : !tripSearch ? (
               <div className="flex items-center justify-between">
                 <div className="text-sm text-zinc-600">{t("noTrips")}</div>
@@ -615,7 +592,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     if (hintId != null) {
       try { dismiss(hintId); } catch {}
     }
-    show("Notas salvas, redirecionando…", { variant: "success" });
+    show(t("notesSavedRedirecting"), { variant: "success" });
     try { onProceed?.(); } catch {}
     try { router.push("/accommodation/search"); } catch {}
     try {
@@ -651,7 +628,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
+                  if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
             </div>
@@ -679,7 +656,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
+                  if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
               {invalidLeg(i) && (
@@ -692,8 +669,8 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 <button
                   type="button"
                   className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-                  title="Informações sobre localizador"
-                  aria-label="Informações sobre localizador"
+                  title={t("locatorInfoTitle")}
+                  aria-label={t("locatorInfoTitle")}
                   onClick={openLocatorInfo}
                   onTouchStart={openLocatorInfo}
                 >
@@ -712,7 +689,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
+                  if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
             </div>
@@ -733,7 +710,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
+                  if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
             <label htmlFor={`nextday-${i}`} className="text-sm">{t("arrivalNextDayLabel")}</label>
@@ -797,7 +774,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         >
           {proceeding ? (
             <span className="inline-flex items-center gap-2">
-              <span className="h-4 w-4 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
+              <span className="h-4 w-4 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label={t("loading")} />
               <span>{t("proceedToAccommodation")}</span>
             </span>
           ) : (

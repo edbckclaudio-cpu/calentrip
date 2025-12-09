@@ -99,16 +99,16 @@ export default function FlightsResultsPage() {
     if (tripSearch.mode === "same") {
       return {
         legs: [
-          { title: `Trecho de Ida: ${tripSearch.origin} -> ${tripSearch.destination}`, origin: tripSearch.origin, destination: tripSearch.destination, date: tripSearch.departDate },
-          { title: `Trecho de Volta: ${tripSearch.destination} -> ${tripSearch.origin}`, origin: tripSearch.destination, destination: tripSearch.origin, date: tripSearch.returnDate },
+          { title: `${t("outboundFlight")}: ${tripSearch.origin} -> ${tripSearch.destination}`, origin: tripSearch.origin, destination: tripSearch.destination, date: tripSearch.departDate },
+          { title: `${t("inboundFlight")}: ${tripSearch.destination} -> ${tripSearch.origin}`, origin: tripSearch.destination, destination: tripSearch.origin, date: tripSearch.returnDate },
         ],
         passengers: paxCount(tripSearch.passengers as unknown),
       };
     }
     return {
       legs: [
-        { title: `Trecho de Ida: ${tripSearch.outbound.origin} -> ${tripSearch.outbound.destination}`, origin: tripSearch.outbound.origin, destination: tripSearch.outbound.destination, date: tripSearch.outbound.date },
-        { title: `Trecho de Volta: ${tripSearch.inbound.origin} -> ${tripSearch.inbound.destination}`, origin: tripSearch.inbound.origin, destination: tripSearch.inbound.destination, date: tripSearch.inbound.date },
+        { title: `${t("outboundFlight")}: ${tripSearch.outbound.origin} -> ${tripSearch.outbound.destination}`, origin: tripSearch.outbound.origin, destination: tripSearch.outbound.destination, date: tripSearch.outbound.date },
+        { title: `${t("inboundFlight")}: ${tripSearch.inbound.origin} -> ${tripSearch.inbound.destination}`, origin: tripSearch.inbound.origin, destination: tripSearch.inbound.destination, date: tripSearch.inbound.date },
       ],
       passengers: paxCount(tripSearch.passengers as unknown),
     };
@@ -180,41 +180,15 @@ export default function FlightsResultsPage() {
       "Venezuela",
     ];
     if (!c) {
-      return {
-        title: "Atenção para documentos de viagem",
-        lines: [
-          "Antes de comprar, verifique requisitos de passaporte, visto e vacinas conforme o país de destino.",
-          "Em geral, recomenda-se passaporte com validade mínima de 6 meses, e documentos em perfeito estado.",
-        ],
-      };
+      return { title: t("docInternationalTitle"), lines: [t("docInternationalLine1"), t("docInternationalLine2"), t("docInternationalLine3")] };
     }
     if (c === "Brazil") {
-      return {
-        title: `Requisitos para viagem no Brasil`,
-        lines: [
-          "Voo doméstico: passaporte não é exigido. Leve documento oficial com foto (RG ou CNH) válido e legível.",
-          "Vacinas: verifique orientações de saúde do destino. Em rotas específicas podem existir recomendações.",
-        ],
-      };
+      return { title: t("docBrazilTitle"), lines: [t("docBrazilLine1"), t("docBrazilLine2")] };
     }
     if (mercosul.includes(c)) {
-      return {
-        title: `Requisitos para viagem ao Mercosul (${c})`,
-        lines: [
-          "Para brasileiros, RG físico legível e em bom estado é aceito. Recomenda-se emissão há até 10 anos.",
-          "Passaporte pode ser utilizado. Visto: em geral não é exigido para turismo de curto prazo.",
-          "Vacinas: verifique exigências do país. Em algumas rotas pode ser solicitado comprovante de Febre Amarela.",
-        ],
-      };
+      return { title: `${t("docMercosurTitle")} (${c})`, lines: [t("docMercosurLine1"), t("docMercosurLine2"), t("docMercosurLine3")] };
     }
-    return {
-      title: `Requisitos para viagem internacional (${c})`,
-      lines: [
-        "Passaporte obrigatório, preferencialmente com validade mínima de 6 meses a partir da entrada.",
-        "Visto: pode ser necessário. Confirme regras do país de destino (ex.: EUA, Canadá, China, Índia, Austrália).",
-        "Vacinas: verifique se há exigência de certificado internacional (ex.: Febre Amarela) e demais requisitos de saúde.",
-      ],
-    };
+    return { title: `${t("docInternationalTitle")} (${c})`, lines: [t("docInternationalLine1"), t("docInternationalLine2"), t("docInternationalLine3")] };
   }
 
   if (!tripSearch || !summary) {
@@ -415,7 +389,7 @@ export default function FlightsResultsPage() {
                 {arrivalTimes[i as 0 | 1] && (
                   <div className="text-xs text-zinc-600">{t("arrivalTime")}: {arrivalTimes[i as 0 | 1]}</div>
                 )}
-                <Button type="button" onClick={() => setOpenIdx(i)}>Pesquisar Voos</Button>
+                <Button type="button" onClick={() => setOpenIdx(i)}>{t("searchFlights")}</Button>
                 <Dialog open={openIdx === i} onOpenChange={(o) => setOpenIdx(o ? i : null)}>
                   <DialogHeader>
                     <div className="flex items-center gap-2">
@@ -423,7 +397,7 @@ export default function FlightsResultsPage() {
                       <span>{t("linksSuggested")}</span>
                       <button
                         type="button"
-                        aria-label="Nota de documentos para viagem"
+                        aria-label={t("travelDocsNoteAria")}
                         className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200"
                         onMouseEnter={() => setNoteOpenIdx(i)}
                         onMouseLeave={() => setNoteOpenIdx(null)}
@@ -447,8 +421,8 @@ export default function FlightsResultsPage() {
                                   <div key={idx} className="mt-1 text-zinc-700 dark:text-zinc-200">{l}</div>
                                 ))}
                                 <div className="mt-2 text-xs text-zinc-500">
-                                  Confirme sempre com o consulado/embaixada e autoridades de saúde do destino.
-                                  <a className="ml-1 underline" href="https://www.gov.br/anvisa/pt-br/assuntos/viajantes" target="_blank" rel="noopener noreferrer">Saiba mais</a>
+                                  {t("docDisclaimer")}
+                                  <a className="ml-1 underline" href="https://www.gov.br/anvisa/pt-br/assuntos/viajantes" target="_blank" rel="noopener noreferrer">{t("learnMore")}</a>
                                 </div>
                               </div>
                             );

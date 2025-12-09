@@ -72,7 +72,7 @@ export default function FlightsSearchPage() {
     const filledDiff = Boolean(outbound.origin && outbound.destination && outbound.date && inbound.origin && inbound.destination && inbound.date);
     if (mode === "different" || (filledDiff && !filledSame)) {
       setTripSearch({ mode: "different", outbound: { ...outbound }, inbound: { ...inbound }, passengers });
-      show("Informações confirmadas");
+      show(t("infoConfirmed"));
       await new Promise((r) => setTimeout(r, 500));
       router.push("/flights/book");
     } else if (filledSame) {
@@ -84,12 +84,12 @@ export default function FlightsSearchPage() {
         returnDate: same.returnDate,
         passengers: same.passengers,
       });
-      show("Informações confirmadas");
+      show(t("infoConfirmed"));
       await new Promise((r) => setTimeout(r, 500));
       router.push("/flights/book");
     } else {
       setAttempted(true);
-      show("Preencha os campos obrigatórios", { variant: "error" });
+      show(t("fillRequiredFieldsError"), { variant: "error" });
     }
   }
 
@@ -123,9 +123,9 @@ export default function FlightsSearchPage() {
               {attempted && mode === "same" && !same.destination && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
             </div>
               <div>
-                <label className="mb-1 block text-sm">Data de Ida/Volta</label>
+                <label className="mb-1 block text-sm">{t("departReturnDates")}</label>
                 <Button type="button" variant="outline" className={(attempted && mode === "same" && !(same.departDate && same.returnDate) ? "ring-2 ring-red-400 " : "") + (guideStep === "same_period" ? " ring-4 ring-amber-500 pulse-ring " : "")} onClick={() => setRangeOpen(true)}>
-                  {same.departDate && same.returnDate ? `${same.departDate} → ${same.returnDate}` : "Selecionar período"}
+                  {same.departDate && same.returnDate ? `${same.departDate} → ${same.returnDate}` : t("selectPeriodButton")}
                 </Button>
                 {attempted && mode === "same" && !(same.departDate && same.returnDate) && <div className="mt-1 text-xs text-red-600">{t("required")}</div>}
               </div>
@@ -140,7 +140,7 @@ export default function FlightsSearchPage() {
                 <PassengerSelector value={passengers} onChange={setPassengers} />
               </div>
               <div>
-                <label className="mb-1 block text-sm">Data de Ida/Volta</label>
+                <label className="mb-1 block text-sm">{t("departReturnDates")}</label>
                 <Button
                   type="button"
                   variant="outline"
@@ -194,50 +194,50 @@ export default function FlightsSearchPage() {
           </Tabs>
       </div>
       <Dialog open={exampleOpen} onOpenChange={setExampleOpen} placement="bottom">
-        <DialogHeader>Exemplo de viagem — aeroportos diferentes</DialogHeader>
+        <DialogHeader>{t("exampleDialogTitle")}</DialogHeader>
         <div className="p-4 md:p-6 space-y-4 text-sm">
           <div className="rounded-lg border p-3 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Voo de ida</div>
-            <div className="mt-1 text-base font-medium">Guarulhos (GRU) → Roma Fiumicino (FCO)</div>
-            <div className="mt-1 text-zinc-600">Chegada em Roma e início da viagem</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleOutboundLabel")}</div>
+            <div className="mt-1 text-base font-medium">{t("exampleOutboundDesc")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleOutboundNote")}</div>
           </div>
           <div className="rounded-lg border p-3 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Hospedagem</div>
-            <div className="mt-1 text-base font-medium">Roma • 5 dias</div>
-            <div className="mt-1 text-zinc-600">Sugestão: escolha hospedagem próxima a metrô ou principais pontos turísticos.</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleStayLabel")}</div>
+            <div className="mt-1 text-base font-medium">{t("exampleStayDesc1")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleStaySuggestionRome")}</div>
           </div>
           <div className="rounded-lg border p-3 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Transporte</div>
-            <div className="mt-1 text-base font-medium">Trem Roma → Firenze</div>
-            <div className="mt-1 text-zinc-600">Viagem rápida (cerca de 1h30–2h). Compre com antecedência para melhor preço.</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleTransportLabel")}</div>
+            <div className="mt-1 text-base font-medium">{t("exampleTransportDescRomeFlorence")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleTransportRomeFlorenceNote")}</div>
           </div>
           <div className="rounded-lg border p-3 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Hospedagem</div>
-            <div className="mt-1 text-base font-medium">Firenze • 6 dias</div>
-            <div className="mt-1 text-zinc-600">Explore a Toscana em bate-voltas (Pisa, Siena). Reserve com cancelamento grátis.</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleStayLabel")}</div>
+            <div className="mt-1 text-base font-medium">{t("exampleStayDesc2")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleStaySuggestionFlorence")}</div>
           </div>
           <div className="rounded-lg border p-3 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Transporte</div>
-            <div className="mt-1 text-base font-medium">Trem Firenze → Milão</div>
-            <div className="mt-1 text-zinc-600">Alta velocidade (cerca de 1h45–2h). Chegue perto da estação Milano Centrale.</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleTransportLabel")}</div>
+            <div className="mt-1 text-base font-medium">{t("exampleTransportDescFlorenceMilan")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleTransportFlorenceMilanNote")}</div>
           </div>
           <div className="rounded-lg border p-3 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Hospedagem</div>
-            <div className="mt-1 text-base font-medium">Milão • 5 dias</div>
-            <div className="mt-1 text-zinc-600">Inclua bate-volta ao Lago de Como, se desejar.</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleStayLabel")}</div>
+            <div className="mt-1 text-base font-medium">{t("exampleStayDesc3")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleStaySuggestionMilan")}</div>
           </div>
           <div className="rounded-lg border p-3 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Voo de volta</div>
-            <div className="mt-1 text-base font-medium">Milão (MXP/LIN) → Guarulhos (GRU)</div>
-            <div className="mt-1 text-zinc-600">Selecione o aeroporto mais conveniente (MXP geralmente tem mais opções internacionais).</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleReturnLabel")}</div>
+            <div className="mt-1 text-base font-medium">{t("exampleReturnDesc")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleAirportTipText")}</div>
           </div>
           <div className="rounded-lg border p-3 bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Resumo</div>
-            <div className="mt-1">Roteiro exemplo: <span className="font-medium">GRU → FCO</span> • <span className="font-medium">Roma (5d)</span> • <span className="font-medium">Trem para Firenze</span> • <span className="font-medium">Firenze (6d)</span> • <span className="font-medium">Trem para Milão</span> • <span className="font-medium">Milão (5d)</span> • <span className="font-medium">MXP/LIN → GRU</span></div>
-            <div className="mt-1 text-zinc-600">Use este formato para planejar e salvar sua pesquisa com aeroportos diferentes.</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">{t("exampleSummaryLabel")}</div>
+            <div className="mt-1">{t("exampleRouteExampleText")}</div>
+            <div className="mt-1 text-zinc-600">{t("exampleFormatNote")}</div>
           </div>
           <div className="flex justify-end">
-            <Button type="button" onClick={() => setExampleOpen(false)}>Fechar</Button>
+            <Button type="button" onClick={() => setExampleOpen(false)}>{t("close")}</Button>
           </div>
         </div>
       </Dialog>
@@ -257,18 +257,18 @@ export default function FlightsSearchPage() {
               }
             }}
           >
-            <div className="mb-3 text-lg font-semibold">Selecione Ida e Volta</div>
+            <div className="mb-3 text-lg font-semibold">{t("rangeOverlayTitle")}</div>
             <div className="mb-3 flex items-center justify-between hidden sm:flex">
               <button type="button" className="inline-flex h-8 px-2 items-center justify-center rounded-md border border-zinc-300 text-sm hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() - 1, 1))}>
                 <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                <span>Anterior</span>
+                <span>{t("previousMonth")}</span>
               </button>
               <div className="text-sm font-medium">
                 {rangeBase.toLocaleDateString(undefined, { month: "long", year: "numeric" })} • {new Date(rangeBase.getFullYear(), rangeBase.getMonth() + 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
               </div>
               <button type="button" className="inline-flex h-8 px-2 items-center justify-center rounded-md border border-zinc-300 text-sm hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() + 1, 1))}>
                 <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                <span>Próximo</span>
+                <span>{t("nextMonth")}</span>
               </button>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -310,10 +310,10 @@ export default function FlightsSearchPage() {
                     </div>
                     {mi === 0 && (
                       <div className="my-2 flex items-center justify-center gap-3 sm:hidden">
-                        <button type="button" aria-label="Mês anterior" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() - 1, 1))}>
+                        <button type="button" aria-label={t("previousMonthAria")} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() - 1, 1))}>
                           <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                         </button>
-                        <button type="button" aria-label="Próximo mês" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() + 1, 1))}>
+                        <button type="button" aria-label={t("nextMonthAria")} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700" onClick={() => setRangeBase(new Date(rangeBase.getFullYear(), rangeBase.getMonth() + 1, 1))}>
                           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                         </button>
                       </div>
@@ -323,7 +323,7 @@ export default function FlightsSearchPage() {
               })()}
             </div>
             <div className="mt-4 flex justify-between">
-              <Button type="button" variant="outline" onClick={() => { setRangeStart(""); setRangeEnd(""); }}>Limpar</Button>
+              <Button type="button" variant="outline" onClick={() => { setRangeStart(""); setRangeEnd(""); }}>{t("clear")}</Button>
               <Button
                 type="button"
                 onClick={() => {
@@ -341,7 +341,7 @@ export default function FlightsSearchPage() {
                 }}
                 disabled={!rangeStart || !rangeEnd}
                 >
-                  Aplicar
+                  {t("apply")}
                 </Button>
             </div>
           </div>
