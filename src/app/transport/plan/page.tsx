@@ -160,7 +160,7 @@ export default function TransportPlanPage() {
           }, 600);
         } catch {}
       }
-    } catch { showToast("Erro ao salvar", { variant: "error" }); }
+    } catch { showToast(t("saveErrorMsg"), { variant: "error" }); }
   }
 
   useEffect(() => {
@@ -260,7 +260,7 @@ export default function TransportPlanPage() {
                     <div>
                       <label className="mb-1 block text-sm">{t("departureTime")}</label>
                       <Input
-                        placeholder="hh:mm"
+                        placeholder={t("timePlaceholder")}
                         defaultValue={depTime}
                         type="tel"
                         inputMode="numeric"
@@ -273,7 +273,7 @@ export default function TransportPlanPage() {
                     <div>
                       <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
                       <Input
-                        placeholder="hh:mm"
+                        placeholder={t("timePlaceholder")}
                         defaultValue={arrTime}
                         type="tel"
                         inputMode="numeric"

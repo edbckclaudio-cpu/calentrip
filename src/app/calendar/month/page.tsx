@@ -31,6 +31,7 @@ export default function MonthCalendarPage() {
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
+  const [loadedFromSaved, setLoadedFromSaved] = useState(false);
 
   async function exportICS() {
     function fmtUTC(d: Date) {
@@ -172,7 +173,7 @@ export default function MonthCalendarPage() {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (auto === "1" && raw) {
         const sc = JSON.parse(raw) as { name?: string; events?: EventItem[] };
-        if (sc?.events && sc.events.length) setEvents(sc.events);
+        if (sc?.events && sc.events.length) { setEvents(sc.events); setLoadedFromSaved(true); setGating(null); }
         try { localStorage.removeItem("calentrip:auto_load_saved"); } catch {}
       }
     } catch {}
@@ -181,6 +182,7 @@ export default function MonthCalendarPage() {
   useEffect(() => {
     (async () => {
       try {
+        if (loadedFromSaved) return;
         const trips: TripItem[] = await getSavedTrips();
         let target: TripItem | null = null;
         try {
@@ -218,6 +220,7 @@ export default function MonthCalendarPage() {
         if (dbEvents.length) {
           const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
           setEvents(mapped);
+          setGating(null);
           return;
         }
         const list: EventItem[] = [];
@@ -255,7 +258,7 @@ export default function MonthCalendarPage() {
         setEvents(unique);
       } catch {}
     })();
-  }, [status]);
+  }, [status, loadedFromSaved]);
 
   useEffect(() => {
     (async () => {
