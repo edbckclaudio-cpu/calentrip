@@ -743,7 +743,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 onFocus={() => {
                   setActiveLeg(i as 0 | 1);
                   setProceedPulse(i === 1);
-                  if (!infoShown) { const id = show("Inclua os horários dos voos nesses campos. Eles serão incluídos no calendário final e, a partir deles, calcularemos os horários de locomoção.", { duration: 15000 }); setHintId(id); setInfoShown(true); }
+                  if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
                 }}
               />
             <div className="flex items-center gap-2">

@@ -212,7 +212,7 @@ export default function AccommodationSearchPage() {
     setGuideStep("name");
     setDiffCityCountHighlight(false);
     setDiffCheckHighlight(false);
-    showToast("Preencha o nome da cidade 1 e selecione na barra de rolagem.", { duration: 6000 });
+    showToast(t("fillFirstCityNameScrollHint"), { duration: 6000 });
   }
 
   async function searchCities(q: string) {
@@ -265,17 +265,17 @@ export default function AccommodationSearchPage() {
   useEffect(() => {
     if (guideIdx === null) return;
     if (guideStep === "checkout") {
-      showToast("Escolha a data de check-out desta cidade.", { duration: 5000 });
+      showToast(t("chooseCheckoutDateHint"), { duration: 5000 });
     } else if (guideStep === "stay") {
-      showToast("Clique em Comprar hospedagem.", { duration: 5000 });
+      showToast(t("clickBuyAccommodationHint"), { duration: 5000 });
     } else if (guideStep === "name") {
-      showToast("Digite o nome da cidade e selecione na barra de rolagem.", { duration: 6000 });
+      showToast(t("typeCityNameScrollHint"), { duration: 6000 });
     }
   }, [guideIdx, guideStep, showToast]);
 
   useEffect(() => {
     if (cityDetailIdx === null) return;
-    showToast("Use os links para buscar hospedagem. Salve prints ou arquivos em 'Escolher arquivos' para consultar durante a viagem.", { duration: 8000 });
+    showToast(t("useLinksSaveDocsHint"), { duration: 8000 });
   }, [cityDetailIdx, showToast]);
 
   useEffect(() => {
@@ -290,7 +290,7 @@ export default function AccommodationSearchPage() {
     setCitySearchIdx(null);
     if (idx === cities.length - 1) {
       setGuideStep("stay");
-      showToast("Como é a última cidade, o check-out é a data final da viagem. Clique em Comprar hospedagem.", { duration: 7000 });
+      showToast(t("lastCitySelectedGoToPurchase"), { duration: 7000 });
     }
   }
 
@@ -299,20 +299,14 @@ export default function AccommodationSearchPage() {
     if (!cur?.address) { showToast(t("provideStayAddressError"), { variant: "error" }); return; }
     setCities((prev) => prev.map((x, i) => (i === idx ? { ...x, checked: true } : x)));
     if (idx < cities.length - 1) {
-      const next = idx + 1;
-      const isLastNext = next === cities.length - 1;
-      if (idx === 0) {
-        showToast(isLastNext ? `Preencha o nome da cidade 2 e selecione na barra de rolagem. Depois, compre a hospedagem.` : `Preencha o nome da cidade 2, selecione na barra de rolagem e escolha a data de check-out.`, { duration: 7000 });
-      } else {
-        showToast(isLastNext ? `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e compre a hospedagem.` : `Complete o nome da cidade ${idx + 2}, selecione na barra de rolagem e escolha o check-out.`, { duration: 7000 });
-      }
+      showToast(t("fillNextCityAndProceedHint"), { duration: 7000 });
     }
     const allChecked = cities.every((c, i) => (i === idx ? true : c.checked));
     if (tripSearch?.mode === "same" && allChecked) {
       setProceedHighlight(true);
     }
     if (allChecked && cities.length > 1) {
-      showToast("Agora escolha como ir de uma cidade para a outra.", { duration: 6000 });
+      showToast(t("chooseTransportFirstSecondCity"), { duration: 6000 });
       try { router.push(`/transport/plan?i=0`); } catch {}
     }
     const next = idx + 1;
@@ -778,11 +772,11 @@ export default function AccommodationSearchPage() {
                                 {seg.mode === "air" ? (
                                   <>
                                     <div className="mt-3">
-                                      <label className="mb-1 block text-sm">Aeroporto de origem</label>
+                                      <label className="mb-1 block text-sm">{t("origin")}</label>
                                       <Input defaultValue={seg.dep || ""} onChange={(e) => setSeg({ dep: e.target.value })} placeholder="Digite a origem" />
                                     </div>
                                     <div className="mt-3">
-                                      <label className="mb-1 block text-sm">Aeroporto de destino</label>
+                                      <label className="mb-1 block text-sm">{t("destination")}</label>
                                       <Input defaultValue={seg.arr || ""} onChange={(e) => setSeg({ arr: e.target.value })} placeholder="Digite o destino" />
                                     </div>
                                   </>
@@ -961,13 +955,13 @@ export default function AccommodationSearchPage() {
               {summaryComplete ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700">
                   <span className="material-symbols-outlined text-[14px]">task_alt</span>
-                  Reservado
+                  {t("reservedLabel")}
                 </span>
               ) : null}
               <span className="ml-auto" />
-              <Button type="button" variant="outline" title="Editar" aria-label="Editar" onClick={() => router.push("/transport/plan")}>
+              <Button type="button" variant="outline" title={t("editLabel")} aria-label={t("editLabel")} onClick={() => router.push("/transport/plan")}>
                 <span className="material-symbols-outlined text-[16px] mr-1">edit</span>
-                <span>Editar transporte</span>
+                <span>{t("editTransportLabel")}</span>
               </Button>
             </CardTitle>
           </CardHeader>
@@ -986,12 +980,12 @@ export default function AccommodationSearchPage() {
                     <span className="inline-flex items-center gap-1">
                       {c.checked && c.address ? <span className="material-symbols-outlined text-[16px] text-green-700 dark:text-green-300">task_alt</span> : null}
                       <span className="inline-flex items-center gap-1">
-                        Hospedagem: {c.name || `Cidade ${i + 1}`} • {c.checkin || "—"} → {c.checkout || "—"} • {c.address || "(endereço não informado)"}
+                        {t("accommodationDialogTitle")}: {c.name || `${t("cityLabel")} ${i + 1}`} • {c.checkin || "—"} → {c.checkout || "—"} • {c.address || t("addressNotProvided")}
                         <span className="material-symbols-outlined text-[14px] text-zinc-500">edit</span>
                       </span>
-                      <Button type="button" variant="outline" title="Editar" aria-label="Editar" className="ml-2 h-7 px-2" onClick={() => { setCityDetailIdx(i); setGuideIdx(i); setGuideStep("address"); }}>
+                      <Button type="button" variant="outline" title={t("editLabel")} aria-label={t("editLabel")} className="ml-2 h-7 px-2" onClick={() => { setCityDetailIdx(i); setGuideIdx(i); setGuideStep("address"); }}>
                         <span className="material-symbols-outlined text-[16px] mr-1">edit</span>
-                        <span>Editar</span>
+                        <span>{t("editLabel")}</span>
                       </Button>
                       {Array.isArray(c.stayFiles) && c.stayFiles.length ? (
                         <Button type="button" variant="outline" className="ml-1 h-7 px-2" onClick={() => setShowStayDocsIdx(showStayDocsIdx === i ? null : i)}>
@@ -1027,9 +1021,9 @@ export default function AccommodationSearchPage() {
                            {` • Anexos: ${transportDocsCount[i] ?? (c.transportToNext?.files || []).length}`}
                            <span className="material-symbols-outlined text-[14px] text-zinc-500">edit</span>
                          </span>
-                        <Button type="button" variant="outline" title="Editar" aria-label="Editar" className="ml-2 h-7 px-2" onClick={() => router.push(`/transport/plan?i=${i}`)}>
+                      <Button type="button" variant="outline" title={t("editLabel")} aria-label={t("editLabel")} className="ml-2 h-7 px-2" onClick={() => router.push(`/transport/plan?i=${i}`)}>
                           <span className="material-symbols-outlined text-[16px] mr-1">edit</span>
-                          <span>Editar</span>
+                          <span>{t("editLabel")}</span>
                         </Button>
                         {(transportDocsCount[i] ?? (c.transportToNext?.files || []).length) ? (
                           <Button type="button" variant="outline" className="ml-1 h-7 px-2" onClick={async () => {

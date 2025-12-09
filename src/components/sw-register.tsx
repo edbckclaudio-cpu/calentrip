@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/ui/toast";
 
 export default function SWRegister() {
+  const { t } = useI18n();
   const { show } = useToast();
   const showRef = useRef(show);
   useEffect(() => { showRef.current = show; }, [show]);
@@ -12,10 +14,10 @@ export default function SWRegister() {
     const url = "/sw.js";
     try {
       navigator.serviceWorker.register(url, { scope: "/" }).then((reg) => {
-        try { showRef.current("Offline habilitado", { variant: "success", duration: 6000 }); } catch {}
+        try { showRef.current(t("offlineEnabledMsg"), { variant: "success", duration: 6000, key: "offlineEnabledMsg" }); } catch {}
         try {
           reg.onupdatefound = () => {
-            try { showRef.current("Atualização disponível", { variant: "info" }); } catch {}
+            try { showRef.current(t("updateAvailableMsg"), { variant: "info", key: "updateAvailableMsg" }); } catch {}
           };
         } catch {}
       }).catch(() => {});

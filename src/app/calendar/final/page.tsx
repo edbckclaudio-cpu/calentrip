@@ -115,20 +115,20 @@ export default function FinalCalendarPage() {
 
   async function saveCalendarToFile() {
     try {
-      if (Capacitor.getPlatform() !== "android") { show("Disponível no app Android", { variant: "info" }); return; }
-      const name = typeof window !== "undefined" ? prompt("Nome do arquivo (até 32 letras/números/_)") || "" : "";
+      if (Capacitor.getPlatform() !== "android") { show(t("androidOnlyMsg"), { variant: "info" }); return; }
+      const name = typeof window !== "undefined" ? prompt(t("fileNamePrompt")) || "" : "";
       const safe = name.replace(/[^A-Za-z0-9_]/g, "").slice(0, 32);
-      if (!safe) { show("Nome inválido", { variant: "error" }); return; }
+      if (!safe) { show(t("invalidNameError"), { variant: "error" }); return; }
       const payload = { name: safe, version: 1, createdAt: new Date().toISOString(), events, summaryCities };
       const json = JSON.stringify(payload);
       const r = await StorageFiles.save({ name: safe, json });
-      if (r?.ok) { show("Arquivo salvo no dispositivo", { variant: "success" }); } else { show("Erro ao salvar arquivo", { variant: "error" }); }
-    } catch { show("Erro ao salvar arquivo", { variant: "error" }); }
+      if (r?.ok) { show(t("fileSavedOnDevice"), { variant: "success" }); } else { show(t("fileSaveError"), { variant: "error" }); }
+    } catch { show(t("fileSaveError"), { variant: "error" }); }
   }
 
   const openFilesDrawer = useCallback(async () => {
     try {
-      if (Capacitor.getPlatform() !== "android") { show("Disponível no app Android", { variant: "info" }); return; }
+      if (Capacitor.getPlatform() !== "android") { show(t("androidOnlyMsg"), { variant: "info" }); return; }
       const r = await StorageFiles.list();
       setFilesList(r?.files || []);
       setFilesDrawerOpen(true);
@@ -138,20 +138,20 @@ export default function FinalCalendarPage() {
   async function loadFile(name: string) {
     try {
       const r = await StorageFiles.read({ name });
-      if (!r?.ok || !r?.json) { show("Erro ao abrir arquivo", { variant: "error" }); return; }
+      if (!r?.ok || !r?.json) { show(t("fileOpenError"), { variant: "error" }); return; }
       const obj = JSON.parse(r.json) as { events?: EventItem[]; summaryCities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }> };
       setEvents(obj.events || []);
       setSummaryCities(obj.summaryCities || []);
       setFilesDrawerOpen(false);
-      show("Calendário carregado", { variant: "success" });
-    } catch { show("Erro ao abrir arquivo", { variant: "error" }); }
+      show(t("calendarLoadedMsg"), { variant: "success" });
+    } catch { show(t("fileOpenError"), { variant: "error" }); }
   }
 
   async function deleteFile(name: string) {
     try {
       const r = await StorageFiles.delete({ name });
-      if (r?.ok) { const l = await StorageFiles.list(); setFilesList(l?.files || []); } else { show("Erro ao excluir", { variant: "error" }); }
-    } catch { show("Erro ao excluir", { variant: "error" }); }
+      if (r?.ok) { const l = await StorageFiles.list(); setFilesList(l?.files || []); } else { show(t("deleteErrorMsg"), { variant: "error" }); }
+    } catch { show(t("deleteErrorMsg"), { variant: "error" }); }
   }
 
   async function loadTripEventsFromDbById(id: string) {
@@ -202,11 +202,11 @@ export default function FinalCalendarPage() {
         const actives = all.filter((t) => t.reachedFinalCalendar);
         target = actives.length ? actives[actives.length - 1] : (all.length ? all[0] : null);
       }
-      if (!target) { show("Nenhum calendário salvo", { variant: "info" }); return; }
+      if (!target) { show(t("noSavedCalendarsMsg"), { variant: "info" }); return; }
       setCurrentSavedName(target.savedCalendarName || "");
       const ok = await loadTripEventsFromDbById(target.id);
-      if (ok) { show("Calendário carregado", { variant: "success" }); }
-    } catch { show("Erro ao carregar calendário", { variant: "error" }); }
+      if (ok) { show(t("calendarLoadedMsg"), { variant: "success" }); }
+    } catch { show(t("calendarLoadError"), { variant: "error" }); }
   }
 
   useEffect(() => {
@@ -462,9 +462,9 @@ export default function FinalCalendarPage() {
           }
         } catch {}
       })();
-      show("Salvo em pesquisas salvas", { variant: "success" });
+      show(t("savedInSearchesMsg"), { variant: "success" });
       return true;
-    } catch { show("Erro ao salvar", { variant: "error" }); return false; }
+    } catch { show(t("saveErrorMsg"), { variant: "error" }); return false; }
   }
 
   const sorted = useMemo(() => {
@@ -556,13 +556,13 @@ export default function FinalCalendarPage() {
       if (isAndroid) {
         try { window.location.href = urlAndroidMarket; } catch {}
         setTimeout(() => { try { window.open(urlAndroidWeb, "_blank"); } catch {} }, 600);
-        show("Abrindo Google Calendar na Play Store", { variant: "info" });
+        show(t("openingGoogleCalendarPlayStore"), { variant: "info" });
       } else if (isIOS) {
         try { window.open(urlIOS, "_blank"); } catch {}
-        show("Abrindo Google Calendar na App Store", { variant: "info" });
+        show(t("openingGoogleCalendarAppStore"), { variant: "info" });
       } else {
         try { window.open(urlAndroidWeb, "_blank"); } catch {}
-        show("Abrindo Google Calendar na loja", { variant: "info" });
+        show(t("openingGoogleCalendarStore"), { variant: "info" });
       }
     } catch {}
   }
@@ -574,9 +574,9 @@ export default function FinalCalendarPage() {
       if (isAndroid) {
         try { window.location.href = "intent://com.android.providers.downloads.ui#Intent;scheme=content;end"; } catch {}
         setTimeout(() => { try { window.open("file:///storage/emulated/0/Download/", "_blank"); } catch {} }, 600);
-        show("Abrindo pasta Download. Se não abrir, abra o gerenciador de arquivos e vá em Download.", { variant: "info" });
+        show(t("openingDownloadsFolderInfo"), { variant: "info" });
       } else {
-        show("Abra sua pasta de Downloads e toque em calentrip.ics.", { variant: "info" });
+        show(t("openDownloadsTapIcsInfo"), { variant: "info" });
       }
     } catch {}
   }
@@ -844,11 +844,11 @@ export default function FinalCalendarPage() {
         const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
         const isAndroid = /Android/.test(ua);
         if (isIOS) {
-          show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+          show(t("iosCalendarSentMsg"), { variant: "success" });
         } else if (isAndroid) {
-          show("Calendário enviado. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+          show(t("androidCalendarSentMsg"), { variant: "success" });
         } else {
-          show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
+          show(t("systemCalendarSentMsg"), { variant: "success" });
         }
         return;
       }
@@ -862,7 +862,7 @@ export default function FinalCalendarPage() {
     a.remove();
     URL.revokeObjectURL(url);
     try { openDownloads(); } catch {}
-    show("Arquivo .ics baixado. Abra o gerenciador de arquivos, vá em Download, toque em calentrip.ics e escolha salvar no Google Calendar.", { variant: "info" });
+    show(t("icsDownloadedAndroidHelp"), { variant: "info" });
   }
 
   
@@ -1318,7 +1318,7 @@ export default function FinalCalendarPage() {
       const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
       const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
       setStayInfo({ origin: originAddr, destination: depPoint, gmapsUrl, r2rUrl, uberUrl });
-      try { show("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
+      try { show(t("routeDetailedErrorUsingBasicLinks"), { variant: "info" }); } catch {}
     } finally {
       setStayLoading(false);
     }
@@ -1456,12 +1456,12 @@ export default function FinalCalendarPage() {
         gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(query)}`;
         setGoInfo({ destination: query, gmapsUrl, uberUrl });
-        try { show("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
+        try { show(t("noCurrentLocationUsingBasicLinks"), { variant: "info" }); } catch {}
       } else {
         gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
         uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(query)}`;
         setGoInfo({ destination: query, gmapsUrl, uberUrl });
-        try { show("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
+        try { show(t("destNotGeocodedGenericSearch"), { variant: "info" }); } catch {}
       }
     } catch {
       const q = `${rec.title} ${rec.cityName}`.trim();
@@ -1901,7 +1901,7 @@ export default function FinalCalendarPage() {
                       if (r?.ok) {
                         setPremiumFlag(true);
                         setGating(null);
-                        show("Assinatura ativada", { variant: "success" });
+                        show(t("purchaseSuccess"), { variant: "success" });
                       } else {
                         const msg = r?.error === "billing"
                           ? "Disponível no app Android. Instale via Google Play."
@@ -1916,7 +1916,7 @@ export default function FinalCalendarPage() {
                         if (r?.error === "billing") { try { window.location.href = "/profile"; } catch {} }
                       }
                     } catch {
-                      show("Erro na compra", { variant: "error" });
+                      show(t("purchaseError"), { variant: "error" });
                     }
                   }}
                 >
@@ -2055,7 +2055,7 @@ export default function FinalCalendarPage() {
             document.body.appendChild(a);
             a.click();
             a.remove();
-            show("Abrindo e-mail", { variant: "info" });
+            show(t("openingEmailMsg"), { variant: "info" });
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">mail</span>
@@ -2071,10 +2071,10 @@ export default function FinalCalendarPage() {
             return;
             const text = events.map((e) => `${e.date} ${e.time || ""} • ${e.label}`).join("\n");
             try {
-              if (navigator.share) { await navigator.share({ title: "Calendário", text }); show("Compartilhado", { variant: "success" }); return; }
+              if (navigator.share) { await navigator.share({ title: "Calendário", text }); show(t("sharedMsg"), { variant: "success" }); return; }
               await navigator.clipboard.writeText(text);
-              show("Calendário copiado", { variant: "success" });
-            } catch { show("Erro ao compartilhar", { variant: "error" }); }
+              show(t("calendarCopiedMsg"), { variant: "success" });
+            } catch { show(t("shareErrorMsg"), { variant: "error" }); }
           }}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">share</span>
@@ -2279,7 +2279,7 @@ export default function FinalCalendarPage() {
                 const perm = await Calendar.requestPermissions();
                 if (perm?.granted) {
                   const res = await Calendar.addEvents({ events: evs });
-                  if (res.ok && res.added > 0) { show("Eventos adicionados ao Calendário", { variant: "success" }); return; }
+                  if (res.ok && res.added > 0) { show(t("eventsAddedToCalendarMsg"), { variant: "success" }); return; }
                 }
               } catch {}
             }
@@ -2534,13 +2534,13 @@ export default function FinalCalendarPage() {
                 const canShareMany = typeof nav.canShare === "function" && nav.canShare({ files: perFiles });
                 if (canShareMany) {
                   await nav.share({ files: perFiles, title: "CalenTrip — eventos (Android)" });
-                  show("Eventos enviados ao Calendário (Android)", { variant: "success" });
+                  show(t("eventsSentToCalendarAndroidMsg"), { variant: "success" });
                   return;
                 } else {
                   for (const f of perFiles) {
                     await nav.share({ files: [f], title: f.name });
                   }
-                  show("Eventos enviados individualmente ao Calendário (Android)", { variant: "success" });
+                  show(t("eventsSentIndividuallyAndroidMsg"), { variant: "success" });
                   return;
                 }
               }
@@ -2551,11 +2551,11 @@ export default function FinalCalendarPage() {
                 const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
                 const isAndroid = /Android/.test(ua);
                 if (isIOS) {
-                  show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+                  show(t("iosCalendarSentMsg"), { variant: "success" });
                 } else if (isAndroid) {
-                  show("Calendário enviado. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+                  show(t("androidCalendarSentMsg"), { variant: "success" });
                 } else {
-                  show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
+                  show(t("systemCalendarSentMsg"), { variant: "success" });
                 }
                 return;
               }
@@ -2569,9 +2569,9 @@ export default function FinalCalendarPage() {
                 window.open(url, "_blank");
                 setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 30000);
                 if (isIOS) {
-                  show("Importação aberta. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+                  show(t("importOpenedIosMsg"), { variant: "success" });
                 } else {
-                  show("Importação aberta. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+                  show(t("importOpenedAndroidMsg"), { variant: "success" });
                 }
                 return;
               }
@@ -2584,7 +2584,7 @@ export default function FinalCalendarPage() {
             a.remove();
             URL.revokeObjectURL(url);
             try { openDownloads(); } catch {}
-            show("Arquivo .ics baixado. Abra o gerenciador de arquivos, vá em Download, toque em calentrip.ics e escolha salvar no Google Calendar.", { variant: "info" });
+            show(t("icsDownloadedAndroidHelp"), { variant: "info" });
             }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
@@ -2604,7 +2604,7 @@ export default function FinalCalendarPage() {
       ) : null}
       <div className="container-page">
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">
-          Calendário final
+          {t("calendarFinalTitle")}
           {currentSavedName ? (
             <span className="ml-2 text-xs rounded px-2 py-0.5 bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700">{currentSavedName}</span>
           ) : null}
@@ -2643,7 +2643,7 @@ export default function FinalCalendarPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Eventos</CardTitle>
+            <CardTitle>{t("eventsTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {sorted.length ? (
@@ -2734,7 +2734,7 @@ export default function FinalCalendarPage() {
                         {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">home</span>
-                            <span>Hospedagem</span>
+                            <span>{t("accommodationDialogTitle")}</span>
                           </Button>
                         ) : null}
                         
@@ -2747,7 +2747,7 @@ export default function FinalCalendarPage() {
                             setEditOpen(true);
                           }}>
                             <span className="material-symbols-outlined text-[16px]">edit</span>
-                            <span>Editar</span>
+                            <span>{t("editLabel")}</span>
                           </Button>
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openGoDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">map</span>
@@ -2797,7 +2797,7 @@ export default function FinalCalendarPage() {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen} placement="bottom">
-        <DialogHeader>Editar atividade</DialogHeader>
+        <DialogHeader>{t("editActivityTitle")}</DialogHeader>
         <div className="space-y-3 text-sm">
           <div>
             <label className="mb-1 block text-sm">Data</label>
@@ -2814,8 +2814,8 @@ export default function FinalCalendarPage() {
                 setEvents((prev) => prev.filter((_, i) => i !== editIdx));
                 setEditOpen(false);
                 setEditIdx(null);
-                show("Atividade excluída", { variant: "success" });
-              } catch { show("Erro ao excluir", { variant: "error" }); }
+                show(t("activityDeletedMsg"), { variant: "success" });
+              } catch { show(t("deleteErrorMsg"), { variant: "error" }); }
             }}>Excluir</Button>
             <Button type="button" onClick={() => {
               try {
@@ -2827,8 +2827,8 @@ export default function FinalCalendarPage() {
                 }));
                 setEditOpen(false);
                 setEditIdx(null);
-                show("Atividade atualizada", { variant: "success" });
-              } catch { show("Erro ao salvar", { variant: "error" }); }
+                show(t("activityUpdatedMsg"), { variant: "success" });
+              } catch { show(t("saveErrorMsg"), { variant: "error" }); }
             }}>{t("saveLabel")}</Button>
           </div>
         </div>
@@ -2947,8 +2947,8 @@ export default function FinalCalendarPage() {
                             const one = rawOne ? JSON.parse(rawOne) as { name?: string; events?: EventItem[] } : null;
                             if ((one?.name || "") === (c?.name || "")) localStorage.removeItem("calentrip:saved_calendar");
                           } catch {}
-                          show("Calendário excluído", { variant: "success" });
-                        } catch { show("Erro ao excluir", { variant: "error" }); }
+                          show(t("calendarDeletedMsg"), { variant: "success" });
+                        } catch { show(t("deleteErrorMsg"), { variant: "error" }); }
                       }}>{t("deleteLabel")}</Button>
                     </div>
                   </li>
@@ -3036,7 +3036,7 @@ export default function FinalCalendarPage() {
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
         <DialogHeader>Chegada e deslocamento até hospedagem</DialogHeader>
         <div className="space-y-3 text-sm">
-          <div>Cidade: {arrivalInfo?.city || "—"}</div>
+          <div>{t("cityLabel")}: {arrivalInfo?.city || "—"}</div>
           <div>Destino: {arrivalInfo?.address || "—"}</div>
           <div>Distância (a partir da sua localização): {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
           {!arrivalInfo?.distanceKm && locConsent !== "granted" ? (
@@ -3057,7 +3057,7 @@ export default function FinalCalendarPage() {
             return files.length ? (
               <div>
                 <Button type="button" variant="outline" onClick={async () => {
-                  setDocTitle(arrivalInfo?.city || arrivalInfo?.address || "Hospedagem");
+                  setDocTitle(arrivalInfo?.city || arrivalInfo?.address || t("accommodationDialogTitle"));
                   const mod = await import("@/lib/attachments-store");
                   const resolved = await Promise.all(files.map(async (f) => {
                     if (!f.dataUrl && f.id) {

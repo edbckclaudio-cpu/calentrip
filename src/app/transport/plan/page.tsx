@@ -101,7 +101,7 @@ export default function TransportPlanPage() {
       const js: { cities?: CitySummary[] } | null = raw ? JSON.parse(raw) : null;
       const list: CitySummary[] = js?.cities || [];
       setCities(list);
-      if (!list.length) showToast("Antes, informe as hospedagens.", { duration: 7000 });
+      if (!list.length) showToast(t("backAndInformStaysMessage"), { duration: 7000 });
     } catch {}
   }, [showToast]);
 
@@ -110,7 +110,7 @@ export default function TransportPlanPage() {
 
   useEffect(() => {
     if (!fromCity || !toCity) return;
-    showToast("Escolha o transporte entre as cidades, preenchendo origem, destino e horários.", { duration: 7000 });
+    showToast(t("fillTransportFieldsHint"), { duration: 7000 });
     setDep(""); setArr(""); setDepTime(""); setArrTime("");
     
     (async () => {
@@ -140,13 +140,13 @@ export default function TransportPlanPage() {
       const updated = list.map((x, i) => (i === segIdx ? { ...x, transportToNext: segment } : x));
       const payload = { cities: updated };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
-      showToast("Transporte salvo", { variant: "success" });
+      showToast(t("transportSavedGoSummary"), { variant: "success" });
       const hasNext = segIdx + 1 < updated.length - 1;
       if (hasNext) {
-        showToast("Abrindo o transporte das próximas viagens para comprar e preencher.", { duration: 7000 });
+        showToast(t("openingNextTransportMsg"), { duration: 7000 });
         router.push(`/transport/plan?i=${segIdx + 1}`);
       } else {
-        showToast("Indo para o resumo. Verifique as informações.", { duration: 5000 });
+        showToast(t("transportSavedGoSummary"), { duration: 5000 });
         try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
         router.push("/accommodation/search");
         try {
@@ -174,7 +174,7 @@ export default function TransportPlanPage() {
         const payload = { cities: updated };
         if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
       } catch {}
-      showToast("Transporte próprio selecionado. Indo para resumo.", { duration: 5000 });
+      showToast(t("ownTransportSelectedGoingSummary"), { duration: 5000 });
       try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
       router.push("/accommodation/search");
     }

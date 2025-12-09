@@ -43,23 +43,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     idRef.current = (idRef.current + 1) || 1;
     const id = idRef.current;
     const variant = opts?.variant ?? "info";
-    const isOfflineEnabled = (message || "").includes("Offline habilitado");
-    const isSelectDateTip = (message || "").includes("Selecione a Data e o Horário da sugestão");
-    const duration = isOfflineEnabled ? 4000 : (isSelectDateTip ? 6000 : (opts?.sticky ? undefined : (opts?.duration ?? 13000)));
+    const duration = 7000;
     const k = opts?.key;
     setItems((prev) => {
       const cleared = k ? prev.filter((t) => t.key !== k) : [];
       return [...cleared, { id, message, variant, duration, key: k, minimized: false }];
     });
-    if (typeof duration === "number") {
-      setTimeout(() => {
-        if (isOfflineEnabled) {
-          dismiss(id);
-        } else {
-          minimize(id);
-        }
-      }, duration);
-    }
+    setTimeout(() => { minimize(id); }, duration);
     return id;
   }
 

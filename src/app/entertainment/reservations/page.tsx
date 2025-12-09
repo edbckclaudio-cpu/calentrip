@@ -136,7 +136,7 @@ export default function EntertainmentReservationsPage() {
   }, [records]);
 
   useEffect(() => {
-    const msg = "Selecione a Data e o Horário da sugestão antes de adicionar. Esses campos são essenciais para posicionar corretamente no cronograma e no calendário final.";
+    const msg = t("aiSelectDateTimeTip");
     if (aiOpenIdx !== null) {
       if (aiTipId === null) {
         const id = show(msg, { variant: "info", sticky: true });
@@ -151,7 +151,7 @@ export default function EntertainmentReservationsPage() {
   }, [aiOpenIdx, aiTipId, show, dismiss]);
 
   useEffect(() => {
-    const msg = "Selecione a Data e o Horário da sugestão antes de adicionar. Esses campos são essenciais para posicionar corretamente no cronograma e no calendário final.";
+    const msg = t("aiSelectDateTimeTip");
     if (aiRestOpenIdx !== null) {
       if (restTipId === null) {
         const id = show(msg, { variant: "info", sticky: true });
@@ -364,7 +364,7 @@ export default function EntertainmentReservationsPage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page">
-        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Entretenimento e reservas</h1>
+        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">{t("entertainmentAndReservationsTitle")}</h1>
         <p className="text-sm text-zinc-600">Agende atividades e restaurantes por cidade. Ao final, veja o resumo cronológico.</p>
       </div>
 
@@ -380,15 +380,15 @@ export default function EntertainmentReservationsPage() {
                 <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
                   <div className="text-[10px] leading-tight font-semibold uppercase tracking-wide text-zinc-600 mb-2 break-all text-center">Atividade/entretenimento</div>
                   <div className="space-y-2">
-                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("activity"); setTitle(""); setDate(""); setTime(""); }}>Agendar</Button>
-                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAISuggestions(i)}>Sugestões por IA</Button>
+                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("activity"); setTitle(""); setDate(""); setTime(""); }}>{t("scheduleLabel")}</Button>
+                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAISuggestions(i)}>{t("aiSuggestionsLabel")}</Button>
                   </div>
                 </div>
                 <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
                   <div className="text-[10px] leading-tight font-semibold uppercase tracking-wide text-zinc-600 mb-2 break-all text-center">Restaurante</div>
                   <div className="space-y-2">
-                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("restaurant"); setTitle(""); setDate(""); setTime(""); }}>Agendar</Button>
-                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAIRestaurants(i)}>Sugestões por IA</Button>
+                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("restaurant"); setTitle(""); setDate(""); setTime(""); }}>{t("scheduleLabel")}</Button>
+                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAIRestaurants(i)}>{t("aiSuggestionsLabel")}</Button>
                   </div>
                 </div>
               </div>
@@ -433,12 +433,12 @@ export default function EntertainmentReservationsPage() {
                           setEditTime(r.time || "");
                           setEditAddress(r.address || "");
                         }
-                      }}>Editar</Button>
+                      }}>{t("editLabel")}</Button>
                       <Button type="button" variant="secondary" onClick={() => {
                         const j = records.indexOf(r);
                         if (j >= 0) {
                           setRecords((prev) => prev.filter((_, i) => i !== j));
-                          show("Item removido", { variant: "success" });
+                          show(t("itemRemovedMsg"), { variant: "success" });
                         }
                       }}>Apagar</Button>
                     </div>
@@ -456,7 +456,7 @@ export default function EntertainmentReservationsPage() {
       </div>
 
       <Dialog open={openIdx !== null && openKind !== null} onOpenChange={() => { setOpenIdx(null); setOpenKind(null); }}>
-        <DialogHeader>{openKind === "restaurant" ? "Agendar restaurante" : "Agendar atividade/entretenimento"}</DialogHeader>
+        <DialogHeader>{openKind === "restaurant" ? t("scheduleRestaurantTitle") : t("scheduleActivityTitle")}</DialogHeader>
         {openIdx !== null && openKind !== null && (
           <div className="p-4 md:p-6 space-y-4 text-sm">
             <div>
@@ -500,7 +500,7 @@ export default function EntertainmentReservationsPage() {
                 show(openKind === "restaurant" ? "Restaurante adicionado" : "Atividade adicionada", { variant: "success" });
               }}>{t("saveLabel")}</Button>
             </div>
-            <div className="text-xs text-zinc-600">Para encontrar mais opções, use o botão &quot;Sugestões por IA&quot;.</div>
+            <div className="text-xs text-zinc-600">{t("useLinksSaveDocsHint")}</div>
           </div>
         )}
       </Dialog>
@@ -578,13 +578,13 @@ export default function EntertainmentReservationsPage() {
       <Dialog open={aiOpenIdx !== null} onOpenChange={() => setAiOpenIdx(null)}>
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <span>Sugestões por IA — atividade/entretenimento</span>
+            <span>{t("aiSuggestionsLabel")} — {t("scheduleActivityTitle").split(" ")[0]}</span>
             <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiOpenIdx(null)}>sair</Button>
           </div>
         </DialogHeader>
         {aiOpenIdx !== null && (
           <div className="p-4 md:p-6 space-y-4 text-sm max-h-[75vh] overflow-y-auto">
-            <div className="rounded border p-2">Cidade: {cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`}</div>
+            <div className="rounded border p-2">{t("cityLabel")}: {cities[aiOpenIdx!]?.name || `${t("cityLabel")} ${aiOpenIdx! + 1}`}</div>
             {aiLoading ? (
               <div className="flex items-center justify-center gap-3 py-6">
                 <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
@@ -598,20 +598,20 @@ export default function EntertainmentReservationsPage() {
               <>
                 {aiEvents.length ? (
                   <div>
-                    <div className="mb-2 font-semibold">Eventos nas suas datas</div>
+                    <div className="mb-2 font-semibold">{t("eventsOnYourDatesLabel")}</div>
                     <ul className="space-y-2">
                       {aiEvents.map((ev, i) => (
                         <li key={`ev-${i}`} className="rounded border p-2">
                           <div className="font-medium">{ev.name}</div>
                           <div>Data: {new Date(ev.date).toLocaleDateString(undefined, { timeZone: "UTC" })}</div>
-                          {ev.url && (<div><a className="underline" href={ev.url} target="_blank" rel="noopener noreferrer">Site oficial</a></div>)}
+                          {ev.url && (<div><a className="underline" href={ev.url} target="_blank" rel="noopener noreferrer">{t("officialSiteLabel")}</a></div>)}
                           <div className="mt-2">
                             <Button type="button" onClick={() => {
                               const cityName = cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`;
                               const d = new Date(ev.date).toISOString().slice(0, 10);
                               setRecords((prev) => [...prev, { kind: "activity", cityIdx: aiOpenIdx!, cityName, date: d, time: "", title: ev.name }]);
-                              show("Atividade adicionada", { variant: "success" });
-                            }}>Adicionar ao cronograma</Button>
+                              show(t("activityAddedMsg"), { variant: "success" });
+                            }}>{t("addToScheduleLabel")}</Button>
                           </div>
                         </li>
                       ))}
@@ -626,7 +626,7 @@ export default function EntertainmentReservationsPage() {
                       <div>Ingressos antecipados: {s.prebook === null ? "Ver no site" : s.prebook ? "Sim" : "Não"}</div>
                       <div>Antecedência: {s.lead || "Ver no site"}</div>
                       {s.url && (
-                        <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => setAiActiveKey(`ai-${idx}`)}>Site oficial</a></div>
+                        <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => setAiActiveKey(`ai-${idx}`)}>{t("officialSiteLabel")}</a></div>
                       )}
                       <div className="mt-2 grid grid-cols-2 gap-3">
                         <div>
@@ -651,7 +651,7 @@ export default function EntertainmentReservationsPage() {
                               reader.readAsDataURL(f);
                             }))).then((arr) => { setAiFilesMap((prev) => ({ ...prev, [`ai-${idx}`]: [...(prev[`ai-${idx}`] || []), ...arr] })); setAiActiveKey(`ai-${idx}`); });
                           }} />
-                          <Button type="button" className="rounded-lg font-semibold" onClick={() => { setAiActiveKey(`ai-${idx}`); const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                          <Button type="button" className="rounded-lg font-semibold" onClick={() => { setAiActiveKey(`ai-${idx}`); const el = document.getElementById(`ai-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>{t("useCamera")}</Button>
                           <label htmlFor={`ai-file-${idx}`} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">{t("attachProofButton")}</label>
                           <Input id={`ai-file-${idx}`} className="hidden" type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                             const files = Array.from(e.target.files || []);
@@ -672,12 +672,12 @@ export default function EntertainmentReservationsPage() {
                         <Button type="button" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
                           const cityName = cities[aiOpenIdx!]?.name || `Cidade ${aiOpenIdx! + 1}`;
                           const d = aiDateMap[`ai-${idx}`] || "";
-                          const t = aiTimeMap[`ai-${idx}`] || "";
+                          const timeSel = aiTimeMap[`ai-${idx}`] || "";
                           const files = aiFilesMap[`ai-${idx}`] || [];
                           if (!d) return;
-                          setRecords((prev) => [...prev, { kind: "activity", cityIdx: aiOpenIdx!, cityName, date: d, time: t, title: s.name, files }]);
-                          show("Atividade adicionada", { variant: "success" });
-                        }}>Adicionar ao cronograma</Button>
+                          setRecords((prev) => [...prev, { kind: "activity", cityIdx: aiOpenIdx!, cityName, date: d, time: timeSel, title: s.name, files }]);
+                          show(t("activityAddedMsg"), { variant: "success" });
+                        }}>{t("addToScheduleLabel")}</Button>
                       </div>
                     </li>
                   ))}
@@ -691,13 +691,13 @@ export default function EntertainmentReservationsPage() {
       <Dialog open={aiRestOpenIdx !== null} onOpenChange={() => setAiRestOpenIdx(null)}>
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <span>Sugestões por IA — restaurante</span>
+            <span>{t("aiSuggestionsLabel")} — {t("scheduleRestaurantTitle").split(" ")[1] ? t("scheduleRestaurantTitle").split(" ")[1] : t("scheduleRestaurantTitle")}</span>
             <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiRestOpenIdx(null)}>sair</Button>
           </div>
         </DialogHeader>
         {aiRestOpenIdx !== null && (
           <div className="p-4 md:p-6 space-y-4 text-sm max-h-[75vh] overflow-y-auto">
-            <div className="rounded border p-2">Cidade: {cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`}</div>
+            <div className="rounded border p-2">{t("cityLabel")}: {cities[aiRestOpenIdx!]?.name || `${t("cityLabel")} ${aiRestOpenIdx! + 1}`}</div>
             {restLoading ? (
               <div className="flex items-center justify-center gap-3 py-6">
                 <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
@@ -716,7 +716,7 @@ export default function EntertainmentReservationsPage() {
                     <div>Tipo de cozinha: {s.cuisine && s.cuisine.length ? s.cuisine.join(", ") : "Ver no site"}</div>
                     <div>Faixa de preço: {s.price || "Ver no site"}</div>
                     {s.url && (
-                      <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => setRestActiveKey(`rest-${idx}`)}>Site oficial</a></div>
+                      <div><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => setRestActiveKey(`rest-${idx}`)}>{t("officialSiteLabel")}</a></div>
                     )}
                     <div className="mt-2 grid grid-cols-2 gap-3">
                       <div>
@@ -741,7 +741,7 @@ export default function EntertainmentReservationsPage() {
                             reader.readAsDataURL(f);
                           }))).then((arr) => { setRestFilesMap((prev) => ({ ...prev, [`rest-${idx}`]: [...(prev[`rest-${idx}`] || []), ...arr] })); setRestActiveKey(`rest-${idx}`); });
                         }} />
-                        <Button type="button" className="rounded-lg font-semibold" onClick={() => { setRestActiveKey(`rest-${idx}`); const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>Tirar foto (câmera)</Button>
+                          <Button type="button" className="rounded-lg font-semibold" onClick={() => { setRestActiveKey(`rest-${idx}`); const el = document.getElementById(`rest-cam-${idx}`) as HTMLInputElement | null; el?.click(); }}>{t("useCamera")}</Button>
                         <label htmlFor={`rest-file-${idx}`} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">{t("attachProofButton")}</label>
                         <Input id={`rest-file-${idx}`} className="hidden" type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                           const files = Array.from(e.target.files || []);
@@ -762,12 +762,12 @@ export default function EntertainmentReservationsPage() {
                         <Button type="button" className="w-full h-10 rounded-lg font-semibold tracking-wide" onClick={() => {
                           const cityName = cities[aiRestOpenIdx!]?.name || `Cidade ${aiRestOpenIdx! + 1}`;
                           const d = restDateMap[`rest-${idx}`] || "";
-                          const t = restTimeMap[`rest-${idx}`] || "";
+                          const timeSel = restTimeMap[`rest-${idx}`] || "";
                           const files = restFilesMap[`rest-${idx}`] || [];
                           if (!d) return;
-                          setRecords((prev) => [...prev, { kind: "restaurant", cityIdx: aiRestOpenIdx!, cityName, date: d, time: t, title: s.name, files }]);
-                          show("Restaurante adicionado", { variant: "success" });
-                        }}>Adicionar ao cronograma</Button>
+                          setRecords((prev) => [...prev, { kind: "restaurant", cityIdx: aiRestOpenIdx!, cityName, date: d, time: timeSel, title: s.name, files }]);
+                          show(t("restaurantAddedMsg"), { variant: "success" });
+                        }}>{t("addToScheduleLabel")}</Button>
                     </div>
                   </li>
                 ))}
@@ -778,7 +778,7 @@ export default function EntertainmentReservationsPage() {
       </Dialog>
 
       <Dialog open={editIdx !== null} onOpenChange={() => setEditIdx(null)}>
-        <DialogHeader>Editar item</DialogHeader>
+        <DialogHeader>{t("editItemTitle")}</DialogHeader>
         {editIdx !== null && (
           <div className="p-4 md:p-6 space-y-4 text-sm">
             <div className="rounded border p-2">{records[editIdx!]?.cityName}</div>
@@ -806,10 +806,10 @@ export default function EntertainmentReservationsPage() {
                 setRecords((prev) => prev.map((it, i) => i === editIdx ? { ...it, title: editTitle, date: editDate, time: editTime, address: editAddress.trim() || it.address } : it));
                 setEditIdx(null);
                 setEditAddress("");
-                show("Item atualizado", { variant: "success" });
+                show(t("itemUpdatedMsg"), { variant: "success" });
               }}>{t("saveLabel")}</Button>
             </div>
-            <div className="text-xs text-zinc-600">Para encontrar mais opções, use o botão &quot;Sugestões por IA&quot;.</div>
+            <div className="text-xs text-zinc-600">{t("useLinksSaveDocsHint")}</div>
           </div>
         )}
       </Dialog>

@@ -141,11 +141,11 @@ export default function MonthCalendarPage() {
         const isIOS = /iPad|iPhone|iPod/.test(ua2) || (ua2.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
         const isAndroid = /Android/.test(ua2);
         if (isIOS) {
-          show("Calendário enviado. No iPhone, toque 'Adicionar à Agenda' e confirme.", { variant: "success" });
+          show(t("iosCalendarSentMsg"), { variant: "success" });
         } else if (isAndroid) {
-          show("Calendário enviado. No Android, escolha 'Calendário' e toque em 'Salvar/Adicionar'.", { variant: "success" });
+          show(t("androidCalendarSentMsg"), { variant: "success" });
         } else {
-          show("Calendário enviado ao sistema. Abra no seu app de calendário.", { variant: "success" });
+          show(t("systemCalendarSentMsg"), { variant: "success" });
         }
         return;
       }
@@ -158,7 +158,7 @@ export default function MonthCalendarPage() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    show("Arquivo .ics baixado. Abra com Google/Outlook/Apple Calendar para importar.", { variant: "info" });
+    show(t("icsDownloadedMsg"), { variant: "info" });
   }
 
   useEffect(() => {
@@ -401,9 +401,9 @@ export default function MonthCalendarPage() {
                 }
               } catch {}
               try { localStorage.setItem("calentrip:open_calendar_help", "1"); } catch {}
-              show("Salvo em pesquisas salvas", { variant: "success" });
+              show(t("savedInSearchesMsg"), { variant: "success" });
               try { window.location.href = "/calendar/final"; } catch {}
-            } catch { show("Erro ao salvar", { variant: "error" }); }
+            } catch { show(t("saveErrorMsg"), { variant: "error" }); }
           }}
           disabled={!premiumFlag}
         >
@@ -441,7 +441,7 @@ export default function MonthCalendarPage() {
       <div className="container-page">
         <div className="mb-2 flex items-center gap-3 text-xs">
           <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#007AFF]"></span><span>Voo</span></div>
-          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#febb02]"></span><span>Hospedagem</span></div>
+          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#febb02]"></span><span>{t("accommodationDialogTitle")}</span></div>
           <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#34c759]"></span><span>Atividades</span></div>
         </div>
         <Card>
@@ -507,7 +507,7 @@ export default function MonthCalendarPage() {
                                 setEditOpen(true);
                               }}>
                                 <span className="material-symbols-outlined text-[16px]">edit</span>
-                                <span>Editar</span>
+                                <span>{t("editLabel")}</span>
                               </Button>
                               <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
                                 <span className="material-symbols-outlined text-[16px]">map</span>
@@ -538,7 +538,7 @@ export default function MonthCalendarPage() {
             <div className="fixed inset-0 z-50">
               <div className="absolute inset-0 bg-black/40" onClick={() => setEditOpen(false)} />
               <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-                <DialogHeader>Editar atividade</DialogHeader>
+                <DialogHeader>{t("editActivityTitle")}</DialogHeader>
                 <div className="space-y-3 text-sm">
                   <div>
                     <label className="mb-1 block text-sm">Data</label>
@@ -557,8 +557,8 @@ export default function MonthCalendarPage() {
                         setEvents((prev) => prev.filter((e) => !(e.date === day && indices.includes(prev.indexOf(e)) && indices.indexOf(prev.indexOf(e)) === editIdx)));
                         setEditOpen(false);
                         setEditIdx(null);
-                        show("Atividade excluída", { variant: "success" });
-                      } catch { show("Erro ao excluir", { variant: "error" }); }
+                        show(t("activityDeletedMsg"), { variant: "success" });
+                      } catch { show(t("deleteErrorMsg"), { variant: "error" }); }
                     }}>Excluir</Button>
                     <Button type="button" onClick={() => {
                       try {
@@ -575,8 +575,8 @@ export default function MonthCalendarPage() {
                         }));
                         setEditOpen(false);
                         setEditIdx(null);
-                        show("Atividade atualizada", { variant: "success" });
-                      } catch { show("Erro ao salvar", { variant: "error" }); }
+                        show(t("activityUpdatedMsg"), { variant: "success" });
+                      } catch { show(t("saveErrorMsg"), { variant: "error" }); }
                     }}>{t("saveLabel")}</Button>
                   </div>
                 </div>

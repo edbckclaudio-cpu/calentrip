@@ -108,9 +108,9 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
           </ul>
         ) : (
           <div className="flex flex-col gap-3">
-            <Button type="button" onClick={() => { show("Abrindo login Google..."); signIn("google"); }}>{t("signInGoogle")}</Button>
+            <Button type="button" onClick={() => { show(t("googleLoginOpeningMsg")); signIn("google"); }}>{t("signInGoogle")}</Button>
             {process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "1" ? (
-              <Button type="button" onClick={() => { show("Iniciando login..."); signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" }); }}>
+              <Button type="button" onClick={() => { show(t("demoLoginStartingMsg")); signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" }); }}>
                 {t("signInCredentials")}
               </Button>
             ) : null}
@@ -281,12 +281,12 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                 className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900"
                 onClick={async () => {
                   try {
-                    if (typeof Notification === "undefined") { show("Avisos não suportados neste dispositivo", { variant: "info" }); return; }
+                    if (typeof Notification === "undefined") { show(t("notificationsUnsupportedMsg"), { variant: "info" }); return; }
                     const res = await Notification.requestPermission();
                     try { localStorage.setItem("calentrip:notifConsent", res); } catch {}
-                    if (res === "granted") show("Avisos ativados", { variant: "success" });
-                    else if (res === "denied") show("Permissão de avisos negada", { variant: "error" });
-                    else show("Permissão de avisos pendente", { variant: "info" });
+                    if (res === "granted") show(t("notificationsEnabledMsg"), { variant: "success" });
+                    else if (res === "denied") show(t("notificationsDeniedMsg"), { variant: "error" });
+                    else show(t("notificationsPendingMsg"), { variant: "info" });
                   } catch {}
                 }}
               >
