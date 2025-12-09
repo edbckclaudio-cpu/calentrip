@@ -994,7 +994,7 @@ export default function AccommodationSearchPage() {
                         <span>Editar</span>
                       </Button>
                       {Array.isArray(c.stayFiles) && c.stayFiles.length ? (
-                        <Button type="button" variant="ghost" className="ml-1 h-7 px-2" onClick={() => setShowStayDocsIdx(showStayDocsIdx === i ? null : i)}>
+                        <Button type="button" variant="outline" className="ml-1 h-7 px-2" onClick={() => setShowStayDocsIdx(showStayDocsIdx === i ? null : i)}>
                           <span className="material-symbols-outlined text-[16px] mr-1">attach_file</span>
                           <span>Ver documentos</span>
                         </Button>
@@ -1032,7 +1032,7 @@ export default function AccommodationSearchPage() {
                           <span>Editar</span>
                         </Button>
                         {(transportDocsCount[i] ?? (c.transportToNext?.files || []).length) ? (
-                          <Button type="button" variant="ghost" className="ml-1 h-7 px-2" onClick={async () => {
+                          <Button type="button" variant="outline" className="ml-1 h-7 px-2" onClick={async () => {
                             if (showTransportDocsIdx === i) { setShowTransportDocsIdx(null); return; }
                             setShowTransportDocsIdx(i);
                             try {
