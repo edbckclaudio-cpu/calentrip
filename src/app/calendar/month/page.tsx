@@ -13,7 +13,8 @@ import { TripItem, FlightNote, getSavedTrips, getTripEvents, updateTrip, migrate
 import { alarmForEvent } from "@/lib/ics";
 
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
-type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | { city?: string; address?: string; kind: "checkin" | "checkout" } };
+type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
+type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
 
 export default function MonthCalendarPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -163,6 +164,18 @@ export default function MonthCalendarPage() {
 
   useEffect(() => {
     (async () => { try { await migrateFromLocalStorage(); } catch {} })();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const auto = typeof window !== "undefined" ? localStorage.getItem("calentrip:auto_load_saved") : null;
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+      if (auto === "1" && raw) {
+        const sc = JSON.parse(raw) as { name?: string; events?: EventItem[] };
+        if (sc?.events && sc.events.length) setEvents(sc.events);
+        try { localStorage.removeItem("calentrip:auto_load_saved"); } catch {}
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
