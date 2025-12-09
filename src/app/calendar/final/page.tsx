@@ -2642,7 +2642,7 @@ export default function FinalCalendarPage() {
                 localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
                 localStorage.setItem("calentrip:auto_load_saved", "1");
               }
-              window.open("/calendar/month", "_blank");
+              window.location.href = "/calendar/month";
             } catch {}
           }}>
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>

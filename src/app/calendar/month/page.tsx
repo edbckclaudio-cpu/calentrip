@@ -219,6 +219,7 @@ export default function MonthCalendarPage() {
         const dbEvents = target ? await getTripEvents(target.id) : [];
         if (dbEvents.length) {
           const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
+          if (loadedFromSaved) return;
           setEvents(mapped);
           setGating(null);
           return;
@@ -255,6 +256,7 @@ export default function MonthCalendarPage() {
         (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
         const seen = new Set<string>();
         const unique = list.filter((e) => { const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`; if (seen.has(key)) return false; seen.add(key); return true; });
+        if (loadedFromSaved) return;
         setEvents(unique);
       } catch {}
     })();
