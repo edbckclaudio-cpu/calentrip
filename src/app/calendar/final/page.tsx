@@ -2635,7 +2635,16 @@ export default function FinalCalendarPage() {
             <span className="material-symbols-outlined text-[16px]">save</span>
             <span className="hidden sm:inline">{t("saveLabel")}</span>
           </Button>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
+            try {
+              const payload = { name: currentSavedName || "", events };
+              if (typeof window !== "undefined") {
+                localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+                localStorage.setItem("calentrip:auto_load_saved", "1");
+              }
+              window.open("/calendar/month", "_blank");
+            } catch {}
+          }}>
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">{t("calendarMonth")}</span>
           </Button>
