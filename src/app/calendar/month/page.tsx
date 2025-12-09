@@ -167,95 +167,82 @@ export default function MonthCalendarPage() {
 
   useEffect(() => {
     (async () => {
-    try {
-      const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
-      const saved = rawSaved ? (JSON.parse(rawSaved) as { events?: EventItem[] }) : null;
-      if (saved?.events?.length) {
-        setEvents(saved.events as EventItem[]);
-        return;
-      }
       try {
-        const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
-        const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
-        if (list.length) {
-          const sorted = list.slice().sort((a, b) => ((a.savedAt || "").localeCompare(b.savedAt || "")));
-          const last = sorted[sorted.length - 1];
-          if (last?.events?.length) { setEvents(last.events as EventItem[]); return; }
-        }
-      } catch {}
-      const list: EventItem[] = [];
-      const trips: TripItem[] = await getSavedTrips();
-      const current = trips.length ? trips[0] : null;
-      if (current) {
-        const premium = isTripPremium(current.id);
-        setPremiumFlag(premium);
-        setCurrentTripId(current.id);
+        const trips: TripItem[] = await getSavedTrips();
+        let target: TripItem | null = null;
         try {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
-          const list: Array<{ tripId: string; expiresAt: number }> = raw ? JSON.parse(raw) : [];
-          const rec = list.find((r) => r.tripId === "global" && r.expiresAt > Date.now());
-          if (rec) {
-            const d = new Date(rec.expiresAt);
-            const dd = String(d.getDate()).padStart(2, "0");
-            const mm = String(d.getMonth() + 1).padStart(2, "0");
-            setPremiumUntil(`${dd}/${mm}`);
-          } else setPremiumUntil("");
-        } catch { setPremiumUntil(""); }
-        if (status !== "authenticated") setGating({ show: true, reason: "anon" });
-        else if (!premium) setGating({ show: true, reason: "noPremium" });
-        else setGating(null);
-      }
-      const dbEvents = currentTripId ? await getTripEvents(currentTripId) : [];
-      if (dbEvents.length) {
-        const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
-        setEvents(mapped);
-        return;
-      }
-      trips.forEach((t) => {
-        if (t.flightNotes && t.flightNotes.length) {
-          t.flightNotes.forEach((fn) => {
-            const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
-            list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
-            const addDays = (d: string, days: number) => {
-              const dt = new Date(`${d}T00:00:00`);
-              if (Number.isNaN(dt.getTime())) return d;
-              dt.setDate(dt.getDate() + days);
-              const p = (n: number) => String(n).padStart(2, "0");
-              return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
-            };
-            if (fn.arrivalTime) {
-              const arrDate = fn.arrivalNextDay ? addDays(fn.date, 1) : fn.date;
-              const arrLabel = fn.leg === "outbound" ? "Chegada voo de ida" : "Chegada voo de volta";
-              list.push({ type: "flight", label: `${arrLabel}: ${fn.destination}`, date: arrDate, time: fn.arrivalTime || undefined, meta: fn });
-            }
-          });
-        } else {
-          list.push({ type: "flight", label: t.title, date: t.date });
+          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const ts = raw ? JSON.parse(raw) : null;
+          if (ts) {
+            const isSame = ts.mode === "same";
+            const origin = isSame ? ts.origin : ts.outbound?.origin;
+            const destination = isSame ? ts.destination : ts.outbound?.destination;
+            const date = isSame ? ts.departDate : ts.outbound?.date;
+            const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+            const title = origin && destination ? `${origin} → ${destination}` : "";
+            target = trips.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+          }
+        } catch {}
+        if (!target) {
+          const actives = trips.filter((t) => t.reachedFinalCalendar);
+          target = actives.length ? actives[actives.length - 1] : (trips.length ? trips[0] : null);
         }
-      });
-      const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-      const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string }> }) : null;
-      const cities = Array.isArray(summary?.cities) ? summary!.cities! : [];
-      cities.forEach((c, i) => {
-        const cityName = c.name || `Cidade ${i + 1}`;
-        const addr = c.address || "(endereço não informado)";
-        if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "17:00", meta: { city: cityName, address: addr, kind: "checkin" } });
-        if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "09:00", meta: { city: cityName, address: addr, kind: "checkout" } });
-      });
-      const rawRecs = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
-      const recs: RecordItem[] = rawRecs ? (JSON.parse(rawRecs) as RecordItem[]) : [];
-      (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
-      const seen = new Set<string>();
-      const unique = list.filter((e) => {
-        const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      setEvents(unique);
-    } catch {}
+        if (target) {
+          const premium = isTripPremium(target.id);
+          setPremiumFlag(premium);
+          setCurrentTripId(target.id);
+          try {
+            const rawP = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
+            const listP: Array<{ tripId: string; expiresAt: number }> = rawP ? JSON.parse(rawP) : [];
+            const rec = listP.find((r) => r.tripId === "global" && r.expiresAt > Date.now());
+            if (rec) { const d = new Date(rec.expiresAt); const dd = String(d.getDate()).padStart(2, "0"); const mm = String(d.getMonth() + 1).padStart(2, "0"); setPremiumUntil(`${dd}/${mm}`); } else setPremiumUntil("");
+          } catch { setPremiumUntil(""); }
+          if (status !== "authenticated") setGating({ show: true, reason: "anon" });
+          else if (!premium) setGating({ show: true, reason: "noPremium" });
+          else setGating(null);
+        }
+        const dbEvents = target ? await getTripEvents(target.id) : [];
+        if (dbEvents.length) {
+          const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
+          setEvents(mapped);
+          return;
+        }
+        const list: EventItem[] = [];
+        const tripsForList = target ? [target] : trips;
+        const addDays = (d: string, days: number) => { const dt = new Date(`${d}T00:00:00`); if (Number.isNaN(dt.getTime())) return d; dt.setDate(dt.getDate() + days); const p = (n: number) => String(n).padStart(2, "0"); return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`; };
+        tripsForList.forEach((t) => {
+          if (t.flightNotes && t.flightNotes.length) {
+            t.flightNotes.forEach((fn) => {
+              const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
+              list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
+              if (fn.arrivalTime) {
+                const arrDate = fn.arrivalNextDay ? addDays(fn.date, 1) : fn.date;
+                const arrLabel = fn.leg === "outbound" ? "Chegada voo de ida" : "Chegada voo de volta";
+                list.push({ type: "flight", label: `${arrLabel}: ${fn.destination}`, date: arrDate, time: fn.arrivalTime || undefined, meta: fn });
+              }
+            });
+          } else {
+            list.push({ type: "flight", label: t.title, date: t.date });
+          }
+        });
+        const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+        const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string }> }) : null;
+        const cities = Array.isArray(summary?.cities) ? summary!.cities! : [];
+        cities.forEach((c, i) => {
+          const cityName = c.name || `Cidade ${i + 1}`;
+          const addr = c.address || "(endereço não informado)";
+          if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "17:00", meta: { city: cityName, address: addr, kind: "checkin" } });
+          if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "09:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+        });
+        const rawRecs = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+        const recs: RecordItem[] = rawRecs ? (JSON.parse(rawRecs) as RecordItem[]) : [];
+        (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+        const seen = new Set<string>();
+        const unique = list.filter((e) => { const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`; if (seen.has(key)) return false; seen.add(key); return true; });
+        setEvents(unique);
+      } catch {}
     })();
-  }, [status, currentTripId]);
+  }, [status]);
 
   useEffect(() => {
     (async () => {
