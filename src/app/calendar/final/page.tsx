@@ -2595,7 +2595,7 @@ export default function FinalCalendarPage() {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">account_circle</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">Perfil</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">{t("profile")}</span> : null}
           </button>
         </div>
       </div>
@@ -2637,7 +2637,7 @@ export default function FinalCalendarPage() {
           </Button>
           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { window.open("/calendar/month", "_blank"); } catch {} }}>
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-            <span className="hidden sm:inline">Calendário</span>
+            <span className="hidden sm:inline">{t("calendarMonth")}</span>
           </Button>
           
         </div>

@@ -197,7 +197,7 @@ export default function TransportPlanPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <span>Transporte entre cidades</span>
+              <span>{t("transportBetween")}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -207,28 +207,28 @@ export default function TransportPlanPage() {
                 <li>
                   <a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700 flex items-center gap-1" href={route?.r2rUrl} target="_blank" rel="noopener noreferrer">
                     <span className="material-symbols-outlined text-[16px]">alt_route</span>
-                    <span>Opções de rota (Rome2Rio)</span>
+                    <span>{t("seeOptionsOnRome2Rio")}</span>
                   </a>
                 </li>
-                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">Rentalcars</a></li>
-                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={route?.gmapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a></li>
+                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">{t("rentalcarsLabel")}</a></li>
+                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={route?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("googleMapsLabel")}</a></li>
               </ul>
               <div>
-                <label className="mb-1 block text-sm">Modal</label>
+                <label className="mb-1 block text-sm">{t("transportModeLabel")}</label>
                 <select className="w-full rounded-md border px-2 py-1 text-sm" value={mode} onChange={(e) => setMode(e.target.value as TransportMode)}>
-                  <option value="air">Avião</option>
-                  <option value="train">Trem</option>
-                  <option value="bus">Ônibus</option>
-                  <option value="car">Carro</option>
+                  <option value="air">{t("modeAir")}</option>
+                  <option value="train">{t("modeTrain")}</option>
+                  <option value="bus">{t("modeBus")}</option>
+                  <option value="car">{t("modeCar")}</option>
                 </select>
               </div>
               {mode !== "car" ? (
                 <div className="space-y-2">
                   <div>
-                    <label className="mb-1 block text-sm">Origem (aeroporto/estação)</label>
+                    <label className="mb-1 block text-sm">{t("transportOriginLabel")}</label>
                     <div className="relative">
                       <Input
-                        placeholder="Digite a origem"
+                        placeholder={t("transportOriginPlaceholder")}
                         defaultValue={dep}
                         type="text"
                         inputMode="text"
@@ -241,10 +241,10 @@ export default function TransportPlanPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm">Destino (aeroporto/estação)</label>
+                    <label className="mb-1 block text-sm">{t("transportDestinationLabel")}</label>
                     <div className="relative">
                       <Input
-                        placeholder="Digite o destino"
+                        placeholder={t("transportDestinationPlaceholder")}
                         defaultValue={arr}
                         type="text"
                         inputMode="text"
@@ -258,7 +258,7 @@ export default function TransportPlanPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="mb-1 block text-sm">Hora da Partida</label>
+                      <label className="mb-1 block text-sm">{t("departureTime")}</label>
                       <Input
                         placeholder="hh:mm"
                         defaultValue={depTime}
@@ -271,7 +271,7 @@ export default function TransportPlanPage() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm">Hora de Chegada</label>
+                      <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
                       <Input
                         placeholder="hh:mm"
                         defaultValue={arrTime}
@@ -285,11 +285,11 @@ export default function TransportPlanPage() {
                     </div>
                   </div>
                   <div className="mt-2">
-                    <label className="mb-1 block text-sm">Documentos do transporte</label>
+                    <label className="mb-1 block text-sm">{t("transportDocsTitle")}</label>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => camInputRef.current?.click()}>Usar câmera</Button>
-                      <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => fileInputRef.current?.click()}>Escolher arquivos</Button>
-                      <span className="text-xs text-zinc-600">Anexos: {files.length}</span>
+                      <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => camInputRef.current?.click()}>{t("useCamera")}</Button>
+                      <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => fileInputRef.current?.click()}>{t("chooseFiles")}</Button>
+                      <span className="text-xs text-zinc-600">{t("attachmentsLabel")}: {files.length}</span>
                     </div>
                     <input ref={camInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
                       const f = e.target.files?.[0];
@@ -322,9 +322,9 @@ export default function TransportPlanPage() {
               ) : null}
               <div className="mt-3 flex justify-end">
                 {mode !== "car" ? (
-                  <Button type="button" onClick={() => { saveTransport(); saveDocumentsToDbSimpleRef(); }}>Salvar transporte</Button>
+                  <Button type="button" onClick={() => { saveTransport(); saveDocumentsToDbSimpleRef(); }}>{t("saveTransport")}</Button>
                 ) : (
-                  <Button type="button" onClick={() => router.push("/accommodation/search")}>Ir para resumo</Button>
+                  <Button type="button" onClick={() => router.push("/accommodation/search")}>{t("goToSummaryButton")}</Button>
                 )}
               </div>
             </div>

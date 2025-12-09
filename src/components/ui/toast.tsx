@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useState, ReactNode, useEffect, useRef } from "react";
+import { useI18n } from "@/lib/i18n";
 import { createPortal } from "react-dom";
 
 type ToastItem = { id: number; message: string; variant?: "info" | "success" | "error"; duration?: number; key?: string; minimized?: boolean };
@@ -15,6 +16,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const idRef = useRef(0);
   const [vvTop, setVvTop] = useState(0);
   const [vvLeft, setVvLeft] = useState(0);
+  const { t } = useI18n();
   const canPortal = typeof document !== "undefined";
   useEffect(() => {
     try {
@@ -70,16 +72,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)", marginTop: vvTop, marginLeft: vvLeft }}
       suppressHydrationWarning
     >
-      {items.map((t) => (
+      {items.map((it) => (
         <div
-          key={t.id}
+          key={it.id}
           className={
-            (t.minimized
+            (it.minimized
               ? `relative min-w-[160px] max-w-[92vw] rounded-xl px-2 py-1 text-[12px] font-semibold leading-snug shadow-2xl ring-2 pointer-events-auto `
               : `relative min-w-[220px] max-w-[92vw] sm:max-w-[560px] lg:max-w-[640px] rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-[14px] sm:text-sm font-semibold leading-snug break-words shadow-2xl ring-2 pointer-events-auto `) +
-            (t.variant === "success"
+            (it.variant === "success"
               ? "bg-emerald-600 text-white ring-emerald-700"
-              : t.variant === "error"
+              : it.variant === "error"
               ? "bg-red-600 text-white ring-red-700"
               : "bg-[#007AFF] text-white ring-[#005bbb]")
           }
@@ -94,30 +96,30 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               const el = e.currentTarget as HTMLDivElement & { _startY?: number };
               const startY = el._startY || 0;
               const dy = e.touches[0].clientY - startY;
-              if (dy < -40) dismiss(t.id);
+              if (dy < -40) dismiss(it.id);
             } catch {}
           }}
         >
-          {t.minimized ? (
+          {it.minimized ? (
             <div className="flex items-center gap-2 pr-8">
-              <span className="line-clamp-1">{(t.message || "").slice(0, 32)}{(t.message || "").length > 32 ? "…" : ""}</span>
+              <span className="line-clamp-1">{(it.message || "").slice(0, 32)}{(it.message || "").length > 32 ? "…" : ""}</span>
             </div>
           ) : (
-            <div className="pr-8">{t.message}</div>
+            <div className="pr-8">{it.message}</div>
           )}
           <button
             type="button"
             className="absolute top-1 right-8 sm:top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md/2 bg-white/10 hover:bg-white/20 text-white"
-            onClick={() => toggleMinimize(t.id)}
-            aria-label={t.minimized ? "Maximizar" : "Minimizar"}
+            onClick={() => toggleMinimize(it.id)}
+            aria-label={it.minimized ? t("maximizeLabel") : t("minimizeLabel")}
           >
-            <span className="material-symbols-outlined text-[18px]">{t.minimized ? "expand_more" : "expand_less"}</span>
+            <span className="material-symbols-outlined text-[18px]">{it.minimized ? "expand_more" : "expand_less"}</span>
           </button>
           <button
             type="button"
             className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md/2 bg-white/10 hover:bg-white/20 text-white"
-            onClick={() => dismiss(t.id)}
-            aria-label="Fechar"
+            onClick={() => dismiss(it.id)}
+            aria-label={t("close")}
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>

@@ -579,7 +579,7 @@ export default function EntertainmentReservationsPage() {
         <DialogHeader>
           <div className="flex items-center justify-between">
             <span>{t("aiSuggestionsLabel")} — {t("scheduleActivityTitle").split(" ")[0]}</span>
-            <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiOpenIdx(null)}>sair</Button>
+            <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiOpenIdx(null)}>{t("close")}</Button>
           </div>
         </DialogHeader>
         {aiOpenIdx !== null && (
@@ -587,13 +587,13 @@ export default function EntertainmentReservationsPage() {
             <div className="rounded border p-2">{t("cityLabel")}: {cities[aiOpenIdx!]?.name || `${t("cityLabel")} ${aiOpenIdx! + 1}`}</div>
             {aiLoading ? (
               <div className="flex items-center justify-center gap-3 py-6">
-                <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
-                <div className="text-sm text-zinc-700">Buscando…</div>
+                <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label={t("loading")} />
+                <div className="text-sm text-zinc-700">{t("loading")}</div>
               </div>
             ) : aiError ? (
               <div className="text-red-600">{aiError}</div>
             ) : aiItems.length === 0 ? (
-              <div className="text-zinc-600">Nenhuma sugestão encontrada.</div>
+              <div className="text-zinc-600">{t("noSuggestionsFound")}</div>
             ) : (
               <>
                 {aiEvents.length ? (
@@ -692,7 +692,7 @@ export default function EntertainmentReservationsPage() {
         <DialogHeader>
           <div className="flex items-center justify-between">
             <span>{t("aiSuggestionsLabel")} — {t("scheduleRestaurantTitle").split(" ")[1] ? t("scheduleRestaurantTitle").split(" ")[1] : t("scheduleRestaurantTitle")}</span>
-            <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiRestOpenIdx(null)}>sair</Button>
+            <Button type="button" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => setAiRestOpenIdx(null)}>{t("close")}</Button>
           </div>
         </DialogHeader>
         {aiRestOpenIdx !== null && (
@@ -700,13 +700,13 @@ export default function EntertainmentReservationsPage() {
             <div className="rounded border p-2">{t("cityLabel")}: {cities[aiRestOpenIdx!]?.name || `${t("cityLabel")} ${aiRestOpenIdx! + 1}`}</div>
             {restLoading ? (
               <div className="flex items-center justify-center gap-3 py-6">
-                <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
-                <div className="text-sm text-zinc-700">Buscando…</div>
+                <div className="h-6 w-6 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label={t("loading")} />
+                <div className="text-sm text-zinc-700">{t("loading")}</div>
               </div>
             ) : restError ? (
               <div className="text-red-600">{restError}</div>
             ) : restItems.length === 0 ? (
-              <div className="text-zinc-600">Nenhuma sugestão encontrada.</div>
+              <div className="text-zinc-600">{t("noSuggestionsFound")}</div>
             ) : (
               <ul className="space-y-2">
                 {restItems.map((s, idx) => (

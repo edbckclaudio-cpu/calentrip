@@ -153,12 +153,12 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
                 )}
                 <div className="flex-1">
-                  <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
+                  <div className="text-sm font-semibold">{session?.user?.name || t("userWord")}</div>
                   <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                   <div className="mt-2 flex items-center gap-2">
-                    <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Ver perfil</button>
-                    <button type="button" className="text-xs" onClick={() => signOut()}>Sair</button>
+                    <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("viewProfile")}</button>
+                    <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
                   </div>
                 </div>
               </div>
@@ -166,12 +166,12 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
               <div className="flex items-center justify-between gap-2">
                 <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs" onClick={() => onOpenChange(true)}>PF</button>
                 <div className="flex-1">
-                  <div className="text-sm font-semibold">Entrar</div>
+                  <div className="text-sm font-semibold">{t("signInTitle")}</div>
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                   <div className="mt-2 flex items-center gap-2">
-                    <button type="button" className="text-xs" onClick={() => signIn("google")}>Google</button>
+                    <button type="button" className="text-xs" onClick={() => signIn("google")}>{t("googleWord")}</button>
                     {process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "1" ? (
-                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>Demo</button>
+                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>{t("demoWord")}</button>
                     ) : null}
                   </div>
                 </div>
@@ -216,65 +216,65 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">person</span>
             </span>
-            <span className="text-sm font-medium">Perfil</span>
+            <span className="text-sm font-medium">{t("profile")}</span>
           </button>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/legal/privacy"; } catch {} }}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">policy</span>
               </span>
-              <span className="text-sm font-medium">Privacidade</span>
+              <span className="text-sm font-medium">{t("privacyTitle")}</span>
             </button>
             <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/legal/terms"; } catch {} }}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">gavel</span>
               </span>
-              <span className="text-sm font-medium">Termos</span>
+              <span className="text-sm font-medium">{t("termsTitle")}</span>
             </button>
             <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/support"; } catch {} }}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">support_agent</span>
               </span>
-              <span className="text-sm font-medium">Suporte</span>
+              <span className="text-sm font-medium">{t("supportTitle")}</span>
             </button>
             <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/account/delete"; } catch {} }}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">person_remove</span>
               </span>
-              <span className="text-sm font-medium">Excluir conta</span>
+              <span className="text-sm font-medium">{t("deleteAccountLabel")}</span>
             </button>
           </div>
           
           <div className="mt-2 rounded-md border border-zinc-200 dark:border-zinc-800">
-            <div className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300">Termos e Políticas</div>
+            <div className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300">{t("termsPoliciesTitle")}</div>
             <div className="px-2 pb-2 space-y-1">
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("privacy")}> 
                 <span className="material-symbols-outlined text-[20px]">privacy_tip</span>
-                <span className="text-sm">Política de Privacidade</span>
+                <span className="text-sm">{t("privacyTitle")}</span>
               </button>
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("terms")}> 
                 <span className="material-symbols-outlined text-[20px]">gavel</span>
-                <span className="text-sm">Termos de Serviço</span>
+                <span className="text-sm">{t("termsTitle")}</span>
               </button>
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("cookies")}> 
                 <span className="material-symbols-outlined text-[20px]">cookie</span>
-                <span className="text-sm">Política de Cookies</span>
+                <span className="text-sm">{t("cookiesTitle")}</span>
               </button>
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("eula")}> 
                 <span className="material-symbols-outlined text-[20px]">description</span>
-                <span className="text-sm">EULA / Licença de Uso</span>
+                <span className="text-sm">{t("eulaTitle")}</span>
               </button>
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("data")}> 
                 <span className="material-symbols-outlined text-[20px]">delete_forever</span>
-                <span className="text-sm">Exclusão de Conta e Dados</span>
+                <span className="text-sm">{t("deleteDataTitle")}</span>
               </button>
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("support")}> 
                 <span className="material-symbols-outlined text-[20px]">support_agent</span>
-                <span className="text-sm">Suporte</span>
+                <span className="text-sm">{t("supportTitle")}</span>
               </button>
               <button type="button" className="flex w-full items-center gap-3 rounded-md px-2 h-9 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => setPolicyType("licenses")}> 
                 <span className="material-symbols-outlined text-[20px]">developer_board</span>
-                <span className="text-sm">Licenças de Terceiros</span>
+                <span className="text-sm">{t("licensesTitle")}</span>
               </button>
               <button
                 type="button"
@@ -291,7 +291,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                 }}
               >
                 <span className="material-symbols-outlined text-[20px]">notifications_active</span>
-                <span className="text-sm">Ativar avisos</span>
+                <span className="text-sm">{t("enableNotificationsButton")}</span>
               </button>
             </div>
           </div>
@@ -299,10 +299,10 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
       </Dialog>
 
       <Dialog open={savedOpen} onOpenChange={setSavedOpen} placement="bottom">
-        <DialogHeader>Pesquisas salvas</DialogHeader>
+        <DialogHeader>{t("savedSearchesTitle")}</DialogHeader>
         <div className="p-4 md:p-6 space-y-4 text-sm max-h-[70vh] overflow-y-auto">
           {savedTrips.length === 0 ? (
-            <div className="text-zinc-600">Nenhuma viagem salva.</div>
+            <div className="text-zinc-600">{t("noSavedSearchesLabel")}</div>
           ) : (
             <ul className="space-y-2">
               {savedTrips.map((it) => (
@@ -323,7 +323,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                         try { setSavedTrips(getTrips().filter((x) => x.reachedFinalCalendar)); } catch { setSavedTrips([]); }
                       }}
                     >
-                      Apagar
+                      {t("deleteLabel")}
                     </Button>
                   </div>
                 </li>
@@ -331,20 +331,20 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             </ul>
           )}
           <DialogFooter>
-            <Button type="button" onClick={() => setSavedOpen(false)}>Fechar</Button>
+            <Button type="button" onClick={() => setSavedOpen(false)}>{t("close")}</Button>
           </DialogFooter>
         </div>
       </Dialog>
 
       <Dialog open={profileOpen} onOpenChange={setProfileOpen} placement="bottom">
-        <DialogHeader>Perfil</DialogHeader>
+        <DialogHeader>{t("profileTitle")}</DialogHeader>
         <div className="p-4 space-y-3 text-sm">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined">account_circle</span>
-            <span>Acesse sua página de perfil</span>
+            <span>{t("profileAccessText")}</span>
           </div>
           <div>
-            <button type="button" className="underline text-sm" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>Abrir perfil</button>
+            <button type="button" className="underline text-sm" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("openProfileButton")}</button>
           </div>
           <div className="mt-2 rounded-md border border-zinc-200 dark:border-zinc-800">
             <div className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300">Termos e Políticas</div>
