@@ -2,15 +2,12 @@
 
 android {
   compileOptions {
-      sourceCompatibility JavaVersion.VERSION_17
-      targetCompatibility JavaVersion.VERSION_17
+      sourceCompatibility JavaVersion.VERSION_21
+      targetCompatibility JavaVersion.VERSION_21
   }
 }
 
-def cordovaVars = file("../capacitor-cordova-android-plugins/cordova.variables.gradle")
-if (cordovaVars.exists()) {
-  apply from: cordovaVars.getPath()
-}
+apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
     implementation project(':capacitor-community-sqlite')
     implementation project(':capacitor-preferences')

@@ -54,6 +54,9 @@ export default function AccommodationSearchPage() {
   const [noteAnim, setNoteAnim] = useState<{ maxH: number; transition: string }>({ maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" });
   const [transportDocsCount, setTransportDocsCount] = useState<Record<number, number>>({});
   const [transportIdx, setTransportIdx] = useState<number | null>(null);
+  const [showStayDocsIdx, setShowStayDocsIdx] = useState<number | null>(null);
+  const [showTransportDocsIdx, setShowTransportDocsIdx] = useState<number | null>(null);
+  const [transportDocsList, setTransportDocsList] = useState<Record<number, Array<{ name: string; size: number }>>>({});
   
   
   const summaryComplete = useMemo(() => {
@@ -505,7 +508,7 @@ export default function AccommodationSearchPage() {
             {isSame ? (
               <div className="space-y-3 max-w-md">
                 <div className="rounded-lg border p-3 text-sm">
-                  <div><span className="font-semibold">Cidade</span>: {city || initialCity || "(defina acima)"}</div>
+                  <div><span className="font-semibold">Cidade</span>: {city || initialCity || "(defina no quadro abaixo)"}</div>
                   <div><span className="font-semibold">Check-in</span>: {dates.checkin || "—"}</div>
                   <div><span className="font-semibold">Check-out</span>: {dates.checkout || "—"}</div>
                 </div>
@@ -961,6 +964,11 @@ export default function AccommodationSearchPage() {
                   Reservado
                 </span>
               ) : null}
+              <span className="ml-auto" />
+              <Button type="button" variant="outline" title="Editar" aria-label="Editar" onClick={() => router.push("/transport/plan")}>
+                <span className="material-symbols-outlined text-[16px] mr-1">edit</span>
+                <span>Editar transporte</span>
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -977,8 +985,28 @@ export default function AccommodationSearchPage() {
                   >
                     <span className="inline-flex items-center gap-1">
                       {c.checked && c.address ? <span className="material-symbols-outlined text-[16px] text-green-700 dark:text-green-300">task_alt</span> : null}
-                      <span>Hospedagem: {c.name || `Cidade ${i + 1}`} • {c.checkin || "—"} → {c.checkout || "—"} • {c.address || "(endereço não informado)"}</span>
+                      <span className="inline-flex items-center gap-1">
+                        Hospedagem: {c.name || `Cidade ${i + 1}`} • {c.checkin || "—"} → {c.checkout || "—"} • {c.address || "(endereço não informado)"}
+                        <span className="material-symbols-outlined text-[14px] text-zinc-500">edit</span>
+                      </span>
+                      <Button type="button" variant="outline" title="Editar" aria-label="Editar" className="ml-2 h-7 px-2" onClick={() => { setCityDetailIdx(i); setGuideIdx(i); setGuideStep("address"); }}>
+                        <span className="material-symbols-outlined text-[16px] mr-1">edit</span>
+                        <span>Editar</span>
+                      </Button>
+                      {Array.isArray(c.stayFiles) && c.stayFiles.length ? (
+                        <Button type="button" variant="ghost" className="ml-1 h-7 px-2" onClick={() => setShowStayDocsIdx(showStayDocsIdx === i ? null : i)}>
+                          <span className="material-symbols-outlined text-[16px] mr-1">attach_file</span>
+                          <span>Ver documentos</span>
+                        </Button>
+                      ) : null}
                     </span>
+                    {showStayDocsIdx === i && Array.isArray(c.stayFiles) && c.stayFiles.length ? (
+                      <ul className="mt-1 text-xs text-zinc-700 dark:text-zinc-300">
+                        {c.stayFiles.map((f, idx2) => (
+                          <li key={`stay-doc-${i}-${idx2}`}>{f.name} • {Math.round((f.size || 0) / 1024)} KB</li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </li>
                 ))}
                 {cities.map((c, i) => (
@@ -993,12 +1021,46 @@ export default function AccommodationSearchPage() {
                     >
                       <span className="inline-flex items-center gap-1">
                         {c.transportToNext ? <span className="material-symbols-outlined text-[16px] text-green-700 dark:text-green-300">task_alt</span> : null}
-                      <span>
-                        Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext?.mode || "").toUpperCase()}
-                        {c.transportToNext?.mode === "car" ? "" : ` • ${c.transportToNext?.depTime || "—"} → ${c.transportToNext?.arrTime || "—"}`}
-                        {` • Anexos: ${transportDocsCount[i] ?? (c.transportToNext?.files || []).length}`}
+                         <span className="inline-flex items-center gap-1">
+                           Transporte: {c.name || `Cidade ${i + 1}`} → {cities[i + 1]?.name || `Cidade ${i + 2}`} • {(c.transportToNext?.mode || "").toUpperCase()}
+                           {c.transportToNext?.mode === "car" ? "" : ` • ${c.transportToNext?.depTime || "—"} → ${c.transportToNext?.arrTime || "—"}`}
+                           {` • Anexos: ${transportDocsCount[i] ?? (c.transportToNext?.files || []).length}`}
+                           <span className="material-symbols-outlined text-[14px] text-zinc-500">edit</span>
+                         </span>
+                        <Button type="button" variant="outline" title="Editar" aria-label="Editar" className="ml-2 h-7 px-2" onClick={() => router.push(`/transport/plan?i=${i}`)}>
+                          <span className="material-symbols-outlined text-[16px] mr-1">edit</span>
+                          <span>Editar</span>
+                        </Button>
+                        {(transportDocsCount[i] ?? (c.transportToNext?.files || []).length) ? (
+                          <Button type="button" variant="ghost" className="ml-1 h-7 px-2" onClick={async () => {
+                            if (showTransportDocsIdx === i) { setShowTransportDocsIdx(null); return; }
+                            setShowTransportDocsIdx(i);
+                            try {
+                              const trips = await getSavedTrips();
+                              const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
+                              const seg = c.transportToNext;
+                              const local = Array.isArray(seg?.files) ? seg!.files!.map((f) => ({ name: f.name, size: f.size })) : [];
+                              let dbList: Array<{ name: string; size: number }> = [];
+                              if (cur) {
+                                const ref = `${c.name || ""}->${cities[i + 1]?.name || ""}`;
+                                const more = await getRefAttachments(cur.id, "transport", ref);
+                                dbList = more.map((m) => ({ name: m.name, size: Number(m.size || 0) }));
+                              }
+                              setTransportDocsList((prev) => ({ ...prev, [i]: [...local, ...dbList] }));
+                            } catch {}
+                          }}>
+                            <span className="material-symbols-outlined text-[16px] mr-1">attach_file</span>
+                            <span>Ver documentos</span>
+                          </Button>
+                        ) : null}
                       </span>
-                      </span>
+                      {showTransportDocsIdx === i && (transportDocsList[i]?.length || 0) ? (
+                        <ul className="mt-1 text-xs text-zinc-700 dark:text-zinc-300">
+                          {transportDocsList[i]!.map((f, idx3) => (
+                            <li key={`tr-doc-${i}-${idx3}`}>{f.name} • {Math.round((f.size || 0) / 1024)} KB</li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </li>
                   ) : null
                 ))}
