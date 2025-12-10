@@ -14,7 +14,7 @@ export default function SWRegister() {
     const url = "/sw.js";
     try {
       navigator.serviceWorker.register(url, { scope: "/" }).then((reg) => {
-        try { showRef.current(t("offlineEnabledMsg"), { variant: "success", duration: 6000, key: "offlineEnabledMsg" }); } catch {}
+        try { showRef.current(t("offlineEnabledMsg"), { variant: "success", duration: 2000, sticky: false, key: "offlineEnabledMsg" }); } catch {}
         try {
           reg.onupdatefound = () => {
             try { showRef.current(t("updateAvailableMsg"), { variant: "info", key: "updateAvailableMsg" }); } catch {}
