@@ -380,15 +380,27 @@ export default function EntertainmentReservationsPage() {
                 <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
                   <div className="text-[10px] leading-tight font-semibold uppercase tracking-wide text-zinc-600 mb-2 break-all text-center">Atividade/entretenimento</div>
                   <div className="space-y-2">
-                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("activity"); setTitle(""); setDate(""); setTime(""); }}>{t("scheduleLabel")}</Button>
-                    <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAISuggestions(i)}>{t("aiSuggestionsLabel")}</Button>
+                    <div>
+                      <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("activity"); setTitle(""); setDate(""); setTime(""); }}>{t("scheduleLabel")}</Button>
+                      <div className="mt-1 text-[11px] text-zinc-700 dark:text-zinc-300 text-center">{t("scheduleSmallHint")}</div>
+                    </div>
+                    <div>
+                      <Button type="button" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAISuggestions(i)}>{t("aiSuggestionsLabel")}</Button>
+                      <div className="mt-1 text-[11px] text-zinc-700 dark:text-zinc-300 text-center">{t("aiSuggestionsSmallHint")}</div>
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
                   <div className="text-[10px] leading-tight font-semibold uppercase tracking-wide text-zinc-600 mb-2 break-all text-center">Restaurante</div>
                   <div className="space-y-2">
-                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("restaurant"); setTitle(""); setDate(""); setTime(""); }}>{t("scheduleLabel")}</Button>
-                    <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAIRestaurants(i)}>{t("aiSuggestionsLabel")}</Button>
+                    <div>
+                      <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => { setOpenIdx(i); setOpenKind("restaurant"); setTitle(""); setDate(""); setTime(""); }}>{t("scheduleLabel")}</Button>
+                      <div className="mt-1 text-[11px] text-zinc-700 dark:text-zinc-300 text-center">{t("scheduleSmallHint")}</div>
+                    </div>
+                    <div>
+                      <Button type="button" variant="secondary" className="w-full h-11 rounded-lg font-semibold tracking-wide" onClick={() => openAIRestaurants(i)}>{t("aiSuggestionsLabel")}</Button>
+                      <div className="mt-1 text-[11px] text-zinc-700 dark:text-zinc-300 text-center">{t("aiSuggestionsSmallHint")}</div>
+                    </div>
                   </div>
                 </div>
               </div>

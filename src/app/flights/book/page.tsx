@@ -45,7 +45,7 @@ function buildLinksSame(
   const skyscannerDate = (d: string) => d.replace(/-/g, "");
   const sky = `https://www.skyscanner.com.br/transporte/voos/${origin}/${destination}/${skyscannerDate(depart)}/${skyscannerDate(ret)}/?adults=${adults}&children=${children}&infants=${infants}`;
   return [
-    { name: "Google Flights", href: google },
+    { name: "Google", href: google },
     { name: "Kayak", href: kayak },
     { name: "Booking", href: booking },
     { name: "Skyscanner", href: sky },
@@ -72,7 +72,7 @@ function buildLinksOne(
   const skyscannerDate = (d: string) => d.replace(/-/g, "");
   const sky = `https://www.skyscanner.com.br/transporte/voos/${origin}/${destination}/${skyscannerDate(depart)}/?adults=${adults}&children=${children}&infants=${infants}`;
   return [
-    { name: "Google Flights", href: google },
+    { name: "Google", href: google },
     { name: "Kayak", href: kayak },
     { name: "Booking", href: booking },
     { name: "Skyscanner", href: sky },
@@ -215,81 +215,6 @@ export default function BookFlightsPage() {
         <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">{t("bookFlightsTitle")}</h1>
         <p className="mb-4 text-sm text-zinc-600">{t("bookFlightsSubtitle")}</p>
       </div>
-      <div className="container-page">
-        <div className="max-w-sm">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <span className="material-symbols-outlined text-base">summarize</span>
-                <span>{t("summarySearch")}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-[11px] py-2">
-            {!hydrated || loadingTrip ? (
-              <div className="text-sm text-zinc-600">{t("loadingSearch")}</div>
-            ) : missing ? (
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-zinc-600">{t("noTrips")}</div>
-                <Button type="button" onClick={() => router.push("/flights/search")}>{t("searchFlights")}</Button>
-              </div>
-            ) : (!missing && tripSearch?.mode === "same") ? (
-              <Table className="w-full border-collapse text-[11px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableCell className="font-semibold p-0.5">{t("tableOrigin")}</TableCell>
-                    <TableCell className="font-semibold p-0.5">{t("tableDestination")}</TableCell>
-                    <TableCell className="font-semibold p-0.5">{t("tableDate")}</TableCell>
-                    <TableCell className="font-semibold p-0.5">{t("tablePassengers")}</TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="p-0.5">{tripSearch!.origin}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch!.destination}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch!.departDate} → {tripSearch!.returnDate}</TableCell>
-                    <TableCell className="p-0.5">{totalPassengers(tripSearch!.passengers)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            ) : (!missing && tripSearch) ? (
-              <Table className="w-full border-collapse text-[11px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableCell className="font-semibold p-0.5">{t("tableOrigin")}</TableCell>
-                    <TableCell className="font-semibold p-0.5">{t("tableDestination")}</TableCell>
-                    <TableCell className="font-semibold p-0.5">{t("tableDate")}</TableCell>
-                    <TableCell className="font-semibold p-0.5">{t("tablePassengers")}</TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="p-0.5">{tripSearch!.outbound.origin}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch!.outbound.destination}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch!.outbound.date}</TableCell>
-                    <TableCell className="p-0.5">{totalPassengers(tripSearch!.passengers)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="p-0.5">{tripSearch!.inbound.origin}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch!.inbound.destination}</TableCell>
-                    <TableCell className="p-0.5">{tripSearch!.inbound.date}</TableCell>
-                    <TableCell className="p-0.5">{totalPassengers(tripSearch!.passengers)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            ) : null}
-            <div className="mt-4 flex justify-end">
-              <Button
-                type="button"
-                className="px-3 py-1 text-[11px]"
-                onClick={() => { show(t("editingSearchMsg")); router.push("/flights/search"); }}
-              >
-                {t("editSearchTitle")}
-              </Button>
-            </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
 
       <div className="container-page">
         <Card className={guide === "aggregators" ? "ring-4 ring-amber-500 pulse-ring" : undefined}>
@@ -354,13 +279,13 @@ export default function BookFlightsPage() {
           </CardHeader>
           <CardContent>
             {tripSearch && tripSearch.mode === "same" && data ? (
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 {data.links.map((item) => (
                   <li key={item.name} className="flex items-center gap-1">
-                    <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
+                    <Link className="underline text-[13px]" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
                       {item.name}
                     </Link>
-                    {item.name === "Google Flights" ? (
+                    {item.name === "Google" ? (
                       <button
                         type="button"
                         className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
@@ -376,7 +301,7 @@ export default function BookFlightsPage() {
                 ))}
               </ul>
             ) : tripSearch && tripSearch.mode === "different" ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   {(() => { const ts = tripSearch as TripSearchDifferent; return (
                     <div className="mb-2">
@@ -388,13 +313,13 @@ export default function BookFlightsPage() {
                       <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">{t("linksPreFilledOneWay")}</div>
                     </div>
                   ); })()}
-                  <ul className="space-y-2">
+                  <ul className="space-y-1">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.outbound.origin, ts.outbound.destination, ts.outbound.date, ts.passengers); })().map((item) => (
                       <li key={`out-${item.name}`} className="flex items-center gap-1">
-                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
+                        <Link className="underline text-[13px]" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
-                        {item.name === "Google Flights" ? (
+                        {item.name === "Google" ? (
                           <button
                             type="button"
                             className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
@@ -421,13 +346,13 @@ export default function BookFlightsPage() {
                       <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">{t("linksPreFilledOneWay")}</div>
                     </div>
                   ); })()}
-                  <ul className="space-y-2">
+                  <ul className="space-y-1">
                     {(() => { const ts = tripSearch as TripSearchDifferent; return buildLinksOne(ts.inbound.origin, ts.inbound.destination, ts.inbound.date, ts.passengers); })().map((item) => (
                       <li key={`in-${item.name}`} className="flex items-center gap-1">
-                        <Link className="underline" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
+                        <Link className="underline text-[13px]" href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => { show(t("openingLink")); if (guide === "aggregators") setGuide("notes"); }}>
                           {item.name}
                         </Link>
-                        {item.name === "Google Flights" ? (
+                        {item.name === "Google" ? (
                           <button
                             type="button"
                             className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
