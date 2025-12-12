@@ -17,6 +17,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -118,11 +119,11 @@ public class CalendarPlugin extends Plugin {
 
     try {
       for (int i = 0; i < arr.length(); i++) {
-        JSObject ev = arr.getJSONObject(i);
-        String startISO = ev.getString("startISO");
-        String endISO = ev.getString("endISO");
-        String title = ev.getString("title");
-        String description = ev.getString("description");
+        JSONObject ev = arr.getJSONObject(i);
+        String startISO = ev.optString("startISO", "");
+        String endISO = ev.optString("endISO", "");
+        String title = ev.optString("title", "");
+        String description = ev.optString("description", "");
 
         if (TextUtils.isEmpty(startISO) || TextUtils.isEmpty(title)) {
           errors.add("invalid_event_" + i);

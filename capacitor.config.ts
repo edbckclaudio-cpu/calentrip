@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const serverUrl = process.env.NEXT_PUBLIC_CAP_SERVER_URL;
 
 const config: CapacitorConfig = {
-  appId: 'digital.calentrip',
+  appId: 'digital.calentrip.android',
   appName: 'CalenTrip',
   webDir: 'out',
   plugins: {
