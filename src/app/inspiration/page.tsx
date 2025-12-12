@@ -69,12 +69,66 @@ function italyEvents(): EventItem[] {
   return list;
 }
 
+function brazilEvents(): EventItem[] {
+  const stay = (kind: "checkin" | "checkout", city: string, date: string, time: string, address: string): EventItem => ({ type: "stay", label: `${kind === "checkin" ? "Check-in hospedagem" : "Checkout hospedagem"}: ${city} • Endereço: ${address}`, date, time, meta: { city, address, kind } });
+  const transport = (mode: "AIR" | "BUS" | "CAR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `Transporte: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
+  const activity = (date: string, time: string, title: string): EventItem => ({ type: "activity", label: `Atividade: ${title}`, date, time });
+  const restaurant = (date: string, time: string, title: string): EventItem => ({ type: "restaurant", label: `Restaurante: ${title}`, date, time });
+  const list: EventItem[] = [];
+  list.push({ type: "flight", label: "Voo de ida: GRU → GIG", date: "2026-05-06" });
+  list.push(stay("checkin", "Rio de Janeiro", "2026-05-06", "14:00", "Av. Atlântica, Copacabana, Rio de Janeiro, Brasil"));
+  list.push(activity("2026-05-07", "09:00", "Cristo Redentor"));
+  list.push(activity("2026-05-07", "15:00", "Pão de Açúcar"));
+  list.push(restaurant("2026-05-07", "19:30", "Marius Degustare"));
+  list.push(activity("2026-05-08", "10:00", "Passeio por Santa Teresa"));
+  list.push(activity("2026-05-09", "09:00", "Praia de Copacabana"));
+  list.push(activity("2026-05-10", "10:00", "Museu do Amanhã"));
+  list.push(stay("checkout", "Rio de Janeiro", "2026-05-12", "08:00", "Av. Atlântica, Copacabana, Rio de Janeiro, Brasil"));
+  list.push(transport("AIR", "Rio de Janeiro", "São Paulo", "2026-05-12", "11:30"));
+  list.push(stay("checkin", "São Paulo", "2026-05-12", "14:00", "Av. Paulista, Bela Vista, São Paulo, Brasil"));
+  list.push(activity("2026-05-13", "10:00", "MASP — Museu de Arte de São Paulo"));
+  list.push(activity("2026-05-13", "15:00", "Parque do Ibirapuera"));
+  list.push(restaurant("2026-05-13", "20:00", "Mercado Municipal — sanduíche de mortadela"));
+  list.push(activity("2026-05-14", "09:30", "Centro histórico e Catedral da Sé"));
+  list.push(stay("checkout", "São Paulo", "2026-05-20", "08:00", "Av. Paulista, Bela Vista, São Paulo, Brasil"));
+  list.push({ type: "flight", label: "Voo de volta: CGH → GRU", date: "2026-05-20" });
+  return list;
+}
+
+function croatiaEvents(): EventItem[] {
+  const stay = (kind: "checkin" | "checkout", city: string, date: string, time: string, address: string): EventItem => ({ type: "stay", label: `${kind === "checkin" ? "Check-in hospedagem" : "Checkout hospedagem"}: ${city} • Endereço: ${address}`, date, time, meta: { city, address, kind } });
+  const transport = (mode: "BUS" | "CAR" | "AIR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `Transporte: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
+  const activity = (date: string, time: string, title: string): EventItem => ({ type: "activity", label: `Atividade: ${title}`, date, time });
+  const restaurant = (date: string, time: string, title: string): EventItem => ({ type: "restaurant", label: `Restaurante: ${title}`, date, time });
+  const list: EventItem[] = [];
+  list.push({ type: "flight", label: "Voo de ida: GRU → SPU (Split)", date: "2026-06-06" });
+  list.push(stay("checkin", "Split", "2026-06-06", "14:00", "Kralja Zvonimira, Split, Croácia"));
+  list.push(activity("2026-06-07", "10:00", "Palácio de Diocleciano"));
+  list.push(activity("2026-06-08", "09:30", "Marjan Hill"));
+  list.push(activity("2026-06-09", "08:00", "Passeio à Blue Cave"));
+  list.push(restaurant("2026-06-09", "19:30", "Konoba Fetivi"));
+  list.push(activity("2026-06-10", "10:00", "Praias de Bačvice e Kasjuni"));
+  list.push(stay("checkout", "Split", "2026-06-11", "08:00", "Kralja Zvonimira, Split, Croácia"));
+  list.push(transport("BUS", "Split", "Dubrovnik", "2026-06-11", "11:00"));
+  list.push(stay("checkin", "Dubrovnik", "2026-06-11", "17:00", "Ulica od Puča, Dubrovnik, Croácia"));
+  list.push(activity("2026-06-12", "09:00", "Cidade Antiga de Dubrovnik"));
+  list.push(activity("2026-06-12", "15:00", "Passeio pelas muralhas de Dubrovnik"));
+  list.push(activity("2026-06-13", "10:00", "Ilha de Lokrum"));
+  list.push(restaurant("2026-06-13", "20:00", "Restaurant Dubrovnik"));
+  list.push(activity("2026-06-14", "09:30", "Teleférico de Dubrovnik"));
+  list.push(stay("checkout", "Dubrovnik", "2026-06-20", "08:00", "Ulica od Puča, Dubrovnik, Croácia"));
+  list.push({ type: "flight", label: "Voo de volta: DBV (Dubrovnik) → GRU", date: "2026-06-20" });
+  return list;
+}
+
 export default function InspirationPage() {
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<"Itália" | "Brasil" | "Croácia" | null>(null);
   function saveAndOpen(target: "final" | "month") {
     try {
-      const events = italyEvents();
-      const payload = { name: "ITALIA-2026", events };
+      const events = selected === "Brasil" ? brazilEvents() : selected === "Croácia" ? croatiaEvents() : italyEvents();
+      const name = selected === "Brasil" ? "BRASIL-2026" : selected === "Croácia" ? "CROACIA-2026" : "ITALIA-2026";
+      const payload = { name, events };
       if (typeof window !== "undefined") {
         localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
         localStorage.setItem("calentrip:auto_load_saved", "1");
@@ -83,8 +137,8 @@ export default function InspirationPage() {
           const raw = localStorage.getItem("calentrip:saved_calendars_list");
           const list = raw ? JSON.parse(raw) as Array<{ name: string; events: EventItem[]; savedAt?: string }> : [];
           const at = new Date().toISOString();
-          const exists = list.find((x) => x.name === "ITALIA-2026");
-          const next = exists ? list.map((x) => (x.name === "ITALIA-2026" ? { name: x.name, events, savedAt: at } : x)) : [...list, { name: "ITALIA-2026", events, savedAt: at }];
+          const exists = list.find((x) => x.name === name);
+          const next = exists ? list.map((x) => (x.name === name ? { name: x.name, events, savedAt: at } : x)) : [...list, { name, events, savedAt: at }];
           localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(next));
         } catch {}
       }
@@ -101,10 +155,10 @@ export default function InspirationPage() {
         <div className="overflow-x-auto snap-x snap-mandatory flex gap-4 pb-2">
           {[
             { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80" },
-            { name: "Brasil", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80" },
-            { name: "Croácia", img: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800&q=80" },
+            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80" },
+            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80" },
           ].map((c, i) => (
-            <button key={i} type="button" className="snap-center min-w-[72%] md:min-w-[360px] h-44 rounded-xl overflow-hidden relative border border-[var(--border)]" onClick={() => { if (c.name === "Itália") setOpen(true); }}>
+            <button key={i} type="button" className="snap-center min-w-[72%] md:min-w-[360px] h-44 rounded-xl overflow-hidden relative border border-[var(--border)]" onClick={() => { setSelected(c.name as typeof selected); setOpen(true); }}>
               <div className="absolute inset-0" style={{ backgroundImage: `url(${c.img})`, backgroundSize: "cover", backgroundPosition: "center" }} />
               <div className="absolute inset-0 bg-black/30" />
               <div className="absolute bottom-2 left-3 right-3 text-white font-semibold text-lg">{c.name}</div>
@@ -114,13 +168,19 @@ export default function InspirationPage() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen} placement="bottom">
-        <DialogHeader>Itália — roteiro exemplo para inspirar</DialogHeader>
+        <DialogHeader>{selected ? `${selected} — roteiro exemplo para inspirar` : "Roteiro exemplo"}</DialogHeader>
         <div className="space-y-2 text-sm">
           <div>
             Este roteiro é um exemplo real para você se inspirar, adaptar ao seu estilo e construir a sua viagem. As durações e deslocamentos consideram tempos reais.
           </div>
           <div>
-            Resumo: avião para Roma, trem Roma → Firenze, carro para Pisa • San Gimignano • Cinque Terre, trem Firenze → Veneza, trem Veneza → Milão e avião de volta de Milão.
+            {selected === "Itália" ? (
+              <>Resumo: avião para Roma, trem Roma → Firenze, carro para Pisa • San Gimignano • Cinque Terre, trem Firenze → Veneza, trem Veneza → Milão e avião de volta de Milão.</>
+            ) : selected === "Brasil" ? (
+              <>Resumo: avião para Rio de Janeiro, voo Rio → São Paulo, atividades em SP e voo de volta.</>
+            ) : selected === "Croácia" ? (
+              <>Resumo: avião para Split, ônibus Split → Dubrovnik, atividades e voo de volta a partir de Dubrovnik.</>
+            ) : null}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button type="button" onClick={() => saveAndOpen("final")}>Visualizar em lista</Button>
