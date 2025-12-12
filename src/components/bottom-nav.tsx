@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 
-function NavIcon({ name, active }: { name: "explore" | "trips" | "stays" | "calendar" | "profile"; active?: boolean }) {
+function NavIcon({ name, active }: { name: "explore" | "trips" | "stays" | "calendar" | "inspiration"; active?: boolean }) {
   const cls = `material-symbols-outlined text-[20px] ${active ? "text-[var(--brand)]" : "text-zinc-600"}`;
   switch (name) {
     case "explore":
@@ -14,8 +14,8 @@ function NavIcon({ name, active }: { name: "explore" | "trips" | "stays" | "cale
       return <span className={cls}>hotel</span>;
     case "calendar":
       return <span className={cls}>calendar_month</span>;
-    case "profile":
-      return <span className={cls}>account_circle</span>;
+    case "inspiration":
+      return <span className={cls}>auto_awesome</span>;
   }
 }
 
@@ -26,7 +26,7 @@ export default function BottomNav() {
     { href: "/", name: "explore" as const, label: t("navExplore") },
     { href: "/accommodation/search", name: "stays" as const, label: t("navStays") },
     { href: "/calendar/final", name: "calendar" as const, label: t("navCalendar") },
-    { href: "/profile", name: "profile" as const, label: t("navProfile") },
+    { href: "/inspiration", name: "inspiration" as const, label: t("navInspiration") },
   ];
 
   return (
@@ -48,6 +48,7 @@ export default function BottomNav() {
                       localStorage.removeItem("calentrip:arrivalNextDay_inbound");
                       localStorage.removeItem("calentrip:tripSearch");
                       localStorage.removeItem("calentrip:auto_load_saved");
+                      localStorage.removeItem("calentrip:inspiration_mode");
                     }
                   }
                 } catch {}

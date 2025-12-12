@@ -32,6 +32,7 @@ export default function MonthCalendarPage() {
   const [editTime, setEditTime] = useState<string>("");
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [loadedFromSaved, setLoadedFromSaved] = useState(false);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
 
   async function exportICS() {
     function fmtUTC(d: Date) {
@@ -328,6 +329,29 @@ export default function MonthCalendarPage() {
     return [...pre, ...days];
   }, [tripMonth, grouped]);
 
+  const dayTitle = useMemo(() => {
+    if (!dayOpen) return "Atividades do dia";
+    const loc = lang === "pt" ? "pt-BR" : lang === "es" ? "es-ES" : "en-US";
+    const d = new Date(`${dayOpen}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return "Atividades do dia";
+    const dayNum = String(d.getDate());
+    const dow = new Intl.DateTimeFormat(loc, { weekday: "long" }).format(d);
+    return `Atividades do dia: ${dayNum} • ${dow}`;
+  }, [dayOpen, lang]);
+
+  function changeDay(delta: number) {
+    if (!dayOpen) return;
+    const d = new Date(`${dayOpen}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return;
+    const y = tripMonth.getFullYear();
+    const m = tripMonth.getMonth();
+    const next = new Date(d);
+    next.setDate(next.getDate() + delta);
+    if (next.getFullYear() !== y || next.getMonth() !== m) return;
+    const p = (n: number) => String(n).padStart(2, "0");
+    setDayOpen(`${next.getFullYear()}-${p(next.getMonth() + 1)}-${p(next.getDate())}`);
+  }
+
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
       {gating?.show ? (
@@ -498,8 +522,8 @@ export default function MonthCalendarPage() {
       {dayOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDayOpen(null)} />
-          <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-            <DialogHeader>Atividades do dia</DialogHeader>
+          <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black" onTouchStart={(e) => setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY })} onTouchEnd={(e) => { if (!touchStart) return; const dx = e.changedTouches[0].clientX - touchStart.x; const dy = e.changedTouches[0].clientY - touchStart.y; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) changeDay(1); else changeDay(-1); } setTouchStart(null); }}>
+            <DialogHeader>{dayTitle}</DialogHeader>
             <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
               {grouped[dayOpen!] && grouped[dayOpen!].length ? (
                 <ul className="space-y-3">

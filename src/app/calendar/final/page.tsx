@@ -334,6 +334,13 @@ export default function FinalCalendarPage() {
     } catch { setLocConsent("default"); }
   }, []);
 
+  useEffect(() => {
+    try {
+      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:inspiration_mode") : null;
+      if (flag === "1") setPremiumFlag(true);
+    } catch {}
+  }, []);
+
   const ensureLocationConsent = useCallback(() => {
     if (locConsent === "granted") return true;
     setLocModalOpen(true);
