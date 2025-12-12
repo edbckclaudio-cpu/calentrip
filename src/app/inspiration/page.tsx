@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 
@@ -159,35 +160,7 @@ export default function InspirationPage() {
         <div className="text-sm text-zinc-700">Escolha uma inspiração e veja o roteiro completo para adaptar ao seu gosto.</div>
       </div>
       <div className="container-page">
-        <div className="overflow-x-auto snap-x snap-mandatory flex gap-4 pb-2">
-          {[
-            { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6f/Piazza_del_Duomo_Milano_June_2016.jpg" },
-            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Copacabana_Beach_-_Rio_de_Janeiro%2C_Brazil.jpg" },
-            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Dubrovnik_old_town_panorama.jpg" },
-          ].map((c, i) => (
-            <button key={i} type="button" className="snap-center min-w-[72%] md:min-w-[360px] h-44 rounded-xl overflow-hidden relative border border-[var(--border)]" onClick={() => { setSelected(c.name as typeof selected); setOpen(true); }}>
-              <img
-                src={c.img}
-                alt={c.name}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-                crossOrigin="anonymous"
-                referrerPolicy="no-referrer"
-                decoding="async"
-                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                  try {
-                    const t = e.currentTarget;
-                    const fb = (c as { fallback?: string }).fallback;
-                    t.src = fb || `https://via.placeholder.com/360x202?text=${c.name}`;
-                    t.onerror = null;
-                  } catch {}
-                }}
-              />
-              <div className="absolute inset-0 bg-black/30" />
-              <div className="absolute bottom-2 left-3 right-3 text-white font-semibold text-lg">{c.name}</div>
-            </button>
-          ))}
-        </div>
+        <Carousel />
       </div>
 
       <Dialog open={open} onOpenChange={setOpen} placement="bottom">
@@ -215,5 +188,110 @@ export default function InspirationPage() {
         </DialogFooter>
       </Dialog>
     </div>
+  );
+}
+
+function Carousel() {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<"Itália" | "Brasil" | "Croácia" | null>(null);
+  const items = [
+    { name: "Itália", primary: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=1200&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6f/Piazza_del_Duomo_Milano_June_2016.jpg" },
+    { name: "Brasil", primary: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=1200&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Copacabana_Beach_-_Rio_de_Janeiro%2C_Brazil.jpg" },
+    { name: "Croácia", primary: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=1200&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Dubrovnik_old_town_panorama.jpg" },
+  ] as const;
+  const [index, setIndex] = useState(0);
+  function next() { setIndex((i) => (i + 1) % items.length); }
+  function prev() { setIndex((i) => (i - 1 + items.length) % items.length); }
+  function saveToLocal(target: "final" | "month") {
+    try {
+      const events = selected === "Brasil" ? brazilEvents() : selected === "Croácia" ? croatiaEvents() : italyEvents();
+      const name = selected === "Brasil" ? "BRASIL-2026" : selected === "Croácia" ? "CROACIA-2026" : "ITALIA-2026";
+      const payload = { name, events };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+        localStorage.setItem("calentrip:auto_load_saved", "1");
+        localStorage.setItem("calentrip:inspiration_mode", "1");
+        try {
+          const raw = localStorage.getItem("calentrip:saved_calendars_list");
+          const list = raw ? JSON.parse(raw) as Array<{ name: string; events: EventItem[]; savedAt?: string }> : [];
+          const at = new Date().toISOString();
+          const exists = list.find((x) => x.name === name);
+          const next = exists ? list.map((x) => (x.name === name ? { name: x.name, events, savedAt: at } : x)) : [...list, { name, events, savedAt: at }];
+          localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(next));
+        } catch {}
+      }
+      try { window.location.href = target === "final" ? "/calendar/final" : "/calendar/month"; } catch {}
+    } catch {}
+  }
+  return (
+    <div className="relative">
+      <div className="overflow-hidden rounded-xl border border-[var(--border)]">
+        <Card
+          name={items[index].name}
+          src={items[index].primary}
+          fallback={items[index].fallback}
+          onClick={() => { setSelected(items[index].name as typeof selected); setOpen(true); }}
+        />
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <button type="button" className="inline-flex items-center gap-1 rounded-md border px-3 h-9" onClick={prev}>
+          <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+          <span>Anterior</span>
+        </button>
+        <div className="flex items-center gap-1">
+          {items.map((_, i) => (
+            <button key={i} type="button" className={i === index ? "h-2 w-2 rounded-full bg-[var(--brand)]" : "h-2 w-2 rounded-full bg-zinc-300"} onClick={() => setIndex(i)} aria-label={`Ir para ${i + 1}`} />
+          ))}
+        </div>
+        <button type="button" className="inline-flex items-center gap-1 rounded-md border px-3 h-9" onClick={next}>
+          <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+          <span>Próximo</span>
+        </button>
+      </div>
+      <Dialog open={open} onOpenChange={setOpen} placement="bottom">
+        <DialogHeader>{selected ? `${selected} — roteiro exemplo para inspirar` : "Roteiro exemplo"}</DialogHeader>
+        <div className="space-y-2 text-sm">
+          <div>
+            Este roteiro é um exemplo real para você se inspirar, adaptar ao seu estilo e construir a sua viagem. As durações e deslocamentos consideram tempos reais.
+          </div>
+          <div>
+            {selected === "Itália" ? (
+              <>Resumo: avião para Roma, trem Roma → Firenze, carro para Pisa • San Gimignano • Cinque Terre, trem Firenze → Veneza, trem Veneza → Milão e avião de volta de Milão.</>
+            ) : selected === "Brasil" ? (
+              <>Resumo: avião para Rio de Janeiro, voo Rio → São Paulo, atividades em SP e voo de volta.</>
+            ) : selected === "Croácia" ? (
+              <>Resumo: avião para Zagreb, ônibus Zagreb → Split → Dubrovnik, atividades e voo de volta a partir de Dubrovnik.</>
+            ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" onClick={() => { setOpen(false); saveToLocal("final"); }}>Visualizar em lista</Button>
+            <Button type="button" variant="outline" onClick={() => { setOpen(false); saveToLocal("month"); }}>Visualizar em calendário</Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Fechar</Button>
+        </DialogFooter>
+      </Dialog>
+    </div>
+  );
+}
+
+function Card({ name, src, fallback, onClick }: { name: string; src: string; fallback?: string; onClick?: () => void }) {
+  const [imgSrc, setImgSrc] = useState(src);
+  return (
+    <button type="button" className="relative w-full h-44 md:h-56" onClick={onClick}>
+      <Image
+        src={imgSrc}
+        alt={name}
+        fill
+        sizes="(max-width: 768px) 100vw, 720px"
+        priority={false}
+        quality={70}
+        className="object-cover"
+        onError={() => setImgSrc(fallback || `https://via.placeholder.com/720x320?text=${name}`)}
+      />
+      <div className="absolute inset-0 bg-black/30" />
+      <div className="absolute bottom-2 left-3 right-3 text-white font-semibold text-lg">{name}</div>
+    </button>
   );
 }
