@@ -101,21 +101,28 @@ function croatiaEvents(): EventItem[] {
   const activity = (date: string, time: string, title: string): EventItem => ({ type: "activity", label: `Atividade: ${title}`, date, time });
   const restaurant = (date: string, time: string, title: string): EventItem => ({ type: "restaurant", label: `Restaurante: ${title}`, date, time });
   const list: EventItem[] = [];
-  list.push({ type: "flight", label: "Voo de ida: GRU → SPU (Split)", date: "2026-06-06" });
-  list.push(stay("checkin", "Split", "2026-06-06", "14:00", "Kralja Zvonimira, Split, Croácia"));
-  list.push(activity("2026-06-07", "10:00", "Palácio de Diocleciano"));
-  list.push(activity("2026-06-08", "09:30", "Marjan Hill"));
-  list.push(activity("2026-06-09", "08:00", "Passeio à Blue Cave"));
-  list.push(restaurant("2026-06-09", "19:30", "Konoba Fetivi"));
-  list.push(activity("2026-06-10", "10:00", "Praias de Bačvice e Kasjuni"));
-  list.push(stay("checkout", "Split", "2026-06-11", "08:00", "Kralja Zvonimira, Split, Croácia"));
-  list.push(transport("BUS", "Split", "Dubrovnik", "2026-06-11", "11:00"));
-  list.push(stay("checkin", "Dubrovnik", "2026-06-11", "17:00", "Ulica od Puča, Dubrovnik, Croácia"));
-  list.push(activity("2026-06-12", "09:00", "Cidade Antiga de Dubrovnik"));
-  list.push(activity("2026-06-12", "15:00", "Passeio pelas muralhas de Dubrovnik"));
-  list.push(activity("2026-06-13", "10:00", "Ilha de Lokrum"));
-  list.push(restaurant("2026-06-13", "20:00", "Restaurant Dubrovnik"));
-  list.push(activity("2026-06-14", "09:30", "Teleférico de Dubrovnik"));
+  list.push({ type: "flight", label: "Voo de ida: GRU → ZAG (Zagreb)", date: "2026-06-06" });
+  list.push(stay("checkin", "Zagreb", "2026-06-06", "14:00", "Trg bana Jelačića, Zagreb, Croácia"));
+  list.push(activity("2026-06-07", "10:00", "Praça Ban Jelačić e Mercado Dolac"));
+  list.push(activity("2026-06-07", "14:30", "Cidade Alta (Gradec) e Torre Lotrščak"));
+  list.push(restaurant("2026-06-07", "19:30", "Restaurante tradicional croata em Tkalčićeva"));
+  list.push(activity("2026-06-08", "10:00", "Catedral de Zagreb e Parque Maksimir"));
+  list.push(stay("checkout", "Zagreb", "2026-06-10", "08:00", "Trg bana Jelačića, Zagreb, Croácia"));
+  list.push(transport("BUS", "Zagreb", "Split", "2026-06-10", "11:00"));
+  list.push(stay("checkin", "Split", "2026-06-10", "17:00", "Kralja Zvonimira, Split, Croácia"));
+  list.push(activity("2026-06-11", "10:00", "Palácio de Diocleciano"));
+  list.push(activity("2026-06-12", "09:30", "Marjan Hill"));
+  list.push(activity("2026-06-13", "08:00", "Passeio à Blue Cave"));
+  list.push(restaurant("2026-06-13", "19:30", "Konoba Fetivi"));
+  list.push(activity("2026-06-14", "10:00", "Praias de Bačvice e Kasjuni"));
+  list.push(stay("checkout", "Split", "2026-06-14", "08:00", "Kralja Zvonimira, Split, Croácia"));
+  list.push(transport("BUS", "Split", "Dubrovnik", "2026-06-14", "11:00"));
+  list.push(stay("checkin", "Dubrovnik", "2026-06-14", "17:00", "Ulica od Puča, Dubrovnik, Croácia"));
+  list.push(activity("2026-06-15", "09:00", "Cidade Antiga de Dubrovnik"));
+  list.push(activity("2026-06-16", "15:00", "Passeio pelas muralhas de Dubrovnik"));
+  list.push(activity("2026-06-17", "10:00", "Ilha de Lokrum"));
+  list.push(restaurant("2026-06-17", "20:00", "Restaurant Dubrovnik"));
+  list.push(activity("2026-06-18", "09:30", "Teleférico de Dubrovnik"));
   list.push(stay("checkout", "Dubrovnik", "2026-06-20", "08:00", "Ulica od Puča, Dubrovnik, Croácia"));
   list.push({ type: "flight", label: "Voo de volta: DBV (Dubrovnik) → GRU", date: "2026-06-20" });
   return list;
@@ -179,7 +186,7 @@ export default function InspirationPage() {
             ) : selected === "Brasil" ? (
               <>Resumo: avião para Rio de Janeiro, voo Rio → São Paulo, atividades em SP e voo de volta.</>
             ) : selected === "Croácia" ? (
-              <>Resumo: avião para Split, ônibus Split → Dubrovnik, atividades e voo de volta a partir de Dubrovnik.</>
+              <>Resumo: avião para Zagreb, ônibus Zagreb → Split → Dubrovnik, atividades e voo de volta a partir de Dubrovnik.</>
             ) : null}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
