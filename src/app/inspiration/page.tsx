@@ -91,6 +91,7 @@ function brazilEvents(): EventItem[] {
   list.push(restaurant("2026-05-13", "20:00", "Mercado Municipal — sanduíche de mortadela"));
   list.push(activity("2026-05-14", "09:30", "Centro histórico e Catedral da Sé"));
   list.push(stay("checkout", "São Paulo", "2026-05-20", "08:00", "Av. Paulista, Bela Vista, São Paulo, Brasil"));
+  list.push({ type: "flight", label: "Voo de volta: CGH → GRU", date: "2026-05-20" });
   return list;
 }
 
@@ -160,12 +161,28 @@ export default function InspirationPage() {
       <div className="container-page">
         <div className="overflow-x-auto snap-x snap-mandatory flex gap-4 pb-2">
           {[
-            { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb" },
-            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb" },
-            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb" },
+            { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6f/Piazza_del_Duomo_Milano_June_2016.jpg" },
+            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Copacabana_Beach_-_Rio_de_Janeiro%2C_Brazil.jpg" },
+            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Dubrovnik_old_town_panorama.jpg" },
           ].map((c, i) => (
             <button key={i} type="button" className="snap-center min-w-[72%] md:min-w-[360px] h-44 rounded-xl overflow-hidden relative border border-[var(--border)]" onClick={() => { setSelected(c.name as typeof selected); setOpen(true); }}>
-              <img src={c.img} alt={c.name} className="absolute inset-0 w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+              <img
+                src={c.img}
+                alt={c.name}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+                crossOrigin="anonymous"
+                referrerPolicy="no-referrer"
+                decoding="async"
+                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                  try {
+                    const t = e.currentTarget;
+                    const fb = (c as { fallback?: string }).fallback;
+                    t.src = fb || `https://via.placeholder.com/360x202?text=${c.name}`;
+                    t.onerror = null;
+                  } catch {}
+                }}
+              />
               <div className="absolute inset-0 bg-black/30" />
               <div className="absolute bottom-2 left-3 right-3 text-white font-semibold text-lg">{c.name}</div>
             </button>

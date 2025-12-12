@@ -501,11 +501,6 @@ export default function AccommodationSearchPage() {
           <CardContent>
             {isSame ? (
               <div className="space-y-3 max-w-md">
-                <div className="rounded-lg border p-3 text-sm">
-                  <div><span className="font-semibold">Cidade</span>: {city || initialCity || "(defina no quadro abaixo)"}</div>
-                  <div><span className="font-semibold">Check-in</span>: {dates.checkin || "—"}</div>
-                  <div><span className="font-semibold">Check-out</span>: {dates.checkout || "—"}</div>
-                </div>
                 {(() => {
                   try {
                     const on = localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true";
