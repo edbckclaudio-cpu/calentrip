@@ -170,10 +170,12 @@ function Carousel() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<"Itália" | "Brasil" | "Croácia" | null>(null);
   const items = [
-    { name: "Itália", primary: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=1200&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6f/Piazza_del_Duomo_Milano_June_2016.jpg" },
-    { name: "Brasil", primary: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=1200&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Copacabana_Beach_-_Rio_de_Janeiro%2C_Brazil.jpg" },
-    { name: "Croácia", primary: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=1200&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb", fallback: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Dubrovnik_old_town_panorama.jpg" },
+    { name: "Itália" },
+    { name: "Brasil" },
+    { name: "Croácia" },
   ] as const;
+  const heroPrimary = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb"; // paisagem montanhosa com céu
+  const heroFallback = "https://upload.wikimedia.org/wikipedia/commons/1/18/Sunrise_in_the_mountains.jpg";
   const [index, setIndex] = useState(0);
   function next() { setIndex((i) => (i + 1) % items.length); }
   function prev() { setIndex((i) => (i - 1 + items.length) % items.length); }
@@ -203,8 +205,8 @@ function Carousel() {
       <div className="overflow-hidden rounded-xl border border-[var(--border)]">
         <Card
           name={items[index].name}
-          src={items[index].primary}
-          fallback={items[index].fallback}
+          src={heroPrimary}
+          fallback={heroFallback}
           onClick={() => { setSelected(items[index].name as typeof selected); setOpen(true); }}
         />
       </div>
@@ -265,6 +267,7 @@ function Card({ name, src, fallback, onClick }: { name: string; src: string; fal
         className="object-cover"
         onError={() => setImgSrc(fallback || `https://via.placeholder.com/720x320?text=${name}`)}
       />
+      <span className="material-symbols-outlined absolute top-2 right-2 text-white/80 text-[22px]">flight</span>
       <div className="absolute inset-0 bg-black/30" />
       <div className="absolute bottom-2 left-3 right-3 text-white font-semibold text-lg">{name}</div>
     </button>
