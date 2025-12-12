@@ -160,12 +160,12 @@ export default function InspirationPage() {
       <div className="container-page">
         <div className="overflow-x-auto snap-x snap-mandatory flex gap-4 pb-2">
           {[
-            { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80&auto=format&fit=crop" },
-            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80&auto=format&fit=crop" },
-            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80&auto=format&fit=crop" },
+            { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb" },
+            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb" },
+            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80&auto=format&fit=crop&fm=jpg&cs=tinysrgb" },
           ].map((c, i) => (
             <button key={i} type="button" className="snap-center min-w-[72%] md:min-w-[360px] h-44 rounded-xl overflow-hidden relative border border-[var(--border)]" onClick={() => { setSelected(c.name as typeof selected); setOpen(true); }}>
-              <div className="absolute inset-0" style={{ backgroundImage: `url(\"${c.img}\")`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
+              <img src={c.img} alt={c.name} className="absolute inset-0 w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
               <div className="absolute inset-0 bg-black/30" />
               <div className="absolute bottom-2 left-3 right-3 text-white font-semibold text-lg">{c.name}</div>
             </button>
