@@ -1,3 +1,8 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "css.lint.unknownAtRules": "ignore",
+    "tailwindCSS.experimental.classRegex": [],
+    "tailwindCSS.includeLanguages": {
+        "css": "css"
+    }
 }

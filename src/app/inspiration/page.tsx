@@ -91,7 +91,6 @@ function brazilEvents(): EventItem[] {
   list.push(restaurant("2026-05-13", "20:00", "Mercado Municipal — sanduíche de mortadela"));
   list.push(activity("2026-05-14", "09:30", "Centro histórico e Catedral da Sé"));
   list.push(stay("checkout", "São Paulo", "2026-05-20", "08:00", "Av. Paulista, Bela Vista, São Paulo, Brasil"));
-  list.push({ type: "flight", label: "Voo de volta: CGH → GRU", date: "2026-05-20" });
   return list;
 }
 
@@ -161,12 +160,12 @@ export default function InspirationPage() {
       <div className="container-page">
         <div className="overflow-x-auto snap-x snap-mandatory flex gap-4 pb-2">
           {[
-            { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80" },
-            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80" },
-            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80" },
+            { name: "Itália", img: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80&auto=format&fit=crop" },
+            { name: "Brasil", img: "https://images.unsplash.com/photo-1543248939-343aa4eb8398?w=800&q=80&auto=format&fit=crop" },
+            { name: "Croácia", img: "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?w=800&q=80&auto=format&fit=crop" },
           ].map((c, i) => (
             <button key={i} type="button" className="snap-center min-w-[72%] md:min-w-[360px] h-44 rounded-xl overflow-hidden relative border border-[var(--border)]" onClick={() => { setSelected(c.name as typeof selected); setOpen(true); }}>
-              <div className="absolute inset-0" style={{ backgroundImage: `url(${c.img})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+              <div className="absolute inset-0" style={{ backgroundImage: `url(\"${c.img}\")`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
               <div className="absolute inset-0 bg-black/30" />
               <div className="absolute bottom-2 left-3 right-3 text-white font-semibold text-lg">{c.name}</div>
             </button>
