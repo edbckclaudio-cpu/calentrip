@@ -25,6 +25,7 @@ export default function AccommodationSearchPage() {
   }, [tripSearch]);
   const [city, setCity] = useState(initialCity);
   const lastToastId = useRef<number | null>(null);
+  const linksToastShown = useRef(false);
   const showToast = useCallback((message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) => {
     if (lastToastId.current) dismiss(lastToastId.current);
     const id = show(message, opts);
@@ -275,8 +276,11 @@ export default function AccommodationSearchPage() {
 
   useEffect(() => {
     if (cityDetailIdx === null) return;
-    showToast(t("useLinksSaveDocsHint"), { duration: 8000 });
-  }, [cityDetailIdx, showToast]);
+    if (!linksToastShown.current) {
+      showToast(t("useLinksSaveDocsHint"), { key: "useLinksSaveDocsHint" });
+      linksToastShown.current = true;
+    }
+  }, [cityDetailIdx, showToast, t]);
 
   useEffect(() => {
     if (guideStep) {
@@ -814,7 +818,10 @@ export default function AccommodationSearchPage() {
                                       setSeg({ files: [...(seg.files || []), ...list] });
                                     };
                                     input.click();
-                                  }} disabled={seg.mode === "car"}>Anexar comprovante</Button>
+                                  }} disabled={seg.mode === "car"} className="px-2 py-1 text-xs rounded-md gap-1">
+                                    <span className="material-symbols-outlined text-[16px]">attach_file</span>
+                                    <span>{t("attachProofButton")}</span>
+                                  </Button>
                                 </div>
                               </div>
                               <div className="mt-3 flex justify-end">
@@ -913,7 +920,10 @@ export default function AccommodationSearchPage() {
                           setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, stayFiles: [...(x.stayFiles || []), ...list] } : x)));
                         });
                       }} />
-                      <label htmlFor={`stay-file-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">{t("attachProofButton")}</label>
+                      <label htmlFor={`stay-file-${cityDetailIdx ?? 0}`} className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs gap-1 bg-[#febb02] text-black hover:bg-[#ffcc3f] cursor-pointer">
+                        <span className="material-symbols-outlined text-[16px]">attach_file</span>
+                        <span>{t("attachProofButton")}</span>
+                      </label>
                       <Input id={`stay-file-${cityDetailIdx ?? 0}`} className="hidden" type="file" multiple accept="image/*,application/pdf" onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         Promise.all(files.map(async (f) => {

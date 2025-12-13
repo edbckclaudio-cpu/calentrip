@@ -49,11 +49,19 @@ export function fmtUTC(d: Date) {
 export function alarmForEvent(kind: EventKind, hasTime: boolean, start: Date | null): string[] {
   const isFlight = kind === "flight";
   const isActivity = kind === "activity";
+  const isRestaurant = kind === "restaurant";
   const isTransport = kind === "transport";
-  const mins = isFlight ? 240 : (isActivity || isTransport) ? 60 : null;
-  if (!mins || !start) return [];
+  if (!start) return [];
   if (!isFlight && !hasTime) return [];
-  const label = isFlight ? "Lembrete de voo" : isTransport ? "Lembrete de transporte" : "Lembrete de atividade";
-  return ["BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${label}`, `TRIGGER:-PT${mins}M`, "END:VALARM"];
+  const alarms: string[] = [];
+  if (isFlight) {
+    alarms.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Lembrete de voo", "TRIGGER:-P1D", "END:VALARM");
+    alarms.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Lembrete de voo", "TRIGGER:-PT60M", "END:VALARM");
+    return alarms;
+  }
+  const label = isTransport ? "Lembrete de transporte" : "Lembrete de atividade";
+  const trigger = (isActivity || isRestaurant) ? "-PT60M" : "-PT120M";
+  alarms.push("BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${label}`, `TRIGGER:${trigger}`, "END:VALARM");
+  return alarms;
 }
 

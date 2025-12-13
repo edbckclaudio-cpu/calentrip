@@ -1,4 +1,4 @@
-package digital.calentrip;
+package digital.calentrip.android;
 
 import com.getcapacitor.BridgeActivity;
 import android.os.Bundle;
