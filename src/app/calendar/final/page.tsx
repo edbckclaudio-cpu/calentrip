@@ -33,9 +33,11 @@ type TripSearchPersist = {
   returnDate?: string;
   departTime?: string;
   returnTime?: string;
+  departFlightNumber?: string;
+  returnFlightNumber?: string;
   passengers?: { adults?: number; children?: number; infants?: number };
-  outbound?: { origin?: string; destination?: string; date?: string; time?: string };
-  inbound?: { origin?: string; destination?: string; date?: string; time?: string };
+  outbound?: { origin?: string; destination?: string; date?: string; time?: string; flightNumber?: string };
+  inbound?: { origin?: string; destination?: string; date?: string; time?: string; flightNumber?: string };
 };
 
 function buildRome2RioUrl(args: { originName: string; destName: string; originLat?: number; originLon?: number; destLat?: number; destLon?: number; date?: string; time?: string; passengers?: number; lang?: string; currency?: string }) {
