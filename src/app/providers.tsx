@@ -33,6 +33,28 @@ export default function Providers({ children }: { children: ReactNode }) {
       document.removeEventListener("focusin", onFocusIn);
     };
   }, []);
+  useEffect(() => {
+    try {
+      const key = "calentrip:firstLoadReloaded";
+      const already = typeof window !== "undefined" ? localStorage.getItem(key) === "1" : false;
+      const check = async () => {
+        try {
+          const fontsReady = typeof document !== "undefined" && (document as any).fonts ? await Promise.race([
+            (document as any).fonts.ready.then(() => true),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500)),
+          ]) : true;
+          const symbolsOk = typeof document !== "undefined" && (document as any).fonts?.check ? (document as any).fonts.check("12px 'Material Symbols Outlined'") : true;
+          if ((!fontsReady || !symbolsOk) && !already) {
+            try { localStorage.setItem(key, "1"); } catch {}
+            try { window.location.reload(); } catch {}
+          } else {
+            try { localStorage.removeItem(key); } catch {}
+          }
+        } catch {}
+      };
+      check();
+    } catch {}
+  }, []);
   return (
     <SessionProvider basePath="/api/auth" refetchInterval={0} refetchOnWindowFocus={false}>
       <I18nProvider>
