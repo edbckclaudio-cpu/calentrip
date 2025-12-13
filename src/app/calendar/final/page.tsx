@@ -401,7 +401,7 @@ export default function FinalCalendarPage() {
       let evs = events;
       if (!evs.length) {
         try {
-          const all: TripItem[] = getTrips();
+          const all: TripItem[] = await getSavedTripsDb();
           const list: EventItem[] = [];
           const seenFlights = new Set<string>();
           all.forEach((t) => {
@@ -907,7 +907,8 @@ export default function FinalCalendarPage() {
   
 
   useEffect(() => {
-    try {
+    (async () => {
+      try {
       const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (rawSaved) {
         try {
@@ -915,7 +916,7 @@ export default function FinalCalendarPage() {
           if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
         } catch {}
       }
-      const all: TripItem[] = getTrips();
+      const all: TripItem[] = await getSavedTripsDb();
       let trips: TripItem[] = [];
       let tsObj: TripSearchPersist | null = null;
       try {
@@ -969,8 +970,8 @@ export default function FinalCalendarPage() {
         } else if (tsObj?.outbound && tsObj?.inbound) {
           const ob = tsObj.outbound;
           const ib = tsObj.inbound;
-          if (ob?.origin && ob?.destination && ob?.date) list.push({ type: "flight", label: `Voo de ida: ${ob.origin} → ${ob.destination}`, date: ob.date, time: ob.time || undefined, meta: { leg: "outbound", origin: ob.origin, destination: ob.destination, date: ob.date, departureTime: ob.time || undefined } });
-          if (ib?.origin && ib?.destination && ib?.date) list.push({ type: "flight", label: `Voo de volta: ${ib.origin} → ${ib.destination}`, date: ib.date, time: ib.time || undefined, meta: { leg: "inbound", origin: ib.origin, destination: ib.destination, date: ib.date, departureTime: ib.time || undefined } });
+          if (ob?.origin && ob?.destination && ob?.date) list.push({ type: "flight", label: `Voo de ida: ${ob.origin} → ${ob.destination}${ob.flightNumber ? ` • ${ob.flightNumber}` : ""}`, date: ob.date, time: ob.time || undefined, meta: { leg: "outbound", origin: ob.origin, destination: ob.destination, date: ob.date, departureTime: ob.time || undefined, flightNumber: ob.flightNumber || undefined } });
+          if (ib?.origin && ib?.destination && ib?.date) list.push({ type: "flight", label: `Voo de volta: ${ib.origin} → ${ib.destination}${ib.flightNumber ? ` • ${ib.flightNumber}` : ""}`, date: ib.date, time: ib.time || undefined, meta: { leg: "inbound", origin: ib.origin, destination: ib.destination, date: ib.date, departureTime: ib.time || undefined, flightNumber: ib.flightNumber || undefined } });
         }
       }
       const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
@@ -1010,7 +1011,8 @@ export default function FinalCalendarPage() {
         return true;
       });
       setEvents(unique);
-    } catch {}
+      } catch {}
+    })();
   }, []);
 
   async function openTransportDrawer(item: EventItem) {
@@ -2568,6 +2570,7 @@ export default function FinalCalendarPage() {
                     info.push(`Rome2Rio: ${r2r}`);
                     info.push(`Uber: ${uber}`);
                     if (!isAndroid) info.push(`Chegar no aeroporto: 3h antes do voo.`);
+                    if (fn?.flightNumber) info.push(`Número/Localizador: ${fn.flightNumber}`);
                   }
                 } else if (ev.type === "transport") {
                   const seg = ev.meta as TransportSegmentMeta;
