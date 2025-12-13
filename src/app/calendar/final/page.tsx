@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { Calendar, isCapAndroid } from "@/capacitor/calendar";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { getTrips, TripItem, FlightNote } from "@/lib/trips-store";
-import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb, addTrip as addTripDb, getRefAttachments } from "@/lib/trips-db";
+import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, migrateFromLocalStorage as migrateFromLocalStorageDb, initDatabase as initDatabaseDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb, addTrip as addTripDb, getRefAttachments, getTripAttachments } from "@/lib/trips-db";
 import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
@@ -92,6 +92,7 @@ export default function FinalCalendarPage() {
   const [returnInfo, setReturnInfo] = useState<{ city?: string; address?: string; airportName?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string; r2rUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [returnFiles, setReturnFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const [outboundFiles, setOutboundFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
+  const [inboundFiles, setInboundFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const returnTimer = useRef<number | null>(null);
   const transportToastShown = useRef<{ arrival: boolean; return: boolean }>({ arrival: false, return: false });
   const [sideOpen, setSideOpen] = useState(false);
@@ -235,6 +236,20 @@ export default function FinalCalendarPage() {
       })();
     } catch {}
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!currentTripId) return;
+        const [ob, ib] = await Promise.all([
+          getTripAttachments(currentTripId, "outbound"),
+          getTripAttachments(currentTripId, "inbound"),
+        ]);
+        setOutboundFiles(ob as Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>);
+        setInboundFiles(ib as Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>);
+      } catch {}
+    })();
+  }, [currentTripId]);
 
   useEffect(() => {
     (async () => {
@@ -2667,12 +2682,24 @@ export default function FinalCalendarPage() {
                 {sorted.map((ev, idx) => {
                   const accent = ev.type === "flight" ? "border-l-[#007AFF]" : ev.type === "stay" ? "border-l-[#febb02]" : ev.type === "transport" ? "border-l-[#007AFF]" : "border-l-[#34c759]";
                   const icon = ev.type === "flight" ? "local_airport" : ev.type === "stay" ? "home" : ev.type === "transport" ? "transfer_within_a_station" : "event";
+                  const kind = (ev.meta as { kind?: string })?.kind;
+                  const showTime = ev.type === "stay" ? (kind === "checkin" ? "14:00" : kind === "checkout" ? "11:00" : (ev.time || "")) : (ev.time || "");
+                  const stayFiles = (() => {
+                    const m = ev.meta as { city?: string; address?: string; kind?: string } | undefined;
+                    if (!m) return [] as SavedFile[];
+                    const match = summaryCities.find((c) => {
+                      const byName = c.name && m.city && c.name === m.city;
+                      const byAddr = c.address && m.address && c.address === m.address;
+                      return Boolean(byName || byAddr);
+                    });
+                    return (match?.stayFiles || []) as SavedFile[];
+                  })();
                   return (
                     <li key={`ev-${idx}`} className={`rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 flex items-start justify-between gap-3 border-l-4 ${accent}`}>
                       <div className="leading-relaxed">
                         <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
                           <span className="material-symbols-outlined text-[16px]">{icon}</span>
-                          <span>{ev.date} {ev.time || ""}</span>
+                          <span>{ev.date} {showTime}</span>
                         </div>
                         <div className="mt-1">{ev.label}</div>
                       </div>
@@ -2681,6 +2708,29 @@ export default function FinalCalendarPage() {
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
                             <span>{t("airport")}</span>
+                          </Button>
+                        ) : null}
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" && outboundFiles.length ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="px-2 py-1 text-xs rounded-md gap-1"
+                            onClick={async () => {
+                              setDocTitle(t("outboundFlight"));
+                              const mod = await import("@/lib/attachments-store");
+                              const resolved = await Promise.all(outboundFiles.map(async (f) => {
+                                if (!f.dataUrl && f.id) {
+                                  const url = await mod.getObjectUrl(f.id);
+                                  return { ...f, dataUrl: url || undefined };
+                                }
+                                return f;
+                              }));
+                              setDocFiles(resolved);
+                              setDocOpen(true);
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">description</span>
+                            <span>Docs</span>
                           </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" ? (
@@ -2695,11 +2745,11 @@ export default function FinalCalendarPage() {
                             <span>{t("returnAirportLabel")}</span>
                           </Button>
                         ) : null}
-                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature && returnFiles.length ? (
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature && inboundFiles.length ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
                             setDocTitle(returnInfo?.airportName || t("inboundFlight"));
                             const mod = await import("@/lib/attachments-store");
-                            const resolved = await Promise.all(returnFiles.map(async (f) => {
+                            const resolved = await Promise.all(inboundFiles.map(async (f) => {
                               if (!f.dataUrl && f.id) {
                                 const url = await mod.getObjectUrl(f.id);
                                 return { ...f, dataUrl: url || undefined };
@@ -2751,6 +2801,30 @@ export default function FinalCalendarPage() {
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">home</span>
                             <span>{t("accommodationDialogTitle")}</span>
+                          </Button>
+                        ) : null}
+                        {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" && stayFiles.length ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="px-2 py-1 text-xs rounded-md gap-1"
+                            onClick={async () => {
+                              const m = ev.meta as { city?: string; address?: string; kind?: string } | undefined;
+                              setDocTitle(m?.city || m?.address || t("accommodationDialogTitle"));
+                              const mod = await import("@/lib/attachments-store");
+                              const resolved = await Promise.all(stayFiles.map(async (f) => {
+                                if (!f.dataUrl && f.id) {
+                                  const url = await mod.getObjectUrl(f.id);
+                                  return { ...f, dataUrl: url || undefined };
+                                }
+                                return f;
+                              }));
+                              setDocFiles(resolved);
+                              setDocOpen(true);
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">description</span>
+                            <span>Docs</span>
                           </Button>
                         ) : null}
                         

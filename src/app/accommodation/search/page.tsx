@@ -25,6 +25,7 @@ export default function AccommodationSearchPage() {
   }, [tripSearch]);
   const [city, setCity] = useState(initialCity);
   const lastToastId = useRef<number | null>(null);
+  const linksToastShown = useRef(false);
   const showToast = useCallback((message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean; key?: string }) => {
     if (lastToastId.current) dismiss(lastToastId.current);
     const id = show(message, opts);
@@ -275,8 +276,11 @@ export default function AccommodationSearchPage() {
 
   useEffect(() => {
     if (cityDetailIdx === null) return;
-    showToast(t("useLinksSaveDocsHint"), { duration: 8000 });
-  }, [cityDetailIdx, showToast]);
+    if (!linksToastShown.current) {
+      showToast(t("useLinksSaveDocsHint"), { key: "useLinksSaveDocsHint" });
+      linksToastShown.current = true;
+    }
+  }, [cityDetailIdx, showToast, t]);
 
   useEffect(() => {
     if (guideStep) {
