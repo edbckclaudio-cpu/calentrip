@@ -134,7 +134,7 @@ export default function FinalCalendarPage() {
       setFilesList(r?.files || []);
       setFilesDrawerOpen(true);
     } catch { setFilesList([]); setFilesDrawerOpen(true); }
-  }, [show]);
+  }, [show, t]);
 
   async function loadFile(name: string) {
     try {
@@ -928,7 +928,13 @@ export default function FinalCalendarPage() {
             const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
             if (!seenFlights.has(sig)) {
               seenFlights.add(sig);
-              list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
+              list.push({
+                type: "flight",
+                label: `${legLabel}: ${fn.date} • ${(fn.departureTime || "").trim()}${fn.arrivalTime ? ` → ${fn.arrivalTime}${fn.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${fn.origin} → ${fn.destination}`,
+                date: fn.date,
+                time: fn.departureTime || undefined,
+                meta: fn
+              });
             }
             // Removemos a criação de eventos de chegada para evitar duplicação visual
           });
@@ -958,12 +964,11 @@ export default function FinalCalendarPage() {
         const cityName = c.name || `Cidade ${i + 1}`;
         const addr = c.address || "(endereço não informado)";
         if (c.checkin) {
-          let ciTime = i === 0 ? "23:59" : "17:00";
-          try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+          const ciTime = "14:00";
           list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
         }
         if (c.checkout) {
-          list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+          list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
         }
       });
       for (let i = 0; i < cities.length - 1; i++) {
@@ -2306,8 +2311,21 @@ export default function FinalCalendarPage() {
               } catch {}
             }
             events.forEach((e, idx) => {
-              const start = parseDT(e.date, e.time);
-              const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
+              let start = parseDT(e.date, e.time);
+              let end: Date | null = start ? new Date(start.getTime() + 60 * 60 * 1000) : null;
+              if (e.type === "flight") {
+                const fn = e.meta as FlightNote | undefined;
+                if (fn) {
+                  start = parseDT(fn.date, fn.departureTime || e.time);
+                  if (fn.arrivalTime) {
+                    const arr = parseDT(fn.date, fn.arrivalTime);
+                    if (arr) {
+                      const extra = fn.arrivalNextDay ? 24 * 60 * 60 * 1000 : 0;
+                      end = new Date(arr.getTime() + extra);
+                    }
+                  }
+                }
+              }
               const desc = e.label;
               lines.push("BEGIN:VEVENT");
               const uid = `ev-${idx}-${start ? fmt(start) : String(Date.now())}@calentrip`;
@@ -2417,6 +2435,26 @@ export default function FinalCalendarPage() {
                 }
                 const rich = isAndroid ? limit(info.join("\n"), 320) : limit(info.join("\n"), 600);
                 lines.push(`DESCRIPTION:${escText(rich)}`);
+              }
+              if (!isAndroid) {
+                if (e.type === "flight") {
+                  lines.push("BEGIN:VALARM");
+                  lines.push("ACTION:DISPLAY");
+                  lines.push("DESCRIPTION:Lembrete do voo");
+                  lines.push("TRIGGER:-P1D");
+                  lines.push("END:VALARM");
+                  lines.push("BEGIN:VALARM");
+                  lines.push("ACTION:DISPLAY");
+                  lines.push("DESCRIPTION:Lembrete do voo");
+                  lines.push("TRIGGER:-PT60M");
+                  lines.push("END:VALARM");
+                } else if (e.type === "activity" || e.type === "restaurant") {
+                  lines.push("BEGIN:VALARM");
+                  lines.push("ACTION:DISPLAY");
+                  lines.push("DESCRIPTION:Lembrete do evento");
+                  lines.push("TRIGGER:-PT60M");
+                  lines.push("END:VALARM");
+                }
               }
               lines.push("END:VEVENT");
               if (!minimalICS && extraCall) {
@@ -2683,7 +2721,11 @@ export default function FinalCalendarPage() {
                   const accent = ev.type === "flight" ? "border-l-[#007AFF]" : ev.type === "stay" ? "border-l-[#febb02]" : ev.type === "transport" ? "border-l-[#007AFF]" : "border-l-[#34c759]";
                   const icon = ev.type === "flight" ? "local_airport" : ev.type === "stay" ? "home" : ev.type === "transport" ? "transfer_within_a_station" : "event";
                   const kind = (ev.meta as { kind?: string })?.kind;
-                  const showTime = ev.type === "stay" ? (kind === "checkin" ? "14:00" : kind === "checkout" ? "11:00" : (ev.time || "")) : (ev.time || "");
+                  const showTime = ev.type === "stay"
+                    ? (kind === "checkin" ? "14:00" : kind === "checkout" ? "11:00" : (ev.time || ""))
+                    : ev.type === "flight"
+                      ? `${((ev.meta as FlightNote)?.departureTime || ev.time || "")}${(ev.meta as FlightNote)?.arrivalTime ? ` → ${(ev.meta as FlightNote)?.arrivalTime}${(ev.meta as FlightNote)?.arrivalNextDay ? " (+1d)" : ""}` : ""}`
+                      : (ev.time || "");
                   const stayFiles = (() => {
                     const m = ev.meta as { city?: string; address?: string; kind?: string } | undefined;
                     if (!m) return [] as SavedFile[];
@@ -2710,11 +2752,12 @@ export default function FinalCalendarPage() {
                             <span>{t("airport")}</span>
                           </Button>
                         ) : null}
-                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" && outboundFiles.length ? (
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" ? (
                           <Button
                             type="button"
                             variant="outline"
                             className="px-2 py-1 text-xs rounded-md gap-1"
+                            disabled={!outboundFiles.length}
                             onClick={async () => {
                               setDocTitle(t("outboundFlight"));
                               const mod = await import("@/lib/attachments-store");
@@ -2745,7 +2788,7 @@ export default function FinalCalendarPage() {
                             <span>{t("returnAirportLabel")}</span>
                           </Button>
                         ) : null}
-                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature && inboundFiles.length ? (
+                        {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
                             setDocTitle(returnInfo?.airportName || t("inboundFlight"));
                             const mod = await import("@/lib/attachments-store");

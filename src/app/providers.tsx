@@ -39,11 +39,12 @@ export default function Providers({ children }: { children: ReactNode }) {
       const already = typeof window !== "undefined" ? localStorage.getItem(key) === "1" : false;
       const check = async () => {
         try {
-          const fontsReady = typeof document !== "undefined" && (document as any).fonts ? await Promise.race([
-            (document as any).fonts.ready.then(() => true),
+          const fontsObj = typeof document !== "undefined" ? (document as unknown as { fonts?: { ready: Promise<void>; check?: (font: string) => boolean } }).fonts : undefined;
+          const fontsReady = fontsObj ? await Promise.race([
+            fontsObj.ready.then(() => true),
             new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500)),
           ]) : true;
-          const symbolsOk = typeof document !== "undefined" && (document as any).fonts?.check ? (document as any).fonts.check("12px 'Material Symbols Outlined'") : true;
+          const symbolsOk = fontsObj?.check ? fontsObj.check("12px 'Material Symbols Outlined'") : true;
           if ((!fontsReady || !symbolsOk) && !already) {
             try { localStorage.setItem(key, "1"); } catch {}
             try { window.location.reload(); } catch {}

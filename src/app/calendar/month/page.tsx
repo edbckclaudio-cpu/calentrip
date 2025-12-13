@@ -249,8 +249,8 @@ export default function MonthCalendarPage() {
         cities.forEach((c, i) => {
           const cityName = c.name || `Cidade ${i + 1}`;
           const addr = c.address || "(endereço não informado)";
-          if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "17:00", meta: { city: cityName, address: addr, kind: "checkin" } });
-          if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "09:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+          if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
+          if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
         });
         const rawRecs = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
         const recs: RecordItem[] = rawRecs ? (JSON.parse(rawRecs) as RecordItem[]) : [];
