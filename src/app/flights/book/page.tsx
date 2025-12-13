@@ -672,8 +672,11 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                 }}
               />
             <div className="flex items-center gap-2">
-              <Button type="button" onClick={() => document.getElementById(`file-${i}`)?.click()}>{t("attachProofButton")}</Button>
-              <span className="text-xs text-zinc-600">{t("attachProofHelp")}</span>
+              <Button type="button" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => document.getElementById(`file-${i}`)?.click()}>
+                <span className="material-symbols-outlined text-[16px]">attach_file</span>
+                <span>{t("attachProofButton")}</span>
+              </Button>
+              <span className="text-[10px] text-zinc-600">{t("attachProofHelp")}</span>
             </div>
             {files[i]?.length ? (
               <ul className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
