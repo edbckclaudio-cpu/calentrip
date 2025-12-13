@@ -166,9 +166,19 @@ export default function FinalCalendarPage() {
       } catch {}
       const evs = await getTripEventsDb(String(id));
       if (Array.isArray(evs) && evs.length) {
+        let notes: FlightNote[] = [];
+        try {
+          const trips: TripItem[] = await getSavedTripsDb();
+          const curTrip = trips.find((t) => t.id === id);
+          notes = (curTrip?.flightNotes || []) as FlightNote[];
+        } catch {}
         const list = evs.map((e: { type?: string; label?: string; name?: string; date: string; time?: string }) => {
           const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
-          return { type: typeMap as EventItem["type"], label: e.label || e.name || "", date: e.date, time: e.time || undefined };
+          const meta = typeMap === "flight" ? notes.find((n) => n.date === e.date) : undefined;
+          const time = (typeMap === "flight" && meta?.departureTime) ? meta.departureTime : (e.time || undefined);
+          let label = e.label || e.name || "";
+          if (typeMap === "flight" && meta?.flightNumber && !label.includes(meta.flightNumber)) label = `${label} • ${meta.flightNumber}`;
+          return { type: typeMap as EventItem["type"], label, date: e.date, time, meta };
         });
         setCurrentTripId(String(id));
         setEvents(list);
@@ -276,9 +286,14 @@ export default function FinalCalendarPage() {
         setCurrentTripId(String(target.id));
         const dbEvents = await getTripEventsDb(String(target.id));
         if (Array.isArray(dbEvents) && dbEvents.length) {
+          const notes: FlightNote[] = (target.flightNotes || []) as FlightNote[];
           const list = dbEvents.map((e: { type?: string; label?: string; name?: string; date: string; time?: string }) => {
             const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
-            return { type: typeMap as EventItem["type"], label: e.label || e.name || "", date: e.date, time: e.time || undefined };
+            const meta = typeMap === "flight" ? notes.find((n) => n.date === e.date) : undefined;
+            const time = (typeMap === "flight" && meta?.departureTime) ? meta.departureTime : (e.time || undefined);
+            let label = e.label || e.name || "";
+            if (typeMap === "flight" && meta?.flightNumber && !label.includes(meta.flightNumber)) label = `${label} • ${meta.flightNumber}`;
+            return { type: typeMap as EventItem["type"], label, date: e.date, time, meta };
           });
           setEvents(list);
         }
@@ -930,7 +945,7 @@ export default function FinalCalendarPage() {
               seenFlights.add(sig);
               list.push({
                 type: "flight",
-                label: `${legLabel}: ${fn.date} • ${(fn.departureTime || "").trim()}${fn.arrivalTime ? ` → ${fn.arrivalTime}${fn.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${fn.origin} → ${fn.destination}`,
+                label: `${legLabel}: ${fn.date} • ${(fn.departureTime || "").trim()}${fn.arrivalTime ? ` → ${fn.arrivalTime}${fn.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${fn.origin} → ${fn.destination}${fn.flightNumber ? ` • ${fn.flightNumber}` : ""}`,
                 date: fn.date,
                 time: fn.departureTime || undefined,
                 meta: fn
@@ -947,8 +962,8 @@ export default function FinalCalendarPage() {
           const d = tsObj.destination?.trim();
           const dd = tsObj.departDate?.trim();
           const rd = tsObj.returnDate?.trim();
-          if (o && d && dd) list.push({ type: "flight", label: `Voo de ida: ${o} → ${d}` , date: dd, time: tsObj.departTime || undefined, meta: { leg: "outbound", origin: o, destination: d, date: dd, departureTime: tsObj.departTime || undefined } });
-          if (o && d && rd) list.push({ type: "flight", label: `Voo de volta: ${d} → ${o}` , date: rd, time: tsObj.returnTime || undefined, meta: { leg: "inbound", origin: d, destination: o, date: rd, departureTime: tsObj.returnTime || undefined } });
+          if (o && d && dd) list.push({ type: "flight", label: `Voo de ida: ${o} → ${d}${tsObj.departFlightNumber ? ` • ${tsObj.departFlightNumber}` : ""}` , date: dd, time: tsObj.departTime || undefined, meta: { leg: "outbound", origin: o, destination: d, date: dd, departureTime: tsObj.departTime || undefined, flightNumber: tsObj.departFlightNumber || undefined } });
+          if (o && d && rd) list.push({ type: "flight", label: `Voo de volta: ${d} → ${o}${tsObj.returnFlightNumber ? ` • ${tsObj.returnFlightNumber}` : ""}` , date: rd, time: tsObj.returnTime || undefined, meta: { leg: "inbound", origin: d, destination: o, date: rd, departureTime: tsObj.returnTime || undefined, flightNumber: tsObj.returnFlightNumber || undefined } });
         } else if (tsObj?.outbound && tsObj?.inbound) {
           const ob = tsObj.outbound;
           const ib = tsObj.inbound;
@@ -2389,6 +2404,13 @@ export default function FinalCalendarPage() {
                 info.push(desc);
                 if (e.type === "flight") {
                   const fn = e.meta as FlightNote | undefined;
+                  const dep = (fn?.departureTime || e.time || "").trim();
+                  const arr = (fn?.arrivalTime || "").trim();
+                  const next = fn?.arrivalNextDay ? " (+1d)" : "";
+                  info.push(`Voo: ${fn?.origin || ""} → ${fn?.destination || ""}`);
+                  if (dep) info.push(`Partida: ${dep}`);
+                  if (arr) info.push(`Chegada: ${arr}${next}`);
+                  if (fn?.flightNumber) info.push(`Número/Localizador: ${fn.flightNumber}`);
                   if (fn?.leg === "outbound") {
                     const destName = `${fn?.origin || ""} airport`;
                     const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destName)}`;

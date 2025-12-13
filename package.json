@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:export": "next build && next export",
+    "build:export": "next build",
     "start": "next start",
     "lint": "eslint \"{src,calentrip/src}/**/*.{ts,tsx}\"",
     "deploy:vercel": "npx vercel --prod",
