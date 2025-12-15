@@ -116,6 +116,18 @@ export default function FinalCalendarPage() {
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
 
+  useEffect(() => {
+    try {
+      if (events.length) return;
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+      const recs: Array<{ kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: SavedFile[] }> = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(recs) && recs.length) {
+        const list = recs.map((r) => ({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
+        setEvents((prev) => (prev.length ? prev : list));
+      }
+    } catch {}
+  }, []);
+
   async function saveCalendarToFile() {
     try {
       if (Capacitor.getPlatform() !== "android") { show(t("androidOnlyMsg"), { variant: "info" }); return; }
@@ -199,7 +211,7 @@ export default function FinalCalendarPage() {
       const all: TripItem[] = await getSavedTripsDb();
       let target: TripItem | null = null;
       try {
-        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+        const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
         const ts = raw ? JSON.parse(raw) : null;
         if (ts) {
           const isSame = ts.mode === "same";
@@ -224,7 +236,7 @@ export default function FinalCalendarPage() {
 
   useEffect(() => {
     try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+      const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
       const ts = raw ? JSON.parse(raw) : null;
       if (!ts) return;
       const isSame = ts.mode === "same";
@@ -271,7 +283,7 @@ export default function FinalCalendarPage() {
         const all: TripItem[] = await getSavedTripsDb();
         let target: TripItem | null = null;
         try {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
           const ts = raw ? JSON.parse(raw) : null;
           if (ts) {
             const isSame = ts.mode === "same";
@@ -283,24 +295,240 @@ export default function FinalCalendarPage() {
             target = all.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
           }
         } catch {}
+        function readTripSearch(): TripSearchPersist | null {
+          try {
+            const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
+            return raw ? (JSON.parse(raw) as TripSearchPersist) : null;
+          } catch { return null; }
+        }
+        function timeForFlightNote(fn: FlightNote, label?: string): string | undefined {
+          if ((fn.departureTime || "").trim()) return (fn.departureTime || "").trim();
+          const ts = readTripSearch();
+          if (!ts) return undefined;
+          const leg = (label && label.startsWith("Voo de ida")) ? "outbound" : (label && label.startsWith("Voo de volta")) ? "inbound" : fn.leg;
+          if (ts.mode === "same") {
+            return leg === "outbound" ? (ts.departTime || undefined) : leg === "inbound" ? (ts.returnTime || undefined) : undefined;
+          } else {
+            return leg === "outbound" ? (ts.outbound?.time || undefined) : leg === "inbound" ? (ts.inbound?.time || undefined) : undefined;
+          }
+        }
+        async function composeFromLocal() {
+          try {
+            const list: EventItem[] = [];
+            const tripsDb: TripItem[] = await getSavedTripsDb();
+            const tripsStore: TripItem[] = getTrips();
+            function pickTarget(): TripItem | null {
+              try {
+                const ts = readTripSearch();
+                if (ts) {
+                  const isSame = ts.mode === "same";
+                  const origin = isSame ? ts.origin : ts.outbound?.origin;
+                  const destination = isSame ? ts.destination : ts.outbound?.destination;
+                  const date = isSame ? ts.departDate : ts.outbound?.date;
+                  const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+                  const title = origin && destination ? `${origin} → ${destination}` : "";
+                  const dbMatch = tripsDb.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+                  if (dbMatch) return dbMatch;
+                  const storeMatch = tripsStore.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+                  if (storeMatch) return storeMatch;
+                }
+              } catch {}
+              const active = tripsDb.find((t) => t.reachedFinalCalendar) || null;
+              return active || (tripsDb.length ? tripsDb[0] : (tripsStore.length ? tripsStore[0] : null));
+            }
+            const targetTrip = pickTarget();
+            const notes = (targetTrip?.flightNotes || []) as FlightNote[];
+            const seenFlights = new Set<string>();
+            notes.forEach((fn) => {
+              const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
+              const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
+              if (!seenFlights.has(sig)) {
+                seenFlights.add(sig);
+                const dep = timeForFlightNote(fn, legLabel) || (fn.departureTime || "").trim();
+                const arr = fn.arrivalTime || "";
+                list.push({ type: "flight", label: `${legLabel}: ${fn.date} • ${dep}${arr ? ` → ${arr}${fn.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${fn.origin} → ${fn.destination}${fn.flightNumber ? ` • ${fn.flightNumber}` : ""}`, date: fn.date, time: dep || undefined, meta: fn });
+              }
+            });
+            const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+            const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
+            const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
+            const allowedCities = new Set<string>(cities.map((c, i) => (c.name || `Cidade ${i + 1}`)));
+            cities.forEach((c, i) => {
+              const cityName = c.name || `Cidade ${i + 1}`;
+              const addr = c.address || "(endereço não informado)";
+              if (c.checkin) {
+                let ciTime = i === 0 ? "23:59" : "17:00";
+                try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+                list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
+              }
+              if (c.checkout) {
+                list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+              }
+            });
+            for (let i = 0; i < cities.length - 1; i++) {
+              const c = cities[i];
+              const n = cities[i + 1];
+              const seg = c.transportToNext;
+              if (seg) {
+                const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+                const date = c.checkout || n?.checkin || "";
+                const time = seg.depTime || "11:00";
+                list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
+              }
+            }
+            const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+            const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
+            (recs || []).forEach((r) => {
+              if (allowedCities.size && !allowedCities.has(r.cityName)) return;
+              list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r });
+            });
+            const seen = new Set<string>();
+            const dedup = list.filter((e) => {
+              const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            if (dedup.length) {
+              setEvents((prev) => {
+                const s = new Set<string>();
+                const merged = [...prev, ...dedup];
+                return merged.filter((e) => {
+                  const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+                  if (s.has(key)) return false;
+                  s.add(key);
+                  return true;
+                });
+              });
+            }
+          } catch {}
+        }
         if (!target) target = all.find((t) => t.reachedFinalCalendar) || (all.length ? all[0] : null);
-        if (!target) return;
+        if (!target) { await composeFromLocal(); return; }
         setCurrentTripId(String(target.id));
         const dbEvents = await getTripEventsDb(String(target.id));
         if (Array.isArray(dbEvents) && dbEvents.length) {
           const notes: FlightNote[] = (target.flightNotes || []) as FlightNote[];
           const list = dbEvents.map((e: { type?: string; label?: string; name?: string; date: string; time?: string }) => {
             const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
-            const meta = typeMap === "flight" ? notes.find((n) => n.date === e.date) : undefined;
-            const time = (typeMap === "flight" && meta?.departureTime) ? meta.departureTime : (e.time || undefined);
             let label = e.label || e.name || "";
+            let meta: FlightNote | undefined;
+            if (typeMap === "flight") {
+              const leg = label.startsWith("Voo de ida") ? "outbound" : label.startsWith("Voo de volta") ? "inbound" : undefined;
+              const strict = notes.find((n) => n.date === e.date && (!leg || n.leg === leg) && label.includes(n.origin) && label.includes(n.destination));
+              const byLeg = strict || notes.find((n) => n.date === e.date && (!leg || n.leg === leg));
+              meta = byLeg || notes.find((n) => n.date === e.date);
+            }
+            let time: string | undefined;
+            if (typeMap === "flight") {
+              time = meta?.departureTime || (e.time || undefined) || (meta ? timeForFlightNote(meta, label) : undefined);
+              if (!time && label) {
+                const afterDate = label.split(" • ").slice(1)[0] || "";
+                const m = afterDate.match(/\b(\d{2}:\d{2})\b/);
+                if (m) time = m[1];
+              }
+            } else {
+              time = e.time || undefined;
+            }
             if (typeMap === "flight" && meta?.flightNumber && !label.includes(meta.flightNumber)) label = `${label} • ${meta.flightNumber}`;
             return { type: typeMap as EventItem["type"], label, date: e.date, time, meta };
           });
-          setEvents(list);
+          setEvents((prev) => {
+            const s = new Set<string>();
+            const merged = [...prev, ...list];
+            return merged.filter((e) => {
+              const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+              if (s.has(key)) return false;
+              s.add(key);
+              return true;
+            });
+          });
+        } else {
+          const notes: FlightNote[] = (target.flightNotes || []) as FlightNote[];
+          const list: EventItem[] = [];
+          const seenFlights = new Set<string>();
+          notes.forEach((fn) => {
+            const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
+            const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
+            if (!seenFlights.has(sig)) {
+              seenFlights.add(sig);
+              const dep = timeForFlightNote(fn, legLabel) || (fn.departureTime || "").trim();
+              const arr = fn.arrivalTime || "";
+              list.push({
+                type: "flight",
+                label: `${legLabel}: ${fn.date} • ${dep}${arr ? ` → ${arr}${fn.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${fn.origin} → ${fn.destination}${fn.flightNumber ? ` • ${fn.flightNumber}` : ""}`,
+                date: fn.date,
+                time: dep || undefined,
+                meta: fn
+              });
+            }
+          });
+          try {
+            const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+            const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
+            const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
+            cities.forEach((c, i) => {
+              const cityName = c.name || `Cidade ${i + 1}`;
+              const addr = c.address || "(endereço não informado)";
+              if (c.checkin) {
+                let ciTime = i === 0 ? "23:59" : "17:00";
+                try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+                list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
+              }
+              if (c.checkout) {
+                list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+              }
+            });
+            for (let i = 0; i < cities.length - 1; i++) {
+              const c = cities[i];
+              const n = cities[i + 1];
+              const seg = c.transportToNext;
+              if (seg) {
+                const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+                const date = c.checkout || n?.checkin || "";
+                const time = seg.depTime || "11:00";
+                list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
+              }
+            }
+            const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+            const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
+            (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
+          } catch {}
+          const seen = new Set<string>();
+          const dedup = list.filter((e) => {
+            const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          if (dedup.length) {
+            setEvents((prev) => {
+              const s = new Set<string>();
+              const merged = [...prev, ...dedup];
+              return merged.filter((e) => {
+                const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+                if (s.has(key)) return false;
+                s.add(key);
+                return true;
+              });
+            });
+          } else {
+            await composeFromLocal();
+          }
         }
       } catch {}
     })();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const id = setTimeout(() => {
+        try {
+          (async () => { try { await initDatabaseDb(); try { await migrateFromLocalStorageDb(); } catch {}; await composeFromLocal(); } catch {} })();
+        } catch {}
+      }, 600);
+      return () => { try { clearTimeout(id); } catch {} };
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -352,7 +580,18 @@ export default function FinalCalendarPage() {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (auto === "1" && raw) {
         const sc = JSON.parse(raw) as { name?: string; events?: EventItem[] };
-        if (sc?.events && sc.events.length) setEvents(sc.events);
+        if (sc?.events && sc.events.length) {
+          setEvents((prev) => {
+            const s = new Set<string>();
+            const merged = [...prev, ...sc.events];
+            return merged.filter((e) => {
+              const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+              if (s.has(key)) return false;
+              s.add(key);
+              return true;
+            });
+          });
+        }
         localStorage.removeItem("calentrip:auto_load_saved");
       }
     } catch {}
@@ -385,7 +624,7 @@ export default function FinalCalendarPage() {
       let name = (fixedName || rawName || "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
       if (!name) {
         try {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
           const ts = raw ? JSON.parse(raw) : null;
           if (ts) {
             const isSame = ts.mode === "same";
@@ -401,7 +640,7 @@ export default function FinalCalendarPage() {
       let evs = events;
       if (!evs.length) {
         try {
-          const all: TripItem[] = await getSavedTripsDb();
+          const all: TripItem[] = getTrips();
           const list: EventItem[] = [];
           const seenFlights = new Set<string>();
           all.forEach((t) => {
@@ -442,7 +681,7 @@ export default function FinalCalendarPage() {
           }
           const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
           const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
-          (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+          (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
           const seen = new Set<string>();
           evs = list.filter((e) => {
             const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
@@ -508,7 +747,19 @@ export default function FinalCalendarPage() {
 
   const sorted = useMemo(() => {
     const dateOnly = (d: string) => (d || "").replace(/\//g, "-");
-    const arr = [...events].sort((a, b) => {
+    const arr = [...events].map((e) => {
+      if (e.type === "activity" || e.type === "restaurant") {
+        const rec = e.meta as RecordItem | undefined;
+        const city = rec?.cityName || "";
+        if (city && !e.label.includes(city)) {
+          const prefix = e.type === "activity" ? "Atividade" : "Restaurante";
+          const after = (e.label.split(":").slice(1).join(":") || rec?.title || "").trim();
+          const label = `${prefix}: ${after} (${city})`;
+          return { ...e, label };
+        }
+      }
+      return e;
+    }).sort((a, b) => {
       const da = dateOnly(a.date);
       const db = dateOnly(b.date);
       if (da !== db) return da.localeCompare(db);
@@ -913,14 +1164,26 @@ export default function FinalCalendarPage() {
       if (rawSaved) {
         try {
           const sc = JSON.parse(rawSaved) as { events?: EventItem[] };
-          if (sc?.events && sc.events.length) { setEvents(sc.events); return; }
+          if (sc?.events && sc.events.length) {
+            setEvents((prev) => {
+              const s = new Set<string>();
+              const merged = [...prev, ...sc.events];
+              return merged.filter((e) => {
+                const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+                if (s.has(key)) return false;
+                s.add(key);
+                return true;
+              });
+            });
+            // do not early return; allow composing local to merge flights/stays/entertainment
+          }
         } catch {}
       }
       const all: TripItem[] = await getSavedTripsDb();
       let trips: TripItem[] = [];
       let tsObj: TripSearchPersist | null = null;
       try {
-        const rawTs = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+        const rawTs = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
         tsObj = rawTs ? JSON.parse(rawTs) : null;
         if (tsObj) {
           const isSame = tsObj.mode === "same";
@@ -1002,7 +1265,7 @@ export default function FinalCalendarPage() {
       }
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
       const recs: RecordItem[] = raw ? JSON.parse(raw) : [];
-      (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+      (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
       const seen = new Set<string>();
       const unique = list.filter((e) => {
         const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
