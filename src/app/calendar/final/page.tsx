@@ -175,7 +175,6 @@ export default function FinalCalendarPage() {
       const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
       const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
       const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
-      const allowedCities = new Set<string>(cities.map((c, i) => (c.name || `Cidade ${i + 1}`)));
       cities.forEach((c, i) => {
         const cityName = c.name || `Cidade ${i + 1}`;
         const addr = c.address || "(endereço não informado)";
@@ -202,7 +201,6 @@ export default function FinalCalendarPage() {
       const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
       const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
       (recs || []).forEach((r) => {
-        if (allowedCities.size && !allowedCities.has(r.cityName)) return;
         list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r });
       });
       const seen = new Set<string>();
@@ -212,18 +210,7 @@ export default function FinalCalendarPage() {
         seen.add(key);
         return true;
       });
-      if (dedup.length) {
-        setEvents((prev) => {
-          const s = new Set<string>();
-          const merged = [...prev, ...dedup];
-          return merged.filter((e) => {
-            const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
-            if (s.has(key)) return false;
-            s.add(key);
-            return true;
-          });
-        });
-      }
+      setEvents(dedup);
     } catch {}
   }
 
