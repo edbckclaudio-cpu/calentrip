@@ -8,7 +8,8 @@ import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { CalendarInput } from "@/components/ui/calendar";
 import Link from "next/link";
-import { addTrip } from "@/lib/trips-store";
+import { addTrip as addTripStore } from "@/lib/trips-store";
+import { addTrip as addTripDb, updateTrip as updateTripDb, saveCalendarEvents as saveCalendarEventsDb } from "@/lib/trips-db";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { Select } from "@/components/ui/select";
@@ -569,11 +570,50 @@ export default function FlightsResultsPage() {
             const inv1 = dep1 && arrivalTimes[1] && toMinutes(arrivalTimes[1]) < toMinutes(dep1) && !arrivalNextDay[1];
             return Boolean(inv0 || inv1);
           })()}
-          onClick={() => {
+          onClick={async () => {
             const id = String(Date.now());
             const title = `${summary.legs[0].origin} → ${summary.legs[0].destination}`;
             const date = summary.legs[0].date;
-            addTrip({ id, title, date, passengers: summary.passengers });
+            const isSame = tripSearch.mode === "same";
+            const outboundNote = {
+              leg: "outbound" as const,
+              origin: isSame ? (tripSearch.origin || "") : (tripSearch.outbound.origin || ""),
+              destination: isSame ? (tripSearch.destination || "") : (tripSearch.outbound.destination || ""),
+              date: isSame ? (tripSearch.departDate || "") : (tripSearch.outbound.date || ""),
+              departureTime: isSame ? (tripSearch.departTime || "") : (tripSearch.outbound.time || ""),
+              arrivalTime: arrivalTimes[0] || "",
+              flightNumber: isSame ? (tripSearch.departFlightNumber || "") : (tripSearch.outbound.flightNumber || ""),
+              arrivalNextDay: Boolean(arrivalNextDay[0]),
+            };
+            const inboundNote = {
+              leg: "inbound" as const,
+              origin: isSame ? (tripSearch.destination || "") : (tripSearch.inbound.origin || ""),
+              destination: isSame ? (tripSearch.origin || "") : (tripSearch.inbound.destination || ""),
+              date: isSame ? (tripSearch.returnDate || "") : (tripSearch.inbound.date || ""),
+              departureTime: isSame ? (tripSearch.returnTime || "") : (tripSearch.inbound.time || ""),
+              arrivalTime: arrivalTimes[1] || "",
+              flightNumber: isSame ? (tripSearch.returnFlightNumber || "") : (tripSearch.inbound.flightNumber || ""),
+              arrivalNextDay: Boolean(arrivalNextDay[1]),
+            };
+            addTripDb({ id, title, date, passengers: summary.passengers, flightNotes: [outboundNote, inboundNote], reachedFinalCalendar: true });
+            const evs = [
+              {
+                name: "Voo de ida",
+                label: `Voo de ida: ${outboundNote.date} • ${(outboundNote.departureTime || "").trim()}${outboundNote.arrivalTime ? ` → ${outboundNote.arrivalTime}${outboundNote.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${outboundNote.origin} → ${outboundNote.destination}${outboundNote.flightNumber ? ` • ${outboundNote.flightNumber}` : ""}`,
+                date: outboundNote.date,
+                time: outboundNote.departureTime || "",
+                type: "flight",
+              },
+              {
+                name: "Voo de volta",
+                label: `Voo de volta: ${inboundNote.date} • ${(inboundNote.departureTime || "").trim()}${inboundNote.arrivalTime ? ` → ${inboundNote.arrivalTime}${inboundNote.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${inboundNote.origin} → ${inboundNote.destination}${inboundNote.flightNumber ? ` • ${inboundNote.flightNumber}` : ""}`,
+                date: inboundNote.date,
+                time: inboundNote.departureTime || "",
+                type: "flight",
+              },
+            ];
+            try { await saveCalendarEventsDb(id, evs as unknown as Array<{ name: string; label?: string; date: string; time?: string; address?: string; type?: string }>) } catch {}
+            try { await updateTripDb(id, { reachedFinalCalendar: true }); } catch {}
           }}
         >
           {t("saveTrip")}

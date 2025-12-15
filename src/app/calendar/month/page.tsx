@@ -187,7 +187,7 @@ export default function MonthCalendarPage() {
         const trips: TripItem[] = await getSavedTrips();
         let target: TripItem | null = null;
         try {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+          const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
           const ts = raw ? JSON.parse(raw) : null;
           if (ts) {
             const isSame = ts.mode === "same";
@@ -266,7 +266,7 @@ export default function MonthCalendarPage() {
   useEffect(() => {
     (async () => {
       try {
-        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+        const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
         const ts = raw ? JSON.parse(raw) : null;
         if (!ts) return;
         const isSame = ts.mode === "same";

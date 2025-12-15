@@ -48,15 +48,6 @@ export default function FlightsSearchPage() {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      try {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("calentrip_trip_summary");
-          localStorage.removeItem("calentrip:entertainment:records");
-          localStorage.removeItem("calentrip:saved_calendar");
-          localStorage.removeItem("calentrip:open_calendar_help");
-          localStorage.removeItem("calentrip:arrivalNextDay_outbound");
-        }
-      } catch {}
       setSame({ origin: "", destination: "", departDate: "", returnDate: "", passengers: { adults: 1, children: 0, infants: 0 } });
       setOutbound({ origin: "", destination: "", date: "" });
       setInbound({ origin: "", destination: "", date: "" });

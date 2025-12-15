@@ -10,6 +10,7 @@ export default function SWRegister() {
   useEffect(() => { showRef.current = show; }, [show]);
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
     const url = "/sw.js";
     try {

@@ -16,6 +16,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
   const ref = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const portalRef = useRef<HTMLDivElement | null>(null);
+  const overlayInputRef = useRef<HTMLInputElement | null>(null);
   const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const [dir, setDir] = useState<"down" | "up">("down");
   const [dropdownMaxH, setDropdownMaxH] = useState<number>(240);
@@ -87,6 +88,14 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
   }, [open, isMobile]);
 
   useEffect(() => {
+    if (!open || !isMobile) return;
+    const id = window.setTimeout(() => {
+      try { overlayInputRef.current?.focus(); } catch {}
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [open, isMobile]);
+
+  useEffect(() => {
     if (!open) return;
     const id = window.setTimeout(() => {
       try {
@@ -146,7 +155,7 @@ export default function AirportAutocomplete({ value, onSelect, placeholder, inva
             <div className="h-1.5 w-16 rounded-full bg-[var(--brand)] mx-auto mb-3" />
             <DialogHeader>Escolher aeroporto</DialogHeader>
             <div className="space-y-3 text-sm">
-              <Input autoFocus value={q} onChange={(e) => onChangeInput(e.target.value)} placeholder={placeholder ?? t("typeCityAirport")} />
+              <Input ref={overlayInputRef} autoFocus inputMode="text" value={q} onChange={(e) => onChangeInput(e.target.value)} placeholder={placeholder ?? t("typeCityAirport")} />
               <div className="rounded border overflow-auto" style={{ maxHeight: Math.round(mobileVh * 0.5) }}>
                 <ul className="divide-y">
                   {items.map((a) => (
