@@ -50,6 +50,9 @@ const dict: Record<Lang, Record<string, string>> = {
     flightNotesTitle: "Anotações de Voo",
     attachProofButton: "Anexar",
     attachProofHelp: "Foto/arquivo de passagem/localizador",
+    flightSummaryButton: "Resumo de voo",
+    flightSummaryDialogTitle: "Resumo de voo",
+    flightSummarySaved: "Resumo de voo salvo",
     summarySearch: "Resumo da Busca",
     bookFlightsTitle: "Buscar e comprar voo",
     bookFlightsSubtitle: "Escolha uma plataforma ou companhia aérea para concluir a compra.",
@@ -415,6 +418,7 @@ const dict: Record<Lang, Record<string, string>> = {
     restaurantAddedMsg: "Restaurante adicionado",
     itemUpdatedMsg: "Item atualizado",
     fileNamePrompt: "Nome do arquivo (até 32 letras/números/_)",
+    invalidTimeFormat: "Formato inválido (HH:MM)",
   },
   en: {
     appName: "CalenTrip",
@@ -462,6 +466,9 @@ const dict: Record<Lang, Record<string, string>> = {
     flightNotesTitle: "Flight Notes",
     attachProofButton: "Attach proof (photo or file)",
     attachProofHelp: "Use camera, documents or gallery to attach the ticket or locator.",
+    flightSummaryButton: "Flight summary",
+    flightSummaryDialogTitle: "Flight summary",
+    flightSummarySaved: "Flight summary saved",
     summarySearch: "Search Summary",
     bookFlightsTitle: "Search and buy flight",
     bookFlightsSubtitle: "Choose a platform or airline to complete your purchase.",
@@ -825,6 +832,7 @@ const dict: Record<Lang, Record<string, string>> = {
     restaurantAddedMsg: "Restaurant added",
     itemUpdatedMsg: "Item updated",
     fileNamePrompt: "File name (up to 32 letters/numbers/_)",
+    invalidTimeFormat: "Invalid format (HH:MM)",
   },
   es: {
     appName: "CalenTrip",
@@ -872,6 +880,9 @@ const dict: Record<Lang, Record<string, string>> = {
     flightNotesTitle: "Notas de vuelo",
     attachProofButton: "Adjuntar comprobante (foto o archivo)",
     attachProofHelp: "Usa la cámara, documentos o galería para adjuntar el billete o localizador.",
+    flightSummaryButton: "Resumen de vuelo",
+    flightSummaryDialogTitle: "Resumen de vuelo",
+    flightSummarySaved: "Resumen de vuelo guardado",
     summarySearch: "Resumen de búsqueda",
     bookFlightsTitle: "Buscar y comprar vuelo",
     bookFlightsSubtitle: "Elige una plataforma o aerolínea para completar la compra.",
@@ -1234,6 +1245,7 @@ const dict: Record<Lang, Record<string, string>> = {
     restaurantAddedMsg: "Restaurante añadido",
     itemUpdatedMsg: "Ítem actualizado",
     fileNamePrompt: "Nombre del archivo (hasta 32 letras/números/_)",
+    invalidTimeFormat: "Formato inválido (HH:MM)",
   },
 };
 

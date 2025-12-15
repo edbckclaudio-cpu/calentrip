@@ -18,8 +18,8 @@ import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, mig
 import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
-type SavedFile = { name: string; type: string; size: number; id?: string; dataUrl?: string };
-type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: SavedFile[] };
+ type SavedFile = { name: string; type: string; size: number; id?: string; dataUrl?: string };
+ type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: SavedFile[] };
 
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
@@ -1179,10 +1179,7 @@ export default function FinalCalendarPage() {
                 return true;
               });
             });
-<<<<<<< HEAD
-=======
             // do not early return; allow composing local to merge flights/stays/entertainment
->>>>>>> restore-2025-12-13
           }
         } catch {}
       }
@@ -1717,11 +1714,11 @@ export default function FinalCalendarPage() {
 
   async function openGoDrawer(item: EventItem) {
     if (!(item.type === "activity" || item.type === "restaurant")) return;
-    const rec = item.meta as RecordItem;
+       const rec = item.meta as RecordItem;
     setGoRecord(rec);
     setGoDrawerOpen(true);
     setGoLoading(true);
-    try {
+       try {
       const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
         if (!navigator.geolocation) resolve(null);
         if (!ensureLocationConsent()) { resolve(null); return; }
@@ -1733,7 +1730,7 @@ export default function FinalCalendarPage() {
         const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
         return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
       };
-      const query = `${rec.title} ${rec.cityName}`.trim();
+       const query = `${rec.address || `${rec.title} ${rec.cityName}`}`.trim();
       const dest = await geocode(query);
       const pos = await getPos();
       let walkingMin: number | undefined;

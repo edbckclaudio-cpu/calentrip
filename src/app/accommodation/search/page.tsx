@@ -10,7 +10,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
  
 import { useToast } from "@/components/ui/toast";
-import { getSavedTrips, getRefAttachments, getTripEvents, saveCalendarEvents } from "@/lib/trips-db";
+import { getSavedTrips, getRefAttachments, getTripEvents, saveCalendarEvents, getTripAttachments, updateTrip, saveTripAttachments } from "@/lib/trips-db";
+import type { FlightNote } from "@/lib/trips-db";
 
 export default function AccommodationSearchPage() {
   const { tripSearch } = useTrip();
@@ -58,6 +59,12 @@ export default function AccommodationSearchPage() {
   const [showStayDocsIdx, setShowStayDocsIdx] = useState<number | null>(null);
   const [showTransportDocsIdx, setShowTransportDocsIdx] = useState<number | null>(null);
   const [transportDocsList, setTransportDocsList] = useState<Record<number, Array<{ name: string; size: number }>>>({});
+  const [flightSummaryOpen, setFlightSummaryOpen] = useState(false);
+  const [flightSummaryTrip, setFlightSummaryTrip] = useState<{ id: string } | null>(null);
+  const [fsOutbound, setFsOutbound] = useState<{ origin: string; destination: string; date: string; depTime: string; arrTime: string; locator: string }>({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
+  const [fsInbound, setFsInbound] = useState<{ origin: string; destination: string; date: string; depTime: string; arrTime: string; locator: string }>({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
+  const [fsOutFiles, setFsOutFiles] = useState<Array<{ name: string; type: string; size: number; id?: string }>>([]);
+  const [fsInFiles, setFsInFiles] = useState<Array<{ name: string; type: string; size: number; id?: string }>>([]);
   
   
   const summaryComplete = useMemo(() => {
@@ -216,6 +223,69 @@ export default function AccommodationSearchPage() {
     showToast(t("fillFirstCityNameScrollHint"), { duration: 6000 });
   }
 
+  async function openFlightSummary() {
+    try {
+      const trips = await getSavedTrips();
+      const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
+      if (!cur) {
+        setFlightSummaryTrip(null);
+        setFsOutbound({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
+        setFsInbound({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
+        setFsOutFiles([]);
+        setFsInFiles([]);
+        setFlightSummaryOpen(true);
+        return;
+      }
+      setFlightSummaryTrip({ id: cur.id });
+      const out = (cur.flightNotes || []).find((n) => n.leg === "outbound");
+      const inn = (cur.flightNotes || []).find((n) => n.leg === "inbound");
+      setFsOutbound({
+        origin: out?.origin || (tripSearch?.mode === "same" ? (tripSearch?.origin || "") : (tripSearch?.outbound?.origin || "")),
+        destination: out?.destination || (tripSearch?.mode === "same" ? (tripSearch?.destination || "") : (tripSearch?.outbound?.destination || "")),
+        date: out?.date || (tripSearch?.mode === "same" ? (tripSearch?.departDate || "") : (tripSearch?.outbound?.date || "")),
+        depTime: out?.departureTime || "",
+        arrTime: out?.arrivalTime || "",
+        locator: out?.flightNumber || ""
+      });
+      setFsInbound({
+        origin: inn?.origin || (tripSearch?.mode === "same" ? (tripSearch?.destination || "") : (tripSearch?.inbound?.origin || "")),
+        destination: inn?.destination || (tripSearch?.mode === "same" ? (tripSearch?.origin || "") : (tripSearch?.inbound?.destination || "")),
+        date: inn?.date || (tripSearch?.mode === "same" ? (tripSearch?.returnDate || "") : (tripSearch?.inbound?.date || "")),
+        depTime: inn?.departureTime || "",
+        arrTime: inn?.arrivalTime || "",
+        locator: inn?.flightNumber || ""
+      });
+      try {
+        const outFiles = await getTripAttachments(cur.id, "outbound");
+        const inFiles = await getTripAttachments(cur.id, "inbound");
+        setFsOutFiles(outFiles);
+        setFsInFiles(inFiles);
+      } catch {}
+      setFlightSummaryOpen(true);
+    } catch {
+      setFlightSummaryOpen(true);
+    }
+  }
+
+  async function saveFlightSummary() {
+    try {
+      const trips = await getSavedTrips();
+      const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
+      if (!cur) return;
+      const flightNotes: FlightNote[] = [
+        { leg: "outbound", origin: fsOutbound.origin, destination: fsOutbound.destination, date: fsOutbound.date, departureTime: fsOutbound.depTime || undefined, arrivalTime: fsOutbound.arrTime || undefined, flightNumber: fsOutbound.locator || undefined },
+        { leg: "inbound", origin: fsInbound.origin, destination: fsInbound.destination, date: fsInbound.date, departureTime: fsInbound.depTime || undefined, arrivalTime: fsInbound.arrTime || undefined, flightNumber: fsInbound.locator || undefined },
+      ];
+      await updateTrip(cur.id, { flightNotes });
+      const filesAll = [
+        ...fsOutFiles.map((f) => ({ leg: "outbound" as const, name: f.name, type: f.type, size: f.size, id: f.id || "" })),
+        ...fsInFiles.map((f) => ({ leg: "inbound" as const, name: f.name, type: f.type, size: f.size, id: f.id || "" })),
+      ];
+      await saveTripAttachments(cur.id, filesAll);
+      showToast(t("flightSummarySaved"));
+      setFlightSummaryOpen(false);
+    } catch {}
+  }
   async function searchCities(q: string) {
     setCitySearchQuery(q);
     if (!q) { setCitySearchResults([]); return; }
@@ -495,6 +565,12 @@ export default function AccommodationSearchPage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={openFlightSummary}>
+            <span className="material-symbols-outlined text-[16px]">flight</span>
+            <span>{t("flightSummaryButton")}</span>
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -712,6 +788,148 @@ export default function AccommodationSearchPage() {
                     </div>
                   </div>
                 </Dialog>
+                <Dialog open={flightSummaryOpen} onOpenChange={setFlightSummaryOpen} placement="bottom">
+                  <DialogHeader>{t("flightSummaryDialogTitle")}</DialogHeader>
+                  <div className="p-4 md:p-6 space-y-4 text-sm">
+                    <div className="rounded-lg border p-3">
+                      <div className="font-semibold mb-2">{t("outboundFlight")}</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="mb-1 block text-sm">{t("origin")}</label>
+                          <Input value={fsOutbound.origin} onChange={(e) => setFsOutbound({ ...fsOutbound, origin: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("destination")}</label>
+                          <Input value={fsOutbound.destination} onChange={(e) => setFsOutbound({ ...fsOutbound, destination: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("date")}</label>
+                          <Input value={fsOutbound.date} onChange={(e) => setFsOutbound({ ...fsOutbound, date: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("departureTime")}</label>
+                          <Input value={fsOutbound.depTime} onChange={(e) => setFsOutbound({ ...fsOutbound, depTime: e.target.value })} inputMode="numeric" placeholder={t("timePlaceholder")} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
+                          <Input value={fsOutbound.arrTime} onChange={(e) => setFsOutbound({ ...fsOutbound, arrTime: e.target.value })} inputMode="numeric" placeholder={t("timePlaceholder")} />
+                          {(() => {
+                            const dep = (fsOutbound.depTime || "").trim();
+                            const arr = (fsOutbound.arrTime || "").trim();
+                            function toM(s: string) { const p = s.split(":"); return Number(p[0] || 0) * 60 + Number(p[1] || 0); }
+                            const invalid = dep.length === 5 && arr.length === 5 && toM(arr) < toM(dep);
+                            return invalid ? (<div className="mt-1 text-xs text-red-600">{t("arrivalNextDayWarn")}</div>) : null;
+                          })()}
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("flightNumberOptional")}</label>
+                          <Input value={fsOutbound.locator} onChange={(e) => setFsOutbound({ ...fsOutbound, locator: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <input id="fs-file-out" type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={async (e) => {
+                          const files = Array.from(e.target.files ?? []);
+                          const mod = await import("@/lib/attachments-store");
+                          const list = await Promise.all(files.map(async (f) => {
+                            const saved = await mod.saveFromFile(f);
+                            return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                          }));
+                          setFsOutFiles(list);
+                        }} />
+                        <div className="flex items-center gap-2">
+                          <Button type="button" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => document.getElementById("fs-file-out")?.click()}>
+                            <span className="material-symbols-outlined text-[16px]">attach_file</span>
+                            <span>{t("attachProofButton")}</span>
+                          </Button>
+                          <span className="text-[10px] text-zinc-600">{t("attachProofHelp")}</span>
+                        </div>
+                        {fsOutFiles.length ? (
+                          <ul className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
+                            {fsOutFiles.map((f, idx) => (<li key={`${f.name}-${idx}`}>{f.name} • {Math.round(f.size / 1024)} KB</li>))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="font-semibold mb-2">{t("inboundFlight")}</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="mb-1 block text-sm">{t("origin")}</label>
+                          <Input value={fsInbound.origin} onChange={(e) => setFsInbound({ ...fsInbound, origin: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("destination")}</label>
+                          <Input value={fsInbound.destination} onChange={(e) => setFsInbound({ ...fsInbound, destination: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("date")}</label>
+                          <Input value={fsInbound.date} onChange={(e) => setFsInbound({ ...fsInbound, date: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("departureTime")}</label>
+                          <Input value={fsInbound.depTime} onChange={(e) => setFsInbound({ ...fsInbound, depTime: e.target.value })} inputMode="numeric" placeholder={t("timePlaceholder")} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
+                          <Input value={fsInbound.arrTime} onChange={(e) => setFsInbound({ ...fsInbound, arrTime: e.target.value })} inputMode="numeric" placeholder={t("timePlaceholder")} />
+                          {(() => {
+                            const dep = (fsInbound.depTime || "").trim();
+                            const arr = (fsInbound.arrTime || "").trim();
+                            function toM(s: string) { const p = s.split(":"); return Number(p[0] || 0) * 60 + Number(p[1] || 0); }
+                            const invalid = dep.length === 5 && arr.length === 5 && toM(arr) < toM(dep);
+                            return invalid ? (<div className="mt-1 text-xs text-red-600">{t("arrivalNextDayWarn")}</div>) : null;
+                          })()}
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm">{t("flightNumberOptional")}</label>
+                          <Input value={fsInbound.locator} onChange={(e) => setFsInbound({ ...fsInbound, locator: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <input id="fs-file-in" type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={async (e) => {
+                          const files = Array.from(e.target.files ?? []);
+                          const mod = await import("@/lib/attachments-store");
+                          const list = await Promise.all(files.map(async (f) => {
+                            const saved = await mod.saveFromFile(f);
+                            return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                          }));
+                          setFsInFiles(list);
+                        }} />
+                        <div className="flex items-center gap-2">
+                          <Button type="button" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => document.getElementById("fs-file-in")?.click()}>
+                            <span className="material-symbols-outlined text-[16px]">attach_file</span>
+                            <span>{t("attachProofButton")}</span>
+                          </Button>
+                          <span className="text-[10px] text-zinc-600">{t("attachProofHelp")}</span>
+                        </div>
+                        {fsInFiles.length ? (
+                          <ul className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
+                            {fsInFiles.map((f, idx) => (<li key={`${f.name}-${idx}`}>{f.name} • {Math.round(f.size / 1024)} KB</li>))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button type="button" variant="outline" className="mr-2" onClick={() => setFlightSummaryOpen(false)}>{t("close")}</Button>
+                      <Button
+                        type="button"
+                        disabled={!(fsOutbound.origin && fsOutbound.destination && fsOutbound.date && fsInbound.origin && fsInbound.destination && fsInbound.date) || (
+                          (() => {
+                            function toM(s: string) { const p = s.split(":"); return Number(p[0] || 0) * 60 + Number(p[1] || 0); }
+                            const od = (fsOutbound.depTime || "").trim(), oa = (fsOutbound.arrTime || "").trim();
+                            const id = (fsInbound.depTime || "").trim(), ia = (fsInbound.arrTime || "").trim();
+                            const oBad = od.length === 5 && oa.length === 5 && toM(oa) < toM(od);
+                            const iBad = id.length === 5 && ia.length === 5 && toM(ia) < toM(id);
+                            return oBad || iBad;
+                          })()
+                        )}
+                        onClick={saveFlightSummary}
+                      >
+                        {t("saveLabel")}
+                      </Button>
+                    </div>
+                  </div>
+                </Dialog>
                 {transportIdx !== null ? (
                   <Dialog open onOpenChange={() => setTransportIdx(null)}>
                     <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
@@ -761,11 +979,24 @@ export default function AccommodationSearchPage() {
                                   </div>
                                   <div>
                                     <label className="mb-1 block text-sm">Hora de partida</label>
-                                    <Input type="tel" inputMode="numeric" pattern="[0-9]*" defaultValue={seg.depTime || ""} onChange={(e) => setSeg({ depTime: e.target.value })} disabled={seg.mode === "car"} />
+                                    <Input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={t("timePlaceholder")} defaultValue={seg.depTime || ""} onChange={(e) => setSeg({ depTime: e.target.value })} disabled={seg.mode === "car"} />
+                                    {(() => {
+                                      const v = (seg.depTime || "").trim();
+                                      const bad = v.length > 0 && !/^\d{2}:\d{2}$/.test(v);
+                                      return bad ? (<div className="mt-1 text-xs text-red-600">{t("invalidTimeFormat")}</div>) : null;
+                                    })()}
                                   </div>
                                   <div>
                                     <label className="mb-1 block text-sm">Hora de chegada</label>
-                                    <Input type="tel" inputMode="numeric" pattern="[0-9]*" defaultValue={seg.arrTime || ""} onChange={(e) => setSeg({ arrTime: e.target.value })} disabled={seg.mode === "car"} />
+                                    <Input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={t("timePlaceholder")} defaultValue={seg.arrTime || ""} onChange={(e) => setSeg({ arrTime: e.target.value })} disabled={seg.mode === "car"} />
+                                    {(() => {
+                                      const dep = (seg.depTime || "").trim();
+                                      const arr = (seg.arrTime || "").trim();
+                                      const badFmt = arr.length > 0 && !/^\d{2}:\d{2}$/.test(arr);
+                                      function toM(s: string) { const p = s.split(":"); return Number(p[0] || 0) * 60 + Number(p[1] || 0); }
+                                      const invalid = dep.length === 5 && arr.length === 5 && toM(arr) < toM(dep);
+                                      return badFmt ? (<div className="mt-1 text-xs text-red-600">{t("invalidTimeFormat")}</div>) : invalid ? (<div className="mt-1 text-xs text-red-600">{t("arrivalNextDayWarn")}</div>) : null;
+                                    })()}
                                   </div>
                                 </div>
                                 {seg.mode === "air" ? (
@@ -825,7 +1056,7 @@ export default function AccommodationSearchPage() {
                                 </div>
                               </div>
                               <div className="mt-3 flex justify-end">
-                                <Button type="button" onClick={() => {
+                                <Button type="button" disabled={seg.mode !== "car" && (!seg.depTime || !seg.arrTime || !/^\d{2}:\d{2}$/.test(seg.depTime || "") || !/^\d{2}:\d{2}$/.test(seg.arrTime || ""))} onClick={() => {
                                   const params: Partial<TransportSegment> = { mode: seg.mode, dep: seg.dep, arr: seg.arr, depTime: seg.depTime, arrTime: seg.arrTime };
                                   setSeg(params as TransportSegment);
                                   try {
