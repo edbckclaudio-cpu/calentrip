@@ -210,7 +210,14 @@ export default function FinalCalendarPage() {
         seen.add(key);
         return true;
       });
-      setEvents(dedup);
+      const sortDT = (d: string, t?: string) => {
+        const tt = (t || "00:00").padStart(5, "0");
+        const s = `${(d || "").replace(/\//g, "-")}T${tt}:00`;
+        const x = new Date(s);
+        return Number.isNaN(x.getTime()) ? 0 : x.getTime();
+      };
+      const ordered = [...dedup].sort((a, b) => sortDT(a.date, a.time) - sortDT(b.date, b.time));
+      setEvents(ordered);
     } catch {}
   }
 
@@ -3170,10 +3177,22 @@ export default function FinalCalendarPage() {
                           </>
                         ) : null}
                         {((ev.type === "activity" || ev.type === "restaurant") && (ev.meta as RecordItem)?.files && (ev.meta as RecordItem)?.files!.length) ? (
-                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
                             const m = ev.meta as RecordItem;
                             setDocTitle(m.title);
-                            setDocFiles(m.files || []);
+                            try {
+                              const mod = await import("@/lib/attachments-store");
+                              const resolved = await Promise.all((m.files || []).map(async (f) => {
+                                if (!f.dataUrl && f.id) {
+                                  const url = await mod.getObjectUrl(f.id);
+                                  return { ...f, dataUrl: url || undefined };
+                                }
+                                return f;
+                              }));
+                              setDocFiles(resolved);
+                            } catch {
+                              setDocFiles(m.files || []);
+                            }
                             setDocOpen(true);
                           }}>
                             <span className="material-symbols-outlined text-[16px]">description</span>
