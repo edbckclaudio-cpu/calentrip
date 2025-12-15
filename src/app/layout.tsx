@@ -58,8 +58,6 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/icon.svg",
-    shortcut: "/icon-192.png",
-    apple: "/icon-192.png",
   },
 };
 
@@ -81,6 +79,8 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200&display=swap"
         />
+        <link rel="icon" sizes="192x192" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
