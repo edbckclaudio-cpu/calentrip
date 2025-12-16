@@ -95,24 +95,31 @@ export default function TransportPlanPage() {
     } catch {}
   }
 
+  const initialHintShownRef = useRef(false);
   useEffect(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
       const js: { cities?: CitySummary[] } | null = raw ? JSON.parse(raw) : null;
       const list: CitySummary[] = js?.cities || [];
       setCities(list);
-      if (!list.length) showToast(t("backAndInformStaysMessage"), { duration: 7000 });
+      if (!list.length && !initialHintShownRef.current) {
+        initialHintShownRef.current = true;
+        showToast(t("backAndInformStaysMessage"), { duration: 3000 });
+      }
     } catch {}
-  }, [showToast, t]);
+  }, [t]);
 
   const fromCity = cities[segIdx]?.name || "";
   const toCity = cities[segIdx + 1]?.name || "";
 
+  const lastHintIdxRef = useRef<number | null>(null);
   useEffect(() => {
     if (!fromCity || !toCity) return;
-    showToast(t("fillTransportFieldsHint"), { duration: 7000 });
+    if (lastHintIdxRef.current !== segIdx) {
+      lastHintIdxRef.current = segIdx;
+      showToast(t("fillTransportFieldsHint"), { duration: 3000 });
+    }
     setDep(""); setArr(""); setDepTime(""); setArrTime("");
-    
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCity)}&destination=${encodeURIComponent(toCity)}`;
       const params = new URLSearchParams({ lang: "pt-BR", currency: "BRL" });
@@ -121,7 +128,7 @@ export default function TransportPlanPage() {
       const r2rUrl = params.toString() ? `${baseR2R}?${params.toString()}` : baseR2R;
       setRoute({ gmapsUrl, r2rUrl });
     })();
-  }, [fromCity, toCity, cities, segIdx, showToast, t]);
+  }, [fromCity, toCity, cities, segIdx, t]);
 
   
 
@@ -140,13 +147,14 @@ export default function TransportPlanPage() {
       const updated = list.map((x, i) => (i === segIdx ? { ...x, transportToNext: segment } : x));
       const payload = { cities: updated };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
-      showToast(t("transportSavedGoSummary"), { variant: "success" });
+      showToast(t("transportSavedGoSummary"), { variant: "success", duration: 3000 });
       const hasNext = segIdx + 1 < updated.length - 1;
       if (hasNext) {
-        showToast(t("openingNextTransportMsg"), { duration: 7000 });
-        router.push(`/transport/plan?i=${segIdx + 1}`);
+        showToast(t("openingNextTransportMsg"), { duration: 3000 });
+        setSegIdx((v) => v + 1);
+        setDep(""); setArr(""); setDepTime(""); setArrTime("");
       } else {
-        showToast(t("transportSavedGoSummary"), { duration: 5000 });
+        showToast(t("transportSavedGoSummary"), { duration: 3000 });
         try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
         router.push("/accommodation/search");
         try {
@@ -178,7 +186,7 @@ export default function TransportPlanPage() {
       try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
       router.push("/accommodation/search");
     }
-  }, [mode, segIdx, router, showToast, t]);
+  }, [mode, segIdx, router, t]);
 
   if (!tripSearch) {
     return (
