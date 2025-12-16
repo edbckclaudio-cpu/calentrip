@@ -558,55 +558,24 @@ export default function FinalCalendarPage() {
   async function reloadFromStorage() {
     try {
       setLoadedFromSaved(false);
-      await initDatabaseDb();
-      try { await migrateFromLocalStorageDb(); } catch {}
-      const all: TripItemDb[] = await getSavedTripsDb();
-      let target: TripItemDb | null = null;
+      const list: EventItem[] = [];
       try {
         const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
-        const ts = raw ? JSON.parse(raw) : null;
+        const ts = raw ? JSON.parse(raw) as TripSearchPersist : null;
         if (ts) {
           const isSame = ts.mode === "same";
           const origin = isSame ? ts.origin : ts.outbound?.origin;
           const destination = isSame ? ts.destination : ts.outbound?.destination;
-          const date = isSame ? ts.departDate : ts.outbound?.date;
-          const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
-          const title = origin && destination ? `${origin} → ${destination}` : "";
-          target = all.find((t) => t.title === title && t.date === date && Number(t.passengers || 0) === pax) || null;
+          const departDate = isSame ? ts.departDate : ts.outbound?.date;
+          const returnDate = isSame ? ts.returnDate : ts.inbound?.date;
+          const departTime = isSame ? ts.departTime : ts.outbound?.time;
+          const returnTime = isSame ? ts.returnTime : ts.inbound?.time;
+          const outLabel = origin && destination && departDate ? `Voo de ida: ${departDate}${(departTime || "").trim() ? ` • ${(departTime || "").trim()}` : ""} • ${origin} → ${destination}` : "";
+          const inLabel = origin && destination && returnDate ? `Voo de volta: ${returnDate}${(returnTime || "").trim() ? ` • ${(returnTime || "").trim()}` : ""} • ${destination} → ${origin}` : "";
+          if (outLabel) list.push({ type: "flight", label: outLabel, date: departDate!, time: (departTime || undefined), meta: { leg: "outbound", origin: origin!, destination: destination!, date: departDate! } as unknown as FlightNote });
+          if (inLabel) list.push({ type: "flight", label: inLabel, date: returnDate!, time: (returnTime || undefined), meta: { leg: "inbound", origin: destination!, destination: origin!, date: returnDate! } as unknown as FlightNote });
         }
       } catch {}
-      if (!target) target = all.find((t) => t.reachedFinalCalendar) || (all.length ? all[0] : null);
-      if (!target) return;
-      setCurrentTripId(String(target.id));
-      const dbEvents = await getTripEventsDb(String(target.id));
-      const list: EventItem[] = [];
-      if (Array.isArray(dbEvents) && dbEvents.length) {
-        const notes: FlightNote[] = (target.flightNotes || []) as FlightNote[];
-        dbEvents.forEach((e: { type?: string; label?: string; name?: string; date: string; time?: string }) => {
-          const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
-          let label = e.label || e.name || "";
-          let meta: FlightNote | undefined;
-          if (typeMap === "flight") {
-            const leg = label.startsWith("Voo de ida") ? "outbound" : label.startsWith("Voo de volta") ? "inbound" : undefined;
-            const strict = notes.find((n) => n.date === e.date && (!leg || n.leg === leg) && label.includes(n.origin) && label.includes(n.destination));
-            const byLeg = strict || notes.find((n) => n.date === e.date && (!leg || n.leg === leg));
-            meta = byLeg || notes.find((n) => n.date === e.date);
-          }
-          let time: string | undefined;
-          if (typeMap === "flight") {
-            time = meta?.departureTime || (e.time || undefined);
-            if (!time && label) {
-              const afterDate = label.split(" • ").slice(1)[0] || "";
-              const m = afterDate.match(/\b(\d{2}:\d{2})\b/);
-              if (m) time = m[1];
-            }
-          } else {
-            time = e.time || undefined;
-          }
-          if (typeMap === "flight" && meta?.flightNumber && !label.includes(meta.flightNumber)) label = `${label} • ${meta.flightNumber}`;
-          list.push({ type: typeMap as EventItem["type"], label, date: e.date, time, meta });
-        });
-      }
       try {
         const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
         const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
@@ -615,8 +584,12 @@ export default function FinalCalendarPage() {
         cities.forEach((c, i) => {
           const cityName = c.name || `Cidade ${i + 1}`;
           const addr = c.address || "(endereço não informado)";
-          if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
-          if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+          if (c.checkin) {
+            let ciTime = i === 0 ? "23:59" : "17:00";
+            try { if (i === 0 && typeof window !== "undefined" && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+            list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
+          }
+          if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
         });
         for (let i = 0; i < cities.length - 1; i++) {
           const c = cities[i];
@@ -629,8 +602,10 @@ export default function FinalCalendarPage() {
             list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
           }
         }
-        const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
-        const recs: RecordItem[] = raw ? JSON.parse(raw) : [];
+      } catch {}
+      try {
+        const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+        const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
         (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
       } catch {}
       const seen = new Set<string>();
