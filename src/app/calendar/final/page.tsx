@@ -3200,7 +3200,6 @@ export default function FinalCalendarPage() {
             <div className="mb-3 flex items-center gap-2">
               <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={reloadFromStorage}>
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
-                <span className="hidden sm:inline">Recarregar do storage</span>
               </Button>
             </div>
             {sorted.length ? (
@@ -3237,7 +3236,6 @@ export default function FinalCalendarPage() {
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                            <span>{t("airport")}</span>
                           </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "outbound" ? (
@@ -3261,13 +3259,11 @@ export default function FinalCalendarPage() {
                             }}
                           >
                             <span className="material-symbols-outlined text-[16px]">description</span>
-                            <span>Docs</span>
                           </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">local_taxi</span>
-                            <span>{t("airport")}</span>
                           </Button>
                         ) : null}
                         {ev.type === "flight" && (ev.meta as FlightNote)?.leg === "inbound" && `${(ev.meta as FlightNote).origin}|${(ev.meta as FlightNote).destination}|${ev.date}|${ev.time || ""}` === lastInboundSignature ? (
@@ -3285,14 +3281,12 @@ export default function FinalCalendarPage() {
                             setDocOpen(true);
                           }}>
                             <span className="material-symbols-outlined text-[16px]">description</span>
-                            <span>Docs</span>
                           </Button>
                         ) : null}
                         {ev.type === "transport" ? (
                           <>
                             <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(ev)}>
                               <span className="material-symbols-outlined text-[16px] text-[#febb02]">map</span>
-                              <span>Detalhes</span>
                             </Button>
                             <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
                               try {
@@ -3318,14 +3312,12 @@ export default function FinalCalendarPage() {
                               }
                             }}>
                               <span className="material-symbols-outlined text-[16px]">description</span>
-                              <span>Docs</span>
                             </Button>
                           </>
                         ) : null}
                         {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" ? (
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(ev)}>
                             <span className="material-symbols-outlined text-[16px]">home</span>
-                            <span>{t("accommodationDialogTitle")}</span>
                           </Button>
                         ) : null}
                         {ev.type === "stay" && (ev.meta as { kind?: string })?.kind === "checkin" && stayFiles.length ? (
@@ -3349,7 +3341,6 @@ export default function FinalCalendarPage() {
                             }}
                           >
                             <span className="material-symbols-outlined text-[16px]">description</span>
-                            <span>Docs</span>
                           </Button>
                         ) : null}
                         
@@ -3362,11 +3353,9 @@ export default function FinalCalendarPage() {
                             setEditOpen(true);
                           }}>
                             <span className="material-symbols-outlined text-[16px]">edit</span>
-                            <span>{t("editLabel")}</span>
                           </Button>
                           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openGoDrawer(ev)}>
-                            <span className="material-symbols-outlined text-[16px]">map</span>
-                            <span>{t("goButton")}</span>
+                            <span className="material-symbols-outlined text-[16px]">directions_car</span>
                           </Button>
                           </>
                         ) : null}
