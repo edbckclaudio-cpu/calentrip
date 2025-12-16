@@ -560,8 +560,8 @@ export default function FinalCalendarPage() {
       setLoadedFromSaved(false);
       await initDatabaseDb();
       try { await migrateFromLocalStorageDb(); } catch {}
-      const all: TripItem[] = await getSavedTripsDb();
-      let target: TripItem | null = null;
+      const all: TripItemDb[] = await getSavedTripsDb();
+      let target: TripItemDb | null = null;
       try {
         const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
         const ts = raw ? JSON.parse(raw) : null;
@@ -827,7 +827,39 @@ export default function FinalCalendarPage() {
             return { type: typeMap as EventItem["type"], label, date: e.date, time, meta };
           });
           const s = new Set<string>();
-          const merged = [...base, ...list].filter((e) => {
+          const extra: EventItem[] = [];
+          try {
+            const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+            const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
+            const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
+            cities.forEach((c, i) => {
+              const cityName = c.name || `Cidade ${i + 1}`;
+              const addr = c.address || "(endereço não informado)";
+              if (c.checkin) {
+                let ciTime = i === 0 ? "23:59" : "17:00";
+                try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
+                extra.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
+              }
+              if (c.checkout) {
+                extra.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+              }
+            });
+            for (let i = 0; i < cities.length - 1; i++) {
+              const c = cities[i];
+              const n = cities[i + 1];
+              const seg = c.transportToNext;
+              if (seg) {
+                const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+                const date = c.checkout || n?.checkin || "";
+                const time = seg.depTime || "11:00";
+                extra.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
+              }
+            }
+            const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+            const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
+            (recs || []).forEach((r) => extra.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
+          } catch {}
+          const merged = [...base, ...extra].filter((e) => {
             const key = e.type === "stay"
               ? `${e.type}|${e.label}|${(e.date || "").trim()}`
               : `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
