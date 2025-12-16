@@ -56,6 +56,16 @@ export default function Providers({ children }: { children: ReactNode }) {
       check();
     } catch {}
   }, []);
+  useEffect(() => {
+    try {
+      if (process.env.NEXT_PUBLIC_ENABLE_SW === "1") return;
+      if (typeof window === "undefined") return;
+      if (!("serviceWorker" in navigator)) return;
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const r of regs) { try { r.unregister(); } catch {} }
+      }).catch(() => {});
+    } catch {}
+  }, []);
   return (
     <SessionProvider basePath="/api/auth" refetchInterval={0} refetchOnWindowFocus={false}>
       <I18nProvider>

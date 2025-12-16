@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
@@ -15,6 +16,8 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital"),
@@ -85,24 +88,28 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "CalenTrip",
-          url: (process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital"),
-          logo: "/icon-512.png"
-        }) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "CalenTrip",
-          url: (process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital"),
-          potentialAction: {
-            "@type": "SearchAction",
-            target: (process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital") + "/flights/search?query={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
-        }) }} />
+        <Script id="calentrip-org-jsonld" type="application/ld+json" strategy="beforeInteractive">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "CalenTrip",
+            url: SITE_URL,
+            logo: "/icon-512.png",
+          })}
+        </Script>
+        <Script id="calentrip-website-jsonld" type="application/ld+json" strategy="beforeInteractive">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "CalenTrip",
+            url: SITE_URL,
+            potentialAction: {
+              "@type": "SearchAction",
+              target: SITE_URL + "/flights/search?query={search_term_string}",
+              "query-input": "required name=search_term_string",
+            },
+          })}
+        </Script>
         <Providers>
           <SWRegister />
           <Header />

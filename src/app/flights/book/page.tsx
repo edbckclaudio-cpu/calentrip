@@ -6,11 +6,10 @@ import { getCountryByIata } from "@/lib/airports";
 import { useRouter } from "next/navigation";
 import { useMemo, useEffect, useState, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableCell, TableBody } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
-import { addTrip, saveTripAttachments } from "@/lib/trips-db";
+import { addTrip, saveTripAttachments, updateTrip } from "@/lib/trips-db";
 import { saveFromFile } from "@/lib/attachments-store";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/ui/toast";
@@ -181,9 +180,9 @@ export default function BookFlightsPage() {
       setTimeout(() => { try { minimize(id); } catch {} }, 20000);
     }
     setIntroShown(true);
-  }, [hydrated, loadingTrip, tripSearch, introShown, show, minimize]);
+  }, [hydrated, loadingTrip, tripSearch, introShown, show, minimize, t]);
 
-  const missing = hydrated && !loadingTrip && !tripSearch;
+ 
 
   useEffect(() => {
     (async () => {
@@ -400,7 +399,7 @@ export default function BookFlightsPage() {
 }
 
 function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
-  const { tripSearch } = useTrip();
+  const { tripSearch, setTripSearch } = useTrip();
   const { t } = useI18n();
   const router = useRouter();
   const { show, dismiss } = useToast();
@@ -486,6 +485,29 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
   const legDepFilled = (i: number) => Boolean(notes[i]?.dep);
   const canProceed = legDepFilled(0);
 
+  useEffect(() => {
+    try {
+      if (!tripSearch) return;
+      if (tripSearch.mode === "same") {
+        const next = {
+          ...tripSearch,
+          departTime: (notes[0]?.dep || ""),
+          returnTime: (notes[1]?.dep || ""),
+          departFlightNumber: (notes[0]?.code || ""),
+          returnFlightNumber: (notes[1]?.code || ""),
+        };
+        setTripSearch(next);
+      } else {
+        const next = {
+          ...tripSearch,
+          outbound: { ...(tripSearch.outbound || {}), time: (notes[0]?.dep || ""), flightNumber: (notes[0]?.code || "") },
+          inbound: { ...(tripSearch.inbound || {}), time: (notes[1]?.dep || ""), flightNumber: (notes[1]?.code || "") },
+        };
+        setTripSearch(next);
+      }
+    } catch {}
+  }, [notes, tripSearch, setTripSearch]);
+
   function proceedOnce() {
     if (proceedLockRef.current || proceeding) return;
     proceedLockRef.current = true;
@@ -512,8 +534,26 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
       arrivalNextDay: nextDay[i as 0 | 1] || undefined,
     }));
     const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
-    addTrip({ id, title, date, passengers, flightNotes }).catch(() => {});
+    try { await addTrip({ id, title, date, passengers, flightNotes }); } catch {}
     try { saveTripAttachments(id, attachments.map((a) => ({ leg: a.leg, name: a.name, type: a.type, size: a.size, id: a.id || "" }))).catch(() => {}); } catch {}
+    try { await updateTrip(id, { reachedFinalCalendar: true }); } catch {}
+    try {
+      const isSame = (tripSearch.mode === "same");
+      const dest = isSame ? tripSearch.destination : (tripSearch.inbound?.destination || tripSearch.outbound?.destination || "");
+      const departDate = isSame ? (tripSearch.departDate || "") : (tripSearch.outbound?.date || "");
+      const returnDate = isSame ? (tripSearch.returnDate || "") : (tripSearch.inbound?.date || "");
+      const bump = nextDay[0] ? 1 : 0;
+      const addDays = (d: string, days: number) => {
+        const dt = new Date(`${(d || "").replace(/\//g, "-")}T00:00:00`);
+        if (Number.isNaN(dt.getTime())) return d || "";
+        dt.setDate(dt.getDate() + days);
+        const p = (n: number) => String(n).padStart(2, "0");
+        return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+      };
+      const checkin = bump ? addDays(departDate, bump) : departDate;
+      const summary = { cities: [{ name: dest || "", checkin, checkout: returnDate || "", address: "" }] };
+      if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(summary));
+    } catch {}
     if (hintId != null) {
       try { dismiss(hintId); } catch {}
     }

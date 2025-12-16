@@ -20,31 +20,14 @@ export default function EntertainmentReservationsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { show, dismiss } = useToast();
-  const [cities] = useState<CityStay[]>(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-      if (raw) {
-        const obj = JSON.parse(raw);
-        if (Array.isArray(obj?.cities)) return obj.cities as CityStay[];
-      }
-    } catch {}
-    return [] as CityStay[];
-  });
+  const [cities, setCities] = useState<CityStay[]>([]);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [openKind, setOpenKind] = useState<"activity" | "restaurant" | null>(null);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [address, setAddress] = useState("");
-  const [records, setRecords] = useState<RecordItem[]>(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
-      const list = raw ? (JSON.parse(raw) as RecordItem[]) : [];
-      return Array.isArray(list) ? list : [];
-    } catch {
-      return [] as RecordItem[];
-    }
-  });
+  const [records, setRecords] = useState<RecordItem[]>([]);
 
   const [aiOpenIdx, setAiOpenIdx] = useState<number | null>(null);
   const [aiTipId, setAiTipId] = useState<number | null>(null);
@@ -78,6 +61,25 @@ export default function EntertainmentReservationsPage() {
   const [docOpen, setDocOpen] = useState(false);
   const [docTitle, setDocTitle] = useState("");
    const [docFiles, setDocFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
+
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
+      if (raw) {
+        const obj = JSON.parse(raw);
+        const arr = Array.isArray(obj?.cities) ? (obj.cities as CityStay[]) : [];
+        setCities(arr);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
+      const list = raw ? (JSON.parse(raw) as RecordItem[]) : [];
+      setRecords(Array.isArray(list) ? list : []);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!cities.length) return;
@@ -148,7 +150,7 @@ export default function EntertainmentReservationsPage() {
         setAiTipId(null);
       }
     }
-  }, [aiOpenIdx, aiTipId, show, dismiss]);
+  }, [aiOpenIdx, aiTipId, show, dismiss, t]);
 
   useEffect(() => {
     const msg = t("aiSelectDateTimeTip");
@@ -163,7 +165,7 @@ export default function EntertainmentReservationsPage() {
         setRestTipId(null);
       }
     }
-  }, [aiRestOpenIdx, restTipId, show, dismiss]);
+  }, [aiRestOpenIdx, restTipId, show, dismiss, t]);
 
   function formatTimeInput(s: string): string {
     const d = (s || "").replace(/\D/g, "");

@@ -10,7 +10,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
  
 import { useToast } from "@/components/ui/toast";
-import { getSavedTrips, getRefAttachments, getTripEvents, saveCalendarEvents, getTripAttachments, updateTrip, saveTripAttachments } from "@/lib/trips-db";
+import { getSavedTrips, getRefAttachments, getTripEvents, saveCalendarEvents, getTripAttachments, updateTrip, saveTripAttachments, addTrip } from "@/lib/trips-db";
 import type { FlightNote } from "@/lib/trips-db";
 
 export default function AccommodationSearchPage() {
@@ -60,11 +60,13 @@ export default function AccommodationSearchPage() {
   const [showTransportDocsIdx, setShowTransportDocsIdx] = useState<number | null>(null);
   const [transportDocsList, setTransportDocsList] = useState<Record<number, Array<{ name: string; size: number }>>>({});
   const [flightSummaryOpen, setFlightSummaryOpen] = useState(false);
-  const [flightSummaryTrip, setFlightSummaryTrip] = useState<{ id: string } | null>(null);
   const [fsOutbound, setFsOutbound] = useState<{ origin: string; destination: string; date: string; depTime: string; arrTime: string; locator: string }>({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
   const [fsInbound, setFsInbound] = useState<{ origin: string; destination: string; date: string; depTime: string; arrTime: string; locator: string }>({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
   const [fsOutFiles, setFsOutFiles] = useState<Array<{ name: string; type: string; size: number; id?: string }>>([]);
   const [fsInFiles, setFsInFiles] = useState<Array<{ name: string; type: string; size: number; id?: string }>>([]);
+  const [fsDocOpen, setFsDocOpen] = useState(false);
+  const [fsDocTitle, setFsDocTitle] = useState("");
+  const [fsDocFiles, setFsDocFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
   
   
   const summaryComplete = useMemo(() => {
@@ -122,7 +124,7 @@ export default function AccommodationSearchPage() {
         } catch {}
       } catch {}
     })();
-  }, [cities.length]);
+  }, [cities]);
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
@@ -225,18 +227,16 @@ export default function AccommodationSearchPage() {
 
   async function openFlightSummary() {
     try {
+      setFlightSummaryOpen(true);
       const trips = await getSavedTrips();
       const cur = trips.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0];
       if (!cur) {
-        setFlightSummaryTrip(null);
         setFsOutbound({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
         setFsInbound({ origin: "", destination: "", date: "", depTime: "", arrTime: "", locator: "" });
         setFsOutFiles([]);
         setFsInFiles([]);
-        setFlightSummaryOpen(true);
         return;
       }
-      setFlightSummaryTrip({ id: cur.id });
       const out = (cur.flightNotes || []).find((n) => n.leg === "outbound");
       const inn = (cur.flightNotes || []).find((n) => n.leg === "inbound");
       setFsOutbound({
@@ -261,7 +261,6 @@ export default function AccommodationSearchPage() {
         setFsOutFiles(outFiles);
         setFsInFiles(inFiles);
       } catch {}
-      setFlightSummaryOpen(true);
     } catch {
       setFlightSummaryOpen(true);
     }
@@ -342,7 +341,7 @@ export default function AccommodationSearchPage() {
     } else if (guideStep === "name") {
       showToast(t("typeCityNameScrollHint"), { duration: 6000 });
     }
-  }, [guideIdx, guideStep, showToast]);
+  }, [guideIdx, guideStep, showToast, t]);
 
   useEffect(() => {
     if (cityDetailIdx === null) return;
@@ -486,7 +485,25 @@ export default function AccommodationSearchPage() {
             if (found) cur = found;
           }
         } catch {}
-        if (!cur) return;
+        if (!cur) {
+          try {
+            const rawTs = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
+            const ts = rawTs ? JSON.parse(rawTs) as { mode: "same" | "different"; origin?: string; destination?: string; departDate?: string; passengers?: { adults?: number; children?: number; infants?: number }; outbound?: { origin?: string; destination?: string; date?: string }; } : null;
+            if (ts) {
+              const isSame = ts.mode === "same";
+              const origin = isSame ? (ts.origin || "") : (ts.outbound?.origin || "");
+              const destination = isSame ? (ts.destination || "") : (ts.outbound?.destination || "");
+              const date = isSame ? (ts.departDate || "") : (ts.outbound?.date || "");
+              const pax = (() => { const p = ts.passengers || {}; return Number(p.adults || 0) + Number(p.children || 0) + Number(p.infants || 0); })();
+              const id = String(Date.now());
+              const title = origin && destination ? `${origin} → ${destination}` : `${origin} → ${destination}`;
+              await addTrip({ id, title, date, passengers: pax, reachedFinalCalendar: true });
+              try { await updateTrip(id, { reachedFinalCalendar: true }); } catch {}
+              cur = { id, title, date, passengers: pax, reachedFinalCalendar: true } as unknown as { id: string; title: string; date: string; passengers: number; reachedFinalCalendar?: boolean };
+            }
+          } catch {}
+          if (!cur) return;
+        }
         const existing = await getTripEvents(cur.id);
         const keep = (existing || []).filter((e) => e.type !== "stay" && e.type !== "transport");
         const next = [...keep];
@@ -909,6 +926,44 @@ export default function AccommodationSearchPage() {
                         ) : null}
                       </div>
                     </div>
+                    {fsOutFiles.length || fsInFiles.length ? (
+                      <div className="mt-3 flex items-center gap-2">
+                        {fsOutFiles.length ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
+                            try {
+                              const mod = await import("@/lib/attachments-store");
+                              const resolved = await Promise.all(fsOutFiles.map(async (f) => {
+                                const url = f.id ? await mod.getObjectUrl(f.id) : undefined;
+                                return { name: f.name, type: f.type, size: f.size, dataUrl: url || undefined };
+                              }));
+                              setFsDocTitle(t("outboundFlight"));
+                              setFsDocFiles(resolved);
+                              setFsDocOpen(true);
+                            } catch {}
+                          }}>
+                            <span className="material-symbols-outlined text-[16px]">description</span>
+                            <span>{t("viewDocumentsButton")}</span>
+                          </Button>
+                        ) : null}
+                        {fsInFiles.length ? (
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
+                            try {
+                              const mod = await import("@/lib/attachments-store");
+                              const resolved = await Promise.all(fsInFiles.map(async (f) => {
+                                const url = f.id ? await mod.getObjectUrl(f.id) : undefined;
+                                return { name: f.name, type: f.type, size: f.size, dataUrl: url || undefined };
+                              }));
+                              setFsDocTitle(t("inboundFlight"));
+                              setFsDocFiles(resolved);
+                              setFsDocOpen(true);
+                            } catch {}
+                          }}>
+                            <span className="material-symbols-outlined text-[16px]">description</span>
+                            <span>{t("viewDocumentsButton")}</span>
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div className="flex justify-end">
                       <Button type="button" variant="outline" className="mr-2" onClick={() => setFlightSummaryOpen(false)}>{t("close")}</Button>
                       <Button
@@ -927,6 +982,37 @@ export default function AccommodationSearchPage() {
                       >
                         {t("saveLabel")}
                       </Button>
+                    </div>
+                  </div>
+                </Dialog>
+                <Dialog open={fsDocOpen} onOpenChange={setFsDocOpen} placement="bottom">
+                  <DialogHeader>{t("documentsWord")}: {fsDocTitle}</DialogHeader>
+                  <div className="p-4 md:p-6 space-y-3 text-sm">
+                    {fsDocFiles.length ? (
+                      <ul className="space-y-2">
+                        {fsDocFiles.map((f, i) => (
+                          <li key={`fs-doc-${i}`} className="rounded border p-2">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium">{f.name}</div>
+                                <div className="text-xs text-zinc-600">{Math.round(f.size / 1024)} KB</div>
+                              </div>
+                              {f.dataUrl ? (
+                                <a href={f.dataUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-1 text-xs rounded-md border">
+                                  {t("openOnDevice")}
+                                </a>
+                              ) : (
+                                <span className="text-[10px] text-zinc-600">{t("fileAvailableOnDevice")}</span>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-sm text-zinc-600">{t("noDocumentsSaved")}</div>
+                    )}
+                    <div className="mt-2 flex justify-end">
+                      <Button type="button" onClick={() => { setFsDocOpen(false); setFsDocFiles([]); }}>{t("close")}</Button>
                     </div>
                   </div>
                 </Dialog>

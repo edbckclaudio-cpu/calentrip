@@ -103,7 +103,7 @@ export default function TransportPlanPage() {
       setCities(list);
       if (!list.length) showToast(t("backAndInformStaysMessage"), { duration: 7000 });
     } catch {}
-  }, [showToast]);
+  }, [showToast, t]);
 
   const fromCity = cities[segIdx]?.name || "";
   const toCity = cities[segIdx + 1]?.name || "";
@@ -121,7 +121,7 @@ export default function TransportPlanPage() {
       const r2rUrl = params.toString() ? `${baseR2R}?${params.toString()}` : baseR2R;
       setRoute({ gmapsUrl, r2rUrl });
     })();
-  }, [fromCity, toCity]);
+  }, [fromCity, toCity, cities, segIdx, showToast, t]);
 
   
 
@@ -178,7 +178,7 @@ export default function TransportPlanPage() {
       try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
       router.push("/accommodation/search");
     }
-  }, [mode, segIdx, router, showToast]);
+  }, [mode, segIdx, router, showToast, t]);
 
   if (!tripSearch) {
     return (

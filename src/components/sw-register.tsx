@@ -9,8 +9,8 @@ export default function SWRegister() {
   const showRef = useRef(show);
   useEffect(() => { showRef.current = show; }, [show]);
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENABLE_SW !== "1") return;
     if (typeof window === "undefined") return;
-    if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
     const url = "/sw.js";
     try {
@@ -22,6 +22,6 @@ export default function SWRegister() {
         } catch {}
       }).catch(() => {});
     } catch {}
-  }, []);
+  }, [t]);
   return null;
 }

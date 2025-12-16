@@ -1,4 +1,4 @@
-const CACHE_NAME = "calentrip-cache-v3";
+const CACHE_NAME = "calentrip-cache-v4";
 const ASSETS = ["/", "/calendar/final", "/manifest.webmanifest", "/globe.svg", "/next.svg", "/vercel.svg", "/window.svg", "/file.svg"];
 
 self.addEventListener("install", (event) => {
@@ -18,6 +18,12 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
+  try {
+    const url = new URL(req.url);
+    const sameOrigin = url.origin === self.location.origin;
+    if (!sameOrigin) return;
+    if (url.pathname.startsWith("/_next/")) return;
+  } catch {}
   const isHtml = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
   if (isHtml) {
     event.respondWith(

@@ -130,29 +130,6 @@ function croatiaEvents(): EventItem[] {
 }
 
 export default function InspirationPage() {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<"Itália" | "Brasil" | "Croácia" | null>(null);
-  function saveAndOpen(target: "final" | "month") {
-    try {
-      const events = selected === "Brasil" ? brazilEvents() : selected === "Croácia" ? croatiaEvents() : italyEvents();
-      const name = selected === "Brasil" ? "BRASIL-2026" : selected === "Croácia" ? "CROACIA-2026" : "ITALIA-2026";
-      const payload = { name, events };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
-        localStorage.setItem("calentrip:auto_load_saved", "1");
-        localStorage.setItem("calentrip:inspiration_mode", "1");
-        try {
-          const raw = localStorage.getItem("calentrip:saved_calendars_list");
-          const list = raw ? JSON.parse(raw) as Array<{ name: string; events: EventItem[]; savedAt?: string }> : [];
-          const at = new Date().toISOString();
-          const exists = list.find((x) => x.name === name);
-          const next = exists ? list.map((x) => (x.name === name ? { name: x.name, events, savedAt: at } : x)) : [...list, { name, events, savedAt: at }];
-          localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(next));
-        } catch {}
-      }
-      try { window.location.href = target === "final" ? "/calendar/final" : "/calendar/month"; } catch {}
-    } catch {}
-  }
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
       <div className="container-page">
