@@ -237,7 +237,19 @@ export default function MonthCalendarPage() {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (auto === "1" && raw) {
         const sc = JSON.parse(raw) as { name?: string; events?: EventItem[] };
-        if (sc?.events && sc.events.length) { setEvents(sc.events); setLoadedFromSaved(true); setGating(null); }
+        if (sc?.events && sc.events.length) {
+          const norm = sc.events.map((e) => {
+            if (e.type === "stay") {
+              const kind = (e.meta as { kind?: string } | undefined)?.kind;
+              const t = kind === "checkin" ? "14:00" : kind === "checkout" ? "11:00" : (e.time || undefined);
+              return { ...e, time: t };
+            }
+            return e;
+          });
+          setEvents(norm);
+          setLoadedFromSaved(true);
+          setGating(null);
+        }
         try { localStorage.removeItem("calentrip:auto_load_saved"); } catch {}
       }
     } catch {}
@@ -282,7 +294,17 @@ export default function MonthCalendarPage() {
         }
         const dbEvents = target ? await getTripEvents(target.id) : [];
         if (dbEvents.length) {
-          const mapped = dbEvents.map((e) => ({ type: (e.type as unknown as EventItem["type"]) || "activity", label: e.label || e.name, date: e.date, time: e.time }));
+          const mapped = dbEvents.map((e) => {
+            const type = (e.type as unknown as EventItem["type"]) || "activity";
+            const label = e.label || e.name;
+            let time = e.time;
+            if (type === "stay") {
+              const isCheckin = (label || "").toLowerCase().includes("check-in");
+              const isCheckout = (label || "").toLowerCase().includes("checkout");
+              time = isCheckin ? "14:00" : isCheckout ? "11:00" : time;
+            }
+            return { type, label, date: e.date, time };
+          });
           if (loadedFromSaved) return;
           setEvents(mapped);
           setGating(null);
@@ -611,44 +633,61 @@ export default function MonthCalendarPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setDayOpen(null)} />
           <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black" onTouchStart={(e) => setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY })} onTouchEnd={(e) => { if (!touchStart) return; const dx = e.changedTouches[0].clientX - touchStart.x; const dy = e.changedTouches[0].clientY - touchStart.y; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) changeDay(1); else changeDay(-1); } setTouchStart(null); }}>
             <DialogHeader>{dayTitle}</DialogHeader>
-            <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
+            <div className="space-y-3 text-sm max-h-[65vh] overflow-y-auto">
               {grouped[dayOpen!] && grouped[dayOpen!].length ? (
-                <ul className="space-y-3">
-                  {grouped[dayOpen!].map((e, idx) => {
-                    const accent = e.type === "flight" ? "border-l-[#007AFF]" : e.type === "stay" ? "border-l-[#febb02]" : e.type === "transport" ? "border-l-[#007AFF]" : "border-l-[#34c759]";
-                    const icon = e.type === "flight" ? "local_airport" : e.type === "stay" ? "home" : e.type === "transport" ? "transfer_within_a_station" : "event";
-                    return (
-                      <li key={`ev-${idx}`} className={`rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 flex items-start justify-between gap-3 border-l-4 ${accent}`}>
-                        <div className="leading-relaxed">
-                          <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-                            <span className="material-symbols-outlined text-[16px]">{icon}</span>
-                            <span>{e.time || ""}</span>
-                          </div>
-                          <div className="mt-1 text-sm">{e.label}</div>
+                <div className="grid grid-cols-[56px_1fr] gap-x-3">
+                  {(() => {
+                    const parseH = (t?: string) => { const s = (t || "00:00").padStart(5, "0"); const h = Number(s.slice(0, 2)); return Number.isFinite(h) ? h : 0; };
+                    const dayEvs = grouped[dayOpen!]!.slice().sort((a, b) => ((a.time || "00:00").localeCompare(b.time || "00:00")));
+                    const minH = Math.max(0, Math.min(...dayEvs.map((e) => parseH(e.time)), 8));
+                    const maxH = Math.min(23, Math.max(...dayEvs.map((e) => parseH(e.time)), 18));
+                    const startH = Math.min(minH, 7);
+                    const endH = Math.max(maxH, 21);
+                    const hours: number[] = []; for (let h = startH; h <= endH; h++) hours.push(h);
+                    const iconOf = (e: EventItem) => (e.type === "flight" ? "local_airport" : e.type === "transport" ? "transfer_within_a_station" : e.type === "stay" ? "home" : "event");
+                    const accentOf = (e: EventItem) => (e.type === "flight" ? "border-l-[#007AFF]" : e.type === "transport" ? "border-l-[#007AFF]" : e.type === "stay" ? "border-l-[#febb02]" : "border-l-[#34c759]");
+                    return hours.flatMap((h, idxH) => {
+                      const label = `${String(h).padStart(2, "0")}:00`;
+                      const evsAt = dayEvs.filter((e) => parseH(e.time) === h);
+                      return [
+                        <div key={`hl-${idxH}`} className="text-xs text-zinc-500">{label}</div>,
+                        <div key={`hc-${idxH}`} className="space-y-2">
+                          {evsAt.length ? evsAt.map((e, idxE) => {
+                            const icon = iconOf(e);
+                            const accent = accentOf(e);
+                            const isRec = e.type === "activity" || e.type === "restaurant";
+                            const time = (e.time || "00:00").padStart(5, "0");
+                            return (
+                              <div key={`ev-${idxH}-${idxE}`} className={`rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 flex items-start justify-between gap-3 border-l-4 ${accent}`}>
+                                <div className="leading-relaxed">
+                                  <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                                    <span className="material-symbols-outlined text-[16px]">{icon}</span>
+                                    <span>{time}</span>
+                                  </div>
+                                  <div className="mt-1 text-sm">{e.label}</div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {isRec ? (
+                                    <>
+                                      <Button type="button" variant="outline" disabled={!premiumFlag} className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { setEditIdx(idxE); setEditDate(e.date); setEditTime(e.time || ""); setEditOpen(true); }}>
+                                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                                        <span>{t("editLabel")}</span>
+                                      </Button>
+                                      <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>
+                                        <span className="material-symbols-outlined text-[16px]">map</span>
+                                        <span>{t("goButton")}</span>
+                                      </Button>
+                                    </>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          }) : <div className="h-7"></div>}
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {(e.type === "activity" || e.type === "restaurant") ? (
-                            <>
-                              <Button type="button" variant="outline" disabled={!premiumFlag} className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
-                                setEditIdx(idx);
-                                setEditDate(e.date);
-                                setEditTime(e.time || "");
-                                setEditOpen(true);
-                              }}>
-                                <span className="material-symbols-outlined text-[16px]">edit</span>
-                                <span>{t("editLabel")}</span>
-                              </Button>
-                              <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>
-                                <span className="material-symbols-outlined text-[16px]">map</span>
-                                <span>{t("goButton")}</span>
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                      ];
+                    });
+                  })()}
+                </div>
               ) : (
                 <div className="text-zinc-600">Sem eventos neste dia.</div>
               )}
