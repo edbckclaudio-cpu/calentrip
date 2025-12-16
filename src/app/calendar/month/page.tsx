@@ -244,7 +244,7 @@ export default function MonthCalendarPage() {
           }
         });
         const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-        const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string }> }) : null;
+        const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta }> }) : null;
         const cities = Array.isArray(summary?.cities) ? summary!.cities! : [];
         cities.forEach((c, i) => {
           const cityName = c.name || `Cidade ${i + 1}`;
@@ -252,11 +252,29 @@ export default function MonthCalendarPage() {
           if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
           if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
         });
+        for (let i = 0; i < cities.length - 1; i++) {
+          const c = cities[i];
+          const n = cities[i + 1];
+          const seg = c.transportToNext;
+          if (seg) {
+            const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+            const date = c.checkout || n?.checkin || "";
+            const time = seg.depTime || "11:00";
+            list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
+          }
+        }
         const rawRecs = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
         const recs: RecordItem[] = rawRecs ? (JSON.parse(rawRecs) as RecordItem[]) : [];
-        (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title}` : `Restaurante: ${r.title}`, date: r.date, time: r.time, meta: r }));
+        (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
         const seen = new Set<string>();
-        const unique = list.filter((e) => { const key = `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`; if (seen.has(key)) return false; seen.add(key); return true; });
+        const unique = list.filter((e) => {
+          const key = e.type === "stay"
+            ? `${e.type}|${e.label}|${(e.date || "").trim()}`
+            : `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
         if (loadedFromSaved) return;
         setEvents(unique);
       } catch {}
