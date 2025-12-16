@@ -111,34 +111,9 @@ export default function FinalCalendarPage() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
   const [editTime, setEditTime] = useState<string>("");
-  const [diagOpen, setDiagOpen] = useState(false);
-  const [diagSummary, setDiagSummary] = useState<string>("");
+  
 
-  async function collectDebug() {
-    try {
-      const tsRaw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
-      const sumRaw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-      const entRaw = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
-      const ts = tsRaw ? JSON.parse(tsRaw) : null;
-      const sum = sumRaw ? JSON.parse(sumRaw) : null;
-      const ent = entRaw ? JSON.parse(entRaw) : null;
-      const arrND = typeof window !== "undefined" ? localStorage.getItem("calentrip:arrivalNextDay_outbound") : null;
-      let tripsDb: TripItemDb[] = [];
-      let eventsLatestTrip: Array<{ type?: string; label?: string; name?: string; date: string; time?: string }> = [];
-      try {
-        await initDatabaseDb();
-        try { await migrateFromLocalStorageDb(); } catch {}
-        tripsDb = await getSavedTripsDb();
-        const latest = tripsDb.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))[0] || null;
-        if (latest?.id) eventsLatestTrip = await getTripEventsDb(String(latest.id));
-      } catch {}
-      const tripsStore: TripItemStore[] = getTrips();
-      const evs = events;
-      return { storage: { tripSearchRaw: tsRaw, tripSearch: ts, tripSummaryRaw: sumRaw, tripSummary: sum, entertainmentRaw: entRaw, entertainment: ent, arrivalNextDay_outbound: arrND }, db: { trips: tripsDb, eventsLatestTrip }, store: { trips: tripsStore }, ui: { events: evs } };
-    } catch {
-      return {};
-    }
-  }
+  
 
   function readTripSearch(): TripSearchPersist | null {
     try {
@@ -2601,23 +2576,7 @@ export default function FinalCalendarPage() {
             </span>
             {sideOpen ? <span className="text-sm font-medium">Compartilhar calendário</span> : null}
           </button>)}
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
-            try {
-              const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
-              const tsRaw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
-              const obj = raw ? JSON.parse(raw) : null;
-              const ts = tsRaw ? JSON.parse(tsRaw) : null;
-              setDiagSummary(JSON.stringify({ tripSummary: obj, tripSearch: ts }, null, 2));
-            } catch {
-              setDiagSummary("");
-            }
-            setDiagOpen(true);
-          }}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bug_report</span>
-            </span>
-            {sideOpen ? <span className="text-sm font-medium">Diagnóstico</span> : null}
-          </button>
+          
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
             function fmt(d: Date) {
               const y = String(d.getFullYear());
@@ -3190,17 +3149,7 @@ export default function FinalCalendarPage() {
         <p className="text-sm text-zinc-600">Veja todas as atividades em ordem cronológica.</p>
       </div>
 
-      <Dialog open={diagOpen} onOpenChange={setDiagOpen} placement="bottom">
-        <DialogHeader>Diagnóstico</DialogHeader>
-        <div className="space-y-2 text-xs">
-          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-black">
-            <pre className="whitespace-pre-wrap break-words">{diagSummary || "vazio"}</pre>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setDiagOpen(false)}>{t("close")}</Button>
-        </DialogFooter>
-      </Dialog>
+      
 
       <div className="container-page">
         <div className="mb-2 flex items-center gap-2 flex-wrap">
@@ -3238,47 +3187,9 @@ export default function FinalCalendarPage() {
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">{t("calendarMonth")}</span>
           </Button>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
-            (async () => {
-              try {
-                await composeFromLocal();
-              } catch {}
-            })();
-          }}>
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
-            <span className="hidden sm:inline">Recompor</span>
-          </Button>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
-            try {
-              const obj = await collectDebug();
-              setDiagSummary(JSON.stringify(obj, null, 2));
-            } catch {
-              setDiagSummary("");
-            }
-            setDiagOpen(true);
-          }}>
-            <span className="material-symbols-outlined text-[16px]">bug_report</span>
-            <span className="hidden sm:inline">Diagnóstico</span>
-          </Button>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
-            try {
-              const obj = await collectDebug();
-              console.log("CalenTrip diagnóstico completo:", obj);
-              const flat = (o: unknown, p: string[] = []) => {
-                if (o && typeof o === "object") {
-                  const rec = o as Record<string, unknown>;
-                  Object.keys(rec).forEach((k) => flat(rec[k], [...p, k]));
-                  return;
-                }
-                console.log(p.join("."), o);
-              };
-              flat(obj);
-              show("Dump no Console", { variant: "info" });
-            } catch { show("Erro ao imprimir", { variant: "error" }); }
-          }}>
-            <span className="material-symbols-outlined text-[16px]">code</span>
-            <span className="hidden sm:inline">Console</span>
-          </Button>
+          
+          
+          
           
         </div>
         <Card>
@@ -3512,45 +3423,7 @@ export default function FinalCalendarPage() {
         </DialogFooter>
       </Dialog>
 
-      <Dialog open={diagOpen} onOpenChange={setDiagOpen} placement="bottom">
-        <DialogHeader>Diagnóstico</DialogHeader>
-        <div className="space-y-2 text-xs">
-          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-black max-h-[55vh] overflow-y-auto">
-            <pre className="whitespace-pre-wrap break-words">{diagSummary || "vazio"}</pre>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={async () => {
-            try {
-              if (!diagSummary) return;
-              await navigator.clipboard.writeText(diagSummary);
-              show("Copiado", { variant: "success" });
-            } catch { show("Erro ao copiar", { variant: "error" }); }
-          }}>Copiar</Button>
-          <Button type="button" variant="outline" onClick={() => {
-            try {
-              if (!diagSummary) return;
-              const obj = JSON.parse(diagSummary);
-              console.log("CalenTrip diagnóstico completo:", obj);
-              const flat = (o: unknown, p: string[] = []) => {
-                if (o && typeof o === "object") {
-                  const rec = o as Record<string, unknown>;
-                  Object.keys(rec).forEach((k) => flat(rec[k], [...p, k]));
-                  return;
-                }
-                console.log(p.join("."), o);
-              };
-              flat(obj);
-              show("Dump no Console", { variant: "info" });
-            } catch { show("Erro ao imprimir", { variant: "error" }); }
-          }}>Console</Button>
-          <Button type="button" onClick={async () => {
-            try { await composeFromLocal(); } catch {}
-            setDiagOpen(false);
-          }}>Exportar p/ calendário</Button>
-          <Button type="button" variant="outline" onClick={() => setDiagOpen(false)}>{t("close")}</Button>
-        </DialogFooter>
-      </Dialog>
+      
 
       <Dialog open={editOpen} onOpenChange={setEditOpen} placement="bottom">
         <DialogHeader>{t("editActivityTitle")}</DialogHeader>
