@@ -45,8 +45,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     idRef.current = (idRef.current + 1) || 1;
     const id = idRef.current;
     const variant = opts?.variant ?? "info";
-    const duration = 3000;
-    const sticky = true;
+    const duration = Math.max(0, opts?.duration ?? 3000);
+    const sticky = opts?.sticky ?? true;
     const k = opts?.key;
     setItems((prev) => {
       const cleared = k ? prev.filter((t) => t.key !== k) : [];

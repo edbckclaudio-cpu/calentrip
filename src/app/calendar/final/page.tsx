@@ -90,6 +90,8 @@ export default function FinalCalendarPage() {
   const [goLoading, setGoLoading] = useState(false);
   const [goInfo, setGoInfo] = useState<{ destination?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
   const [goRecord, setGoRecord] = useState<RecordItem | null>(null);
+  const [nameDrawerOpen, setNameDrawerOpen] = useState(false);
+  const [nameInput, setNameInput] = useState("");
   const [summaryCities, setSummaryCities] = useState<Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta; stayFiles?: SavedFile[] }>>([]);
   const [outboundFiles, setOutboundFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
   const [inboundFiles, setInboundFiles] = useState<Array<{ name: string; type: string; size: number; id?: string; dataUrl?: string }>>([]);
@@ -595,7 +597,7 @@ export default function FinalCalendarPage() {
           return true;
         });
         setEvents(unique);
-        show("Calendário recarregado do storage", { variant: "success" });
+        show("Calendário recarregado do storage", { variant: "success", duration: 2000, sticky: false });
       } catch {
         show("Falha ao recarregar do storage", { variant: "error" });
       }
@@ -623,8 +625,8 @@ export default function FinalCalendarPage() {
     return d;
   }
 
-  async function saveOnDeviceAndInsertCalendar() {
-    try { await saveCalendarFull(); } catch {}
+  async function saveOnDeviceAndInsertCalendar(fixedName?: string) {
+    try { await saveCalendarFull(fixedName); } catch {}
     try {
       if (!isCapAndroid()) return;
       const toISO = (d: Date) => d.toISOString();
@@ -1337,8 +1339,8 @@ export default function FinalCalendarPage() {
     } catch {}
   }
 
-  async function saveCalendarFull() {
-    try { saveCalendarNamed(true); } catch {}
+  async function saveCalendarFull(fixedName?: string) {
+    try { saveCalendarNamed(true, fixedName); } catch {}
     const uaHeader = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
     const isAndroidHeader = /Android/.test(uaHeader);
     function fmt(d: Date) {
@@ -2579,7 +2581,7 @@ export default function FinalCalendarPage() {
             {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
           </button>
           
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={saveOnDeviceAndInsertCalendar}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { setNameInput(""); setNameDrawerOpen(true); }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
             </span>
@@ -3202,8 +3204,7 @@ export default function FinalCalendarPage() {
             type="button"
             variant="outline"
             className="px-2 py-1 text-xs rounded-md gap-1"
-            disabled={!premiumFlag}
-            onClick={saveOnDeviceAndInsertCalendar}
+            onClick={() => { setNameInput(""); setNameDrawerOpen(true); }}
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
             <span className="hidden sm:inline">{t("saveLabel")}</span>
@@ -3212,7 +3213,16 @@ export default function FinalCalendarPage() {
             type="button"
             variant="outline"
             className="px-2 py-1 text-xs rounded-md gap-1"
-            onClick={saveOnDeviceAndInsertCalendar}
+            onClick={() => {
+              try {
+                const payload = { events };
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
+                  localStorage.setItem("calentrip:auto_load_saved", "1");
+                }
+              } catch {}
+              try { window.location.href = "/calendar/month"; } catch {}
+            }}
           >
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">{t("calendarMonth")}</span>
@@ -3428,14 +3438,53 @@ export default function FinalCalendarPage() {
         <DialogHeader>Salvar no seu celular</DialogHeader>
         <div className="space-y-2 text-sm">
           <div className="mt-1">
-            <Button type="button" disabled={!premiumFlag} onClick={saveOnDeviceAndInsertCalendar}>Salvar</Button>
+            <Button type="button" onClick={saveOnDeviceAndInsertCalendar}>Salvar</Button>
+          </div>
+        </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => setCalendarHelpOpen(false)}>{t("close")}</Button>
+      </DialogFooter>
+    </Dialog>
+
+    {nameDrawerOpen && (
+      <Dialog open={nameDrawerOpen} onOpenChange={setNameDrawerOpen} placement="bottom">
+        <DialogHeader>Qual o nome do calendário?</DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div>
+            <label className="mb-1 block text-sm">Nome</label>
+            <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
+          </div>
+          <div className="mt-1">
+            <Button type="button" onClick={async () => {
+              const raw = nameInput || "";
+              let name = raw.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
+              if (!name) {
+                try {
+                  const rawTs = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
+                  const ts = rawTs ? JSON.parse(rawTs) : null;
+                  if (ts) {
+                    const isSame = ts.mode === "same";
+                    const origin = isSame ? (ts.origin || "") : (ts.outbound?.origin || "");
+                    const destination = isSame ? (ts.destination || "") : (ts.outbound?.destination || "");
+                    const fallback = `${String(origin)}${String(destination)}`.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").toUpperCase().slice(0, 9);
+                    name = fallback || "CALENDAR";
+                  } else {
+                    name = "CALENDAR";
+                  }
+                } catch { name = "CALENDAR"; }
+              }
+              await saveOnDeviceAndInsertCalendar(name);
+              setNameDrawerOpen(false);
+              show(`salvo com o nome ${name}`, { variant: "success", duration: 3000, sticky: false });
+            }}>{t("saveLabel")}</Button>
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setCalendarHelpOpen(false)}>{t("close")}</Button>
+          <Button type="button" variant="outline" onClick={() => setNameDrawerOpen(false)}>{t("close")}</Button>
         </DialogFooter>
       </Dialog>
-
+    )}
+ 
       
 
       <Dialog open={editOpen} onOpenChange={setEditOpen} placement="bottom">

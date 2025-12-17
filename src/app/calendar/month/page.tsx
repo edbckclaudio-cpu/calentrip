@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { isTripPremium } from "@/lib/premium";
 import Image from "next/image";
@@ -8,11 +8,13 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DialogHeader } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { TripItem, FlightNote, getSavedTrips, getTripEvents, updateTrip, migrateFromLocalStorage } from "@/lib/trips-db";
 import { alarmForEvent } from "@/lib/ics";
+import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
 
-type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
+type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
 
@@ -33,6 +35,526 @@ export default function MonthCalendarPage() {
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [loadedFromSaved, setLoadedFromSaved] = useState(false);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerData, setDrawerData] = useState<{ originIata: string; departureDate: string; departureTime: string } | null>(null);
+  const [transportInfo, setTransportInfo] = useState<{ distanceKm?: number; durationMin?: number; durationWithTrafficMin?: number; gmapsUrl?: string; r2rUrl?: string; uberUrl?: string; airportName?: string; arrivalByTime?: string; callTime?: string; notifyAt?: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [stayDrawerOpen, setStayDrawerOpen] = useState(false);
+  const [stayLoading, setStayLoading] = useState(false);
+  const [stayInfo, setStayInfo] = useState<{ origin?: string; destination?: string; distanceKm?: number; drivingMin?: number; walkingMin?: number; busMin?: number; trainMin?: number; uberUrl?: string; gmapsUrl?: string; r2rUrl?: string; mapUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
+  const [arrivalDrawerOpen, setArrivalDrawerOpen] = useState(false);
+  const [arrivalInfo, setArrivalInfo] = useState<{ city?: string; address?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
+  const [goDrawerOpen, setGoDrawerOpen] = useState(false);
+  const [goLoading, setGoLoading] = useState(false);
+  const [goInfo, setGoInfo] = useState<{ destination?: string; distanceKm?: number; walkingMin?: number; drivingMin?: number; busMin?: number; trainMin?: number; priceEstimate?: number; uberUrl?: string; gmapsUrl?: string } | null>(null);
+  const [docOpen, setDocOpen] = useState(false);
+  const [docTitle, setDocTitle] = useState("");
+  const [docFiles, setDocFiles] = useState<Array<{ name: string; type: string; size: number; dataUrl?: string }>>([]);
+  const [locConsent, setLocConsent] = useState<"granted" | "denied" | "skipped" | "default">("default");
+  const [locModalOpen, setLocModalOpen] = useState(false);
+  const [stayCandidates, setStayCandidates] = useState<Array<{ name: string; lat: number; lon: number }>>([]);
+  const [stayChosenIdx, setStayChosenIdx] = useState<number | null>(null);
+  const [stayMode, setStayMode] = useState<"air" | "train" | "bus" | "car" | null>(null);
+  const [stayCityForSearch, setStayCityForSearch] = useState<string>("");
+  const [nameDrawerOpen, setNameDrawerOpen] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const toastOnce = useRef<Set<string>>(new Set());
+  const showOnce = useCallback((message: string, opts?: { variant?: "info" | "success" | "error"; duration?: number; sticky?: boolean }) => {
+    if (toastOnce.current.has(message)) return 0;
+    toastOnce.current.add(message);
+    const id = show(message, opts);
+    try { setTimeout(() => { try { toastOnce.current.delete(message); } catch {} }, 15000); } catch {}
+    return id;
+  }, [show]);
+  const ensureLocationConsent = useCallback(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:locConsent") : null;
+      const s = raw === "granted" ? "granted" : raw === "denied" ? "denied" : raw === "skipped" ? "skipped" : "default";
+      const s2 = s as "granted" | "denied" | "skipped" | "default";
+      setLocConsent(s2);
+      if (s === "default") { setLocModalOpen(true); return false; }
+      return s === "granted";
+    } catch {
+      return false;
+    }
+  }, []);
+
+  function buildRome2RioUrl(args: { originName: string; destName: string; originLat?: number; originLon?: number; destLat?: number; destLon?: number; date?: string; time?: string; passengers?: number; lang?: string; currency?: string }) {
+    const p = new URLSearchParams();
+    p.set("lang", args.lang || "pt-BR");
+    p.set("currency", args.currency || "BRL");
+    if (args.date) p.set("date", args.date);
+    if (args.time) p.set("time", args.time);
+    if (args.passengers) p.set("passengers", String(args.passengers));
+    if (args.originLat && args.originLon) { p.set("sLat", String(args.originLat)); p.set("sLng", String(args.originLon)); }
+    if (args.destLat && args.destLon) { p.set("dLat", String(args.destLat)); p.set("dLng", String(args.destLon)); }
+    const base = `https://www.rome2rio.com/s/${encodeURIComponent(args.originName)}/${encodeURIComponent(args.destName)}`;
+    const q = p.toString();
+    return q ? `${base}?${q}` : base;
+  }
+
+  async function openTransportDrawer(item: EventItem) {
+    if (item.type !== "flight") return;
+    const fn = item.meta as FlightNote;
+    if (!fn || !fn.origin || !fn.date) return;
+    setDrawerData({ originIata: fn.origin, departureDate: fn.date, departureTime: fn.departureTime || "" });
+    setDrawerOpen(true);
+    setLoading(true);
+    try {
+      const airport = await findAirportByIata(fn.origin);
+      const originQ = airport ? `${airport.name} (${airport.iata})` : `${fn.origin} airport`;
+      const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+        if (!navigator.geolocation) resolve(null);
+        if (!ensureLocationConsent()) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, timeout: 10000 });
+      });
+      const geocode = async (q: string) => {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+        return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon) } : null;
+      };
+      const airportLoc = await geocode(originQ);
+      let distanceKm: number | undefined;
+      let durationMin: number | undefined;
+      let uberUrl: string | undefined;
+      if (pos && airportLoc) {
+        const o = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        const d = airportLoc;
+        const osrm = `https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`;
+        const res = await fetch(osrm);
+        const js = await res.json();
+        const r = js?.routes?.[0];
+        if (r) {
+          distanceKm = Math.round((r.distance ?? 0) / 1000);
+          durationMin = Math.round((r.duration ?? 0) / 60);
+        }
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${o.lat}&pickup[longitude]=${o.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(originQ)}`;
+      }
+      const gmapsUrl = pos
+        ? `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude}%2C${pos.coords.longitude}&destination=${encodeURIComponent(originQ)}`
+        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(originQ)}`;
+      const r2rUrl = buildRome2RioUrl({ originName: pos ? `${pos.coords.latitude},${pos.coords.longitude}` : "my location", destName: originQ, originLat: pos?.coords.latitude, originLon: pos?.coords.longitude, destLat: airportLoc?.lat, destLon: airportLoc?.lon, date: fn.date, time: fn.departureTime, lang: "pt-BR", currency: "BRL" });
+      if (!uberUrl && airportLoc) {
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${airportLoc.lat}&dropoff[longitude]=${airportLoc.lon}&dropoff[formatted_address]=${encodeURIComponent(originQ)}`;
+      }
+      const trafficFactor = 1.3;
+      const durationWithTrafficMin = durationMin ? Math.round(durationMin * trafficFactor) : undefined;
+      let callTime: string | undefined;
+      let notifyAt: string | undefined;
+      let arriveBy: string | undefined;
+      if (fn.departureTime && fn.date) {
+        const [h, m] = (fn.departureTime || "00:00").split(":");
+        const dt = new Date(`${fn.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
+        const arriveTarget = new Date(dt.getTime() - 3 * 60 * 60 * 1000);
+        const travelMs = (durationWithTrafficMin ?? durationMin ?? 60) * 60 * 1000;
+        const callAt = new Date(arriveTarget.getTime() - travelMs);
+        const notifyAtDate = new Date(callAt.getTime() - 2 * 60 * 60 * 1000);
+        const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        arriveBy = fmt(arriveTarget);
+        callTime = fmt(callAt);
+        notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
+      }
+      setTransportInfo({ distanceKm, durationMin, durationWithTrafficMin, gmapsUrl, r2rUrl, uberUrl, airportName: originQ, arrivalByTime: arriveBy, callTime, notifyAt });
+    } catch {
+      const dest = drawerData?.originIata ? `${drawerData.originIata} airport` : "aeroporto";
+      const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
+      const r2rUrl = buildRome2RioUrl({ originName: "Origem", destName: dest, lang: "pt-BR", currency: "BRL" });
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(dest)}`;
+      setTransportInfo({ distanceKm: undefined, durationMin: undefined, durationWithTrafficMin: undefined, gmapsUrl, r2rUrl, uberUrl, airportName: dest });
+      try { showOnce("Não foi possível calcular a rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openDepartureDrawer(item: EventItem) {
+    if (item.type !== "transport") return;
+    const seg = item.meta as TransportSegmentMeta;
+    const originAddr = (seg.originAddress || "").trim();
+    const depPoint = (seg.dep || "").trim();
+    setStayDrawerOpen(true);
+    setStayLoading(true);
+    try {
+      const geocode = async (q: string) => {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+        return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
+      };
+      const o = originAddr ? await geocode(originAddr) : null;
+      setStayCandidates([]);
+      setStayChosenIdx(null);
+      setStayMode(seg.mode);
+      const cityForSearch = (seg.originCity || "").trim();
+      setStayCityForSearch(cityForSearch);
+      let destLabel: string | undefined;
+      let destLatLon: { lat: number; lon: number } | null = null;
+      if (cityForSearch) {
+        if (seg.mode === "bus") {
+          try {
+            const fetchList = async (q: string) => {
+              const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8`;
+              const res = await fetch(url, { headers: { Accept: "application/json" } });
+              const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+              return js.map((r) => ({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon) }));
+            };
+            const list1 = await fetchList(`rodoviária ${cityForSearch}`);
+            const list2 = await fetchList(`bus station ${cityForSearch}`);
+            const list3 = await fetchList(`terminal ônibus ${cityForSearch}`);
+            const seen = new Set<string>();
+            const merged: Array<{ name: string; lat: number; lon: number }> = [];
+            [...list1, ...list2, ...list3].forEach((it) => {
+              const key = `${Math.round(it.lat * 10000)}|${Math.round(it.lon * 10000)}`;
+              if (!seen.has(key)) { seen.add(key); merged.push(it); }
+            });
+            const cityLow = cityForSearch.toLowerCase();
+            const cityBusPrefs: Record<string, string[]> = {
+              ["são paulo"]: ["tietê", "terminal tietê"],
+              ["sao paulo"]: ["tiete", "terminal tiete"],
+              ["rio de janeiro"]: ["novo rio"],
+              ["porto"]: ["campo 24 de agosto"],
+            };
+            const rankBus = (n: string) => {
+              const s = (n || "").toLowerCase();
+              let score = 100;
+              if (s.includes(cityLow)) score -= 10;
+              if (/(central|centrale)/.test(s)) score -= 15;
+              if (/(rodovi|terminal|gare routière|autostazione)/.test(s)) score -= 10;
+              const prefs = cityBusPrefs[cityLow] || [];
+              for (const k of prefs) { if (s.includes(k)) score -= 40; }
+              return score;
+            };
+            merged.sort((a, b) => rankBus(a.name) - rankBus(b.name));
+            if (merged.length) {
+              setStayCandidates(merged.slice(0, 6));
+              const rawSel = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
+              const map = rawSel ? JSON.parse(rawSel) as Record<string, { name: string; lat: number; lon: number }> : {};
+              const saved = map[cityForSearch];
+              const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
+              const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
+              destLabel = chosen.name;
+              destLatLon = { lat: chosen.lat, lon: chosen.lon };
+              setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
+            }
+          } catch {}
+        } else if (seg.mode === "train") {
+          try {
+            const fetchList = async (q: string) => {
+              const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8`;
+              const res = await fetch(url, { headers: { Accept: "application/json" } });
+              const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+              return js.map((r) => ({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon) }));
+            };
+            const list1 = await fetchList(`estação de trem ${cityForSearch}`);
+            const list2 = await fetchList(`train station ${cityForSearch}`);
+            const list3 = await fetchList(`gare ${cityForSearch}`);
+            const seen = new Set<string>();
+            const merged: Array<{ name: string; lat: number; lon: number }> = [];
+            [...list1, ...list2, ...list3].forEach((it) => {
+              const key = `${Math.round(it.lat * 10000)}|${Math.round(it.lon * 10000)}`;
+              if (!seen.has(key)) { seen.add(key); merged.push(it); }
+            });
+            const cityLow = cityForSearch.toLowerCase();
+            const cityTrainPrefs: Record<string, string[]> = {
+              ["firenze"]: ["santa maria novella", "smn"],
+              ["florence"]: ["santa maria novella", "smn"],
+              ["roma"]: ["termini"],
+              ["rome"]: ["termini"],
+              ["milano"]: ["centrale"],
+              ["milan"]: ["centrale", "central"],
+              ["venezia"]: ["santa lucia"],
+              ["venice"]: ["santa lucia"],
+              ["napoli"]: ["centrale"],
+              ["naples"]: ["centrale"],
+              ["torino"]: ["porta nuova"],
+              ["turin"]: ["porta nuova"],
+              ["bologna"]: ["centrale"],
+              ["pisa"]: ["centrale"],
+              ["paris"]: ["gare du nord", "gare de lyon"],
+              ["berlin"]: ["hauptbahnhof", "hbf"],
+              ["munich"]: ["hauptbahnhof", "hbf"],
+              ["münchen"]: ["hauptbahnhof", "hbf"],
+              ["madrid"]: ["atocha"],
+              ["barcelona"]: ["sants"],
+            };
+            const rank = (n: string) => {
+              const s = (n || "").toLowerCase();
+              let score = 100;
+              if (s.includes(cityLow)) score -= 20;
+              if (/termini/.test(s)) score -= 50;
+              if (/(centrale|central|hauptbahnhof|hbf)/.test(s)) score -= 40;
+              if (/(santa maria novella|smn)/.test(s)) score -= 45;
+              if (/(gare du nord|gare de lyon)/.test(s)) score -= 35;
+              if (/(stazione|station|gare)/.test(s)) score -= 10;
+              const prefs = cityTrainPrefs[cityLow] || [];
+              for (const k of prefs) { if (s.includes(k)) score -= 50; }
+              return score;
+            };
+            merged.sort((a, b) => rank(a.name) - rank(b.name));
+            if (merged.length) {
+              setStayCandidates(merged.slice(0, 6));
+              const rawSel = typeof window !== "undefined" ? localStorage.getItem("calentrip:train_station_selection") : null;
+              const map = rawSel ? (JSON.parse(rawSel) as Record<string, { name: string; lat: number; lon: number }>) : {};
+              const saved = map[cityForSearch];
+              const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
+              const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
+              destLabel = chosen.name;
+              destLatLon = { lat: chosen.lat, lon: chosen.lon };
+              setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
+            }
+          } catch {}
+        } else if (seg.mode === "air") {
+          try {
+            const airports = await searchAirportsAsync(cityForSearch);
+            const filtered = airports.filter((a) => a.city.toLowerCase() === cityForSearch.toLowerCase()).slice(0, 6);
+            const orderMap: Record<string, number> = {};
+            filtered.forEach((a, i) => { orderMap[`${a.city} – ${a.name} (${a.iata})`] = i; });
+            const names = filtered.map((a) => `${a.city} – ${a.name} (${a.iata})`);
+            const geos: Array<{ name: string; lat: number; lon: number; pref?: number }> = [];
+            for (const n of names) {
+              try {
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(n)}&format=json&limit=1`;
+                const res = await fetch(url, { headers: { Accept: "application/json" } });
+                const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+                const r = js[0];
+                if (r) geos.push({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon), pref: orderMap[n] ?? 999 });
+              } catch {}
+            }
+            if (geos.length) {
+              geos.sort((a, b) => (a.pref ?? 999) - (b.pref ?? 999));
+              const merged = geos.map((g) => ({ name: g.name, lat: g.lat, lon: g.lon }));
+              setStayCandidates(merged.slice(0, 6));
+              const rawSel = typeof window !== "undefined" ? localStorage.getItem("calentrip:airport_selection") : null;
+              const map = rawSel ? (JSON.parse(rawSel) as Record<string, { name: string; lat: number; lon: number }>) : {};
+              const saved = map[cityForSearch];
+              const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
+              const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
+              destLabel = chosen.name;
+              destLatLon = { lat: chosen.lat, lon: chosen.lon };
+              setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
+            }
+          } catch {}
+        }
+      }
+      const d = destLatLon ? { lat: destLatLon.lat, lon: destLatLon.lon, display: destLabel || depPoint } : await geocode(depPoint + (seg.originCity ? ` ${seg.originCity}` : ""));
+      let distanceKm: number | undefined;
+      let drivingMin: number | undefined;
+      let walkingMin: number | undefined;
+      let uberUrl: string | undefined;
+      let gmapsUrl: string | undefined;
+      let r2rUrl: string | undefined;
+      let mapUrl: string | undefined;
+      if (d) {
+        const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+          try {
+            if (!ensureLocationConsent()) { resolve(null); return; }
+            navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+          } catch { resolve(null); }
+        });
+        if (pos) {
+          const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${d.lon},${d.lat}?overview=false`;
+          const resD = await fetch(osrmDrive);
+          const jsD = await resD.json();
+          const rD = jsD?.routes?.[0];
+          if (rD) {
+            distanceKm = Math.round((rD.distance ?? 0) / 1000);
+            drivingMin = Math.round((rD.duration ?? 0) / 60);
+          }
+          try {
+            const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${d.lon},${d.lat}?overview=false`;
+            const resW = await fetch(osrmWalk);
+            const jsW = await resW.json();
+            const rW = jsW?.routes?.[0];
+            if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60);
+          } catch {}
+          uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${d.lat}&dropoff[longitude]=${d.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+          gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(depPoint)}`;
+        } else {
+          uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${d?.lat}&dropoff[longitude]=${d?.lon}&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+          gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(depPoint)}`;
+        }
+        if (o && d) {
+          const bbox = [Math.min(o.lon, d.lon), Math.min(o.lat, d.lat), Math.max(o.lon, d.lon), Math.max(o.lat, d.lat)];
+          mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox.join("%2C")}&layer=mapnik`;
+        }
+        r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+      }
+      const trafficFactor = 1.3;
+      const drivingWithTrafficMin = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+      let callTime: string | undefined;
+      let notifyAt: string | undefined;
+      if (item.date && item.time) {
+        const [h, m] = (item.time || "00:00").split(":");
+        const depDT = new Date(`${item.date}T${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`);
+        const bufferMin = 60;
+        const travelMs = ((drivingWithTrafficMin ?? drivingMin ?? 30) + bufferMin) * 60 * 1000;
+        const callAt = new Date(depDT.getTime() - travelMs);
+        const notifyAtDate = new Date(callAt.getTime());
+        const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        callTime = fmt(callAt);
+        notifyAt = `${notifyAtDate.toLocaleDateString()} ${fmt(notifyAtDate)}`;
+      }
+      setStayInfo({ origin: originAddr, destination: depPoint, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, busMin: drivingWithTrafficMin ? Math.round(drivingWithTrafficMin * 1.8) : undefined, trainMin: drivingWithTrafficMin ? Math.round(drivingWithTrafficMin * 1.2) : undefined, uberUrl, gmapsUrl, r2rUrl, mapUrl, callTime, notifyAt });
+    } catch {
+      const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddr)}&destination=${encodeURIComponent(depPoint)}`;
+      const r2rUrl = `https://www.rome2rio.com/s/${encodeURIComponent(originAddr)}/${encodeURIComponent(depPoint)}`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(depPoint)}`;
+      setStayInfo({ origin: originAddr, destination: depPoint, gmapsUrl, r2rUrl, uberUrl });
+      try { show("Erro ao calcular rota detalhada. Usando links básicos.", { variant: "info" }); } catch {}
+    } finally {
+      setStayLoading(false);
+    }
+  }
+
+  async function openCheckinDrawer(item: EventItem) {
+    if (item.type !== "stay") return;
+    const m = item.meta as { city?: string; address?: string; kind: "checkin" | "checkout" } | undefined;
+    if (!m || m.kind !== "checkin") return;
+    setArrivalDrawerOpen(true);
+    setArrivalInfo(null);
+    const geocode = async (q: string) => {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+      return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
+    };
+    const dest = await geocode(m.address || m.city || "");
+    if (!dest) {
+      const q = (m.address || m.city || "").trim();
+      const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent((m.address || m.city || "").trim())}`;
+      setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
+      try { showOnce("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
+      return;
+    }
+    const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
+      try {
+        if (!ensureLocationConsent()) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+      } catch { resolve(null); }
+    });
+    try {
+      const pos = await getPos();
+      if (!pos) {
+        const q = (m.address || m.city || "").trim();
+        const gmapsUrl = q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : undefined;
+        const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(q)}`;
+        setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
+        try { showOnce("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
+        return;
+      }
+      const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${dest.lon},${dest.lat}?overview=false`;
+      const resD = await fetch(osrmDrive);
+      const jsD = await resD.json();
+      const rD = jsD?.routes?.[0];
+      const drivingMin = rD ? Math.round((rD.duration ?? 0) / 60) : undefined;
+      const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${dest.lon},${dest.lat}?overview=false`;
+      let walkingMin: number | undefined;
+      try { const resW = await fetch(osrmWalk); const jsW = await resW.json(); const rW = jsW?.routes?.[0]; walkingMin = rW ? Math.round((rW.duration ?? 0) / 60) : undefined; } catch {}
+      const trafficFactor = 1.3;
+      const driveWithTraffic = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+      const busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
+      const trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
+      const q = (m.address || m.city || "").trim();
+      const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(q)}`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(q)}`;
+      const distKm = (() => {
+        const toRad = (v: number) => (v * Math.PI) / 180;
+        const R = 6371;
+        const dLat = toRad(dest.lat - cur.lat);
+        const dLon = toRad(dest.lon - cur.lon);
+        const lat1 = toRad(cur.lat);
+        const lat2 = toRad(dest.lat);
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+        return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+      })();
+      const priceEstimate = Math.round((distKm || 0) * 6 + 3);
+      setArrivalInfo({ city: m.city, address: m.address, distanceKm: distKm, walkingMin, drivingMin: driveWithTraffic ?? drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl });
+    } catch {
+      const q = (m.address || m.city || "").trim();
+      const gmapsUrl = q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(q)}`;
+      setArrivalInfo({ city: m.city, address: m.address, gmapsUrl, uberUrl });
+      try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
+    }
+  }
+
+  async function openGoDrawer(item: EventItem) {
+    if (!(item.type === "activity" || item.type === "restaurant")) return;
+    const rec = item.meta as RecordItem;
+    setGoDrawerOpen(true);
+    setGoLoading(true);
+    try {
+      const getPos = () => new Promise<GeolocationPosition | null>((resolve) => {
+        if (!navigator.geolocation) resolve(null);
+        if (!ensureLocationConsent()) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+      });
+      const geocode = async (q: string) => {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+        return js[0] ? { lat: Number(js[0].lat), lon: Number(js[0].lon), display: js[0].display_name } : null;
+      };
+      const query = `${rec.address || `${rec.title} ${rec.cityName}`}`.trim();
+      const dest = await geocode(query);
+      const pos = await getPos();
+      let walkingMin: number | undefined;
+      let drivingMin: number | undefined;
+      let gmapsUrl: string | undefined;
+      let uberUrl: string | undefined;
+      let busMin: number | undefined;
+      let trainMin: number | undefined;
+      let distanceKm: number | undefined;
+      if (dest && pos) {
+        const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${dest.lon},${dest.lat}?overview=false`;
+        const resD = await fetch(osrmDrive);
+        const jsD = await resD.json();
+        const rD = jsD?.routes?.[0];
+        if (rD) {
+          drivingMin = Math.round((rD.duration ?? 0) / 60);
+          distanceKm = Math.round((rD.distance ?? 0) / 1000);
+        }
+        try {
+          const osrmWalk = `https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${dest.lon},${dest.lat}?overview=false`;
+          const resW = await fetch(osrmWalk);
+          const jsW = await resW.json();
+          const rW = jsW?.routes?.[0];
+          if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60);
+        } catch {}
+        const trafficFactor = 1.3;
+        const driveWithTraffic = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+        busMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.8) : undefined;
+        trainMin = driveWithTraffic ? Math.round(driveWithTraffic * 1.2) : undefined;
+        const priceEstimate = Math.round((distanceKm || 0) * 6 + 3);
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(query)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(query)}`;
+        setGoInfo({ destination: query, distanceKm, walkingMin, drivingMin: driveWithTraffic ?? drivingMin, busMin, trainMin, priceEstimate, uberUrl, gmapsUrl });
+      } else if (dest && !pos) {
+        gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${dest.lat}&dropoff[longitude]=${dest.lon}&dropoff[formatted_address]=${encodeURIComponent(query)}`;
+        setGoInfo({ destination: query, gmapsUrl, uberUrl });
+        try { show("Sem localização atual. Links básicos foram gerados.", { variant: "info" }); } catch {}
+      } else {
+        gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+        uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(query)}`;
+        setGoInfo({ destination: query, gmapsUrl, uberUrl });
+        try { showOnce("Destino não geocodificado. Usando busca genérica.", { variant: "info" }); } catch {}
+      }
+    } catch {
+      const q = `${(item.meta as RecordItem).title} ${(item.meta as RecordItem).cityName}`.trim();
+      const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+      const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(q)}`;
+      setGoInfo({ destination: q, gmapsUrl, uberUrl });
+      try { showOnce("Erro ao calcular rota. Usando links básicos.", { variant: "info" }); } catch {}
+    } finally {
+      setGoLoading(false);
+    }
+  }
 
   async function reloadFromStorage() {
     try {
@@ -92,7 +614,7 @@ export default function MonthCalendarPage() {
         return true;
       });
       setEvents(unique);
-      show("Calendário recarregado do storage", { variant: "success" });
+      show("Calendário recarregado do storage", { variant: "success", duration: 2000, sticky: false });
     } catch {
       show("Falha ao recarregar do storage", { variant: "error" });
     }
@@ -534,28 +1056,7 @@ export default function MonthCalendarPage() {
         <button
           type="button"
           className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-          onClick={async () => {
-            try {
-              const payload = { events };
-              if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
-              try {
-                const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
-                const ts = raw ? JSON.parse(raw) : null;
-                if (ts) {
-                  const isSame = ts.mode === "same";
-                  const origin = isSame ? ts.origin : ts.outbound?.origin;
-                  const destination = isSame ? ts.destination : ts.outbound?.destination;
-                  const date = isSame ? ts.departDate : ts.outbound?.date;
-                  if (origin && destination && date) {
-                    if (currentTripId) { await updateTrip(currentTripId, { reachedFinalCalendar: true }); }
-                  }
-                }
-              } catch {}
-              try { localStorage.setItem("calentrip:open_calendar_help", "1"); } catch {}
-              show(t("savedInSearchesMsg"), { variant: "success" });
-              try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.location.href = "/calendar/final"; } catch {}
-            } catch { show(t("saveErrorMsg"), { variant: "error" }); }
-          }}
+          onClick={() => { setNameInput(""); setNameDrawerOpen(true); }}
           disabled={!premiumFlag}
         >
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -667,16 +1168,36 @@ export default function MonthCalendarPage() {
                                   <div className="mt-1 text-sm">{e.label}</div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
+                                  {e.type === "flight" ? (
+                                    <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openTransportDrawer(e)}>
+                                      <span className="material-symbols-outlined text-[16px]">local_taxi</span>
+                                    </Button>
+                                  ) : null}
+                                  {e.type === "transport" ? (
+                                    <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openDepartureDrawer(e)}>
+                                      <span className="material-symbols-outlined text-[16px] text-[#febb02]">map</span>
+                                    </Button>
+                                  ) : null}
+                                  {e.type === "stay" && (e.meta as { kind?: string } | undefined)?.kind === "checkin" ? (
+                                    <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openCheckinDrawer(e)}>
+                                      <span className="material-symbols-outlined text-[16px]">home</span>
+                                    </Button>
+                                  ) : null}
                                   {isRec ? (
                                     <>
                                       <Button type="button" variant="outline" disabled={!premiumFlag} className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { setEditIdx(idxE); setEditDate(e.date); setEditTime(e.time || ""); setEditOpen(true); }}>
                                         <span className="material-symbols-outlined text-[16px]">edit</span>
                                         <span>{t("editLabel")}</span>
                                       </Button>
-                                      <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>
-                                        <span className="material-symbols-outlined text-[16px]">map</span>
-                                        <span>{t("goButton")}</span>
+                                      <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => openGoDrawer(e)}>
+                                        <span className="material-symbols-outlined text-[16px]">directions_car</span>
                                       </Button>
+                                      {((e.meta as RecordItem)?.files || []).length ? (
+                                        <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { const m = e.meta as RecordItem; setDocTitle(m.title); setDocFiles(m.files || []); setDocOpen(true); }}>
+                                          <span className="material-symbols-outlined text-[16px]">description</span>
+                                          <span>Docs</span>
+                                        </Button>
+                                      ) : null}
                                     </>
                                   ) : null}
                                 </div>
@@ -696,8 +1217,8 @@ export default function MonthCalendarPage() {
                 <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setDayOpen(null)}>{t("close")}</Button>
               </div>
             </div>
-          </div>
         </div>
+      </div>
       )}
       <div>
         <div>
@@ -750,6 +1271,305 @@ export default function MonthCalendarPage() {
                 </div>
                 <div className="mt-3 flex justify-end">
                   <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setEditOpen(false)}>{t("close")}</Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {nameDrawerOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setNameDrawerOpen(false)} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>Qual o nome do calendário?</DialogHeader>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <label className="mb-1 block text-sm">Nome</label>
+                    <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
+                  </div>
+                  <div className="mt-1">
+                    <Button type="button" onClick={async () => {
+                      try {
+                        const raw = nameInput || "";
+                        let name = raw.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").slice(0, 9).trim();
+                        if (!name) {
+                          try {
+                            const rawTs = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
+                            const ts = rawTs ? JSON.parse(rawTs) : null;
+                            if (ts) {
+                              const isSame = ts.mode === "same";
+                              const origin = isSame ? (ts.origin || "") : (ts.outbound?.origin || "");
+                              const destination = isSame ? (ts.destination || "") : (ts.outbound?.destination || "");
+                              const fallback = `${String(origin)}${String(destination)}`.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").toUpperCase().slice(0, 9);
+                              name = fallback || "CALENDAR";
+                            } else {
+                              name = "CALENDAR";
+                            }
+                          } catch { name = "CALENDAR"; }
+                        }
+                        try {
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events }));
+                            const rawList = localStorage.getItem("calentrip:saved_calendars_list");
+                            const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
+                            const entry = { name, events, savedAt: new Date().toISOString() };
+                            const idx = list.findIndex((c) => (c?.name || "") === name);
+                            if (idx >= 0) list[idx] = entry; else list.push(entry);
+                            localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(list));
+                          }
+                        } catch {}
+                        try {
+                          const rawTrip = typeof window !== "undefined" ? localStorage.getItem("calentrip:tripSearch") : null;
+                          const ts = rawTrip ? JSON.parse(rawTrip) : null;
+                          if (ts) {
+                            const isSame = ts.mode === "same";
+                            const origin = isSame ? ts.origin : ts.outbound?.origin;
+                            const destination = isSame ? ts.destination : ts.outbound?.destination;
+                            const date = isSame ? ts.departDate : ts.outbound?.date;
+                            if (origin && destination && date) {
+                              if (currentTripId) { await updateTrip(currentTripId, { reachedFinalCalendar: true, savedCalendarName: name }); }
+                            }
+                          }
+                        } catch {}
+                        setNameDrawerOpen(false);
+                        show(`salvo com o nome ${name}`, { variant: "success", duration: 3000, sticky: false });
+                        try { localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {}
+                        try { window.location.href = "/calendar/final"; } catch {}
+                      } catch { show(t("saveErrorMsg"), { variant: "error" }); }
+                    }}>{t("saveLabel")}</Button>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setNameDrawerOpen(false)}>{t("close")}</Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {locModalOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setLocModalOpen(false)} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>Permitir localização</DialogHeader>
+                <div className="text-sm text-zinc-700">
+                  A localização é usada para estimar rotas, tempo e opções de transporte até sua hospedagem e aeroporto.
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => { try { localStorage.setItem("calentrip:locConsent", "skipped"); } catch {} setLocConsent("skipped"); setLocModalOpen(false); }}>Pular</Button>
+                  <Button type="button" onClick={() => {
+                    try {
+                      if (!navigator.geolocation) {
+                        try { localStorage.setItem("calentrip:locConsent", "denied"); } catch {}
+                        setLocConsent("denied");
+                        setLocModalOpen(false);
+                        return;
+                      }
+                      navigator.geolocation.getCurrentPosition(
+                        () => { try { localStorage.setItem("calentrip:locConsent", "granted"); } catch {} setLocConsent("granted"); setLocModalOpen(false); },
+                        () => { try { localStorage.setItem("calentrip:locConsent", "denied"); } catch {} setLocConsent("denied"); setLocModalOpen(false); },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                      );
+                    } catch {
+                      try { localStorage.setItem("calentrip:locConsent", "denied"); } catch {}
+                      setLocConsent("denied");
+                      setLocModalOpen(false);
+                    }
+                  }}>Permitir</Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {drawerOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>Transporte até o aeroporto</DialogHeader>
+                <div className="space-y-3 text-sm">
+                  {loading ? (
+                    <div>Calculando…</div>
+                  ) : (
+                    <>
+                      <div>Destino: {drawerData?.originIata || "—"}</div>
+                      <div>Distância (a partir da sua localização): {transportInfo?.distanceKm ? `${transportInfo.distanceKm} km` : "—"}</div>
+                      {!transportInfo?.distanceKm && locConsent !== "granted" ? <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div> : null}
+                      <div>Tempo estimado (com trânsito): {transportInfo?.durationWithTrafficMin ? `${transportInfo.durationWithTrafficMin} min` : transportInfo?.durationMin ? `${transportInfo.durationMin} min` : "—"}</div>
+                      <div className="mt-2">
+                        <a className="underline" href={transportInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Veja no Google Maps</a>
+                      </div>
+                      <div>
+                        <a className="underline flex items-center gap-1" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">
+                          <span className="material-symbols-outlined text-[16px] text-[#febb02]">alt_route</span>
+                          <span>Opções de rota (Rome2Rio)</span>
+                        </a>
+                      </div>
+                      <div>
+                        <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Uber</a>
+                      </div>
+                      <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
+                      <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
+                      <div>Notificação programada: {transportInfo?.notifyAt ? `às ${transportInfo.notifyAt}` : "—"}</div>
+                      <div className="mt-3 flex justify-end">
+                        <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setDrawerOpen(false); setTransportInfo(null); }}>{t("close")}</Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {stayDrawerOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>Como chegar ao ponto de partida</DialogHeader>
+                <div className="space-y-3 text-sm">
+                  {stayLoading ? (
+                    <div>Calculando…</div>
+                  ) : (
+                    <>
+                      <div>Origem: {stayInfo?.origin || "—"}</div>
+                      <div>Destino: {stayInfo?.destination || "—"}</div>
+                      {stayCandidates.length > 1 ? (
+                        <div>
+                          <div className="text-xs text-zinc-600">{stayMode === "train" ? "Escolha a estação de trem:" : stayMode === "air" ? "Escolha o aeroporto:" : "Escolha a rodoviária:"}</div>
+                          <Select className="mt-1" value={String(stayChosenIdx ?? 0)} onChange={async (e) => {
+                            const i = Number((e.target as HTMLSelectElement).value);
+                            const c = stayCandidates[i];
+                            setStayChosenIdx(i);
+                            try {
+                              const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+                                try {
+                                  if (!ensureLocationConsent()) { resolve(null); return; }
+                                  navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+                                } catch { resolve(null); }
+                              });
+                              let gmapsUrl: string | undefined;
+                              let uberUrl: string | undefined;
+                              let distanceKm: number | undefined;
+                              let drivingMin: number | undefined;
+                              let walkingMin: number | undefined;
+                              if (pos) {
+                                const cur = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                                const osrmDrive = `https://router.project-osrm.org/route/v1/driving/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`;
+                                const resD = await fetch(osrmDrive); const jsD = await resD.json(); const rD = jsD?.routes?.[0];
+                                if (rD) { distanceKm = Math.round((rD.distance ?? 0) / 1000); drivingMin = Math.round((rD.duration ?? 0) / 60); }
+                                try { const resW = await fetch(`https://router.project-osrm.org/route/v1/walking/${cur.lon},${cur.lat};${c.lon},${c.lat}?overview=false`); const jsW = await resW.json(); const rW = jsW?.routes?.[0]; if (rW) walkingMin = Math.round((rW.duration ?? 0) / 60); } catch {}
+                                gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${cur.lat}%2C${cur.lon}&destination=${encodeURIComponent(c.name)}`;
+                                uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup[latitude]=${cur.lat}&pickup[longitude]=${cur.lon}&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
+                              } else {
+                                gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.name)}`;
+                                uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${c.lat}&dropoff[longitude]=${c.lon}&dropoff[formatted_address]=${encodeURIComponent(c.name)}`;
+                              }
+                              const trafficFactor = 1.3;
+                              const drivingWithTrafficMin = drivingMin ? Math.round(drivingMin * trafficFactor) : undefined;
+                              try {
+                                const key = stayMode === "train" ? "calentrip:train_station_selection" : stayMode === "air" ? "calentrip:airport_selection" : "calentrip:bus_station_selection";
+                                const rawSel = typeof window !== "undefined" ? localStorage.getItem(key) : null;
+                                const map = rawSel ? (JSON.parse(rawSel) as Record<string, { name: string; lat: number; lon: number }>) : {};
+                                if (stayCityForSearch) map[stayCityForSearch] = { name: c.name, lat: c.lat, lon: c.lon };
+                                if (typeof window !== "undefined") localStorage.setItem(key, JSON.stringify(map));
+                              } catch {}
+                              setStayInfo((prev) => ({ ...(prev || {}), destination: c.name, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, gmapsUrl, uberUrl }));
+                            } catch {}
+                          }}>
+                            {stayCandidates.map((c, i) => (<option key={`opt-${i}`} value={String(i)}>{c.name}</option>))}
+                          </Select>
+                        </div>
+                      ) : null}
+                      <div>Distância: {stayInfo?.distanceKm ? `${stayInfo.distanceKm} km` : "—"}</div>
+                      <div>Carro: {stayInfo?.drivingMin ? `${stayInfo.drivingMin} min` : "—"}</div>
+                      <div>Ônibus: {stayInfo?.busMin ? `${stayInfo.busMin} min` : "—"}</div>
+                      <div>Trem/Metro: {stayInfo?.trainMin ? `${stayInfo.trainMin} min` : "—"}</div>
+                      <div>
+                        <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                      </div>
+                      <div>
+                        <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }}>{t("close")}</Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {arrivalDrawerOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>Chegada e deslocamento até hospedagem</DialogHeader>
+                <div className="space-y-3 text-sm">
+                  <div>Destino: {arrivalInfo?.address || arrivalInfo?.city || "—"}</div>
+                  <div>Distância (a partir da sua localização): {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
+                  {!arrivalInfo?.distanceKm && locConsent !== "granted" ? <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div> : null}
+                  <div>
+                    <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                  </div>
+                  <div>
+                    <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }}>{t("close")}</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {goDrawerOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => { setGoDrawerOpen(false); setGoInfo(null); }} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>Como ir até o destino</DialogHeader>
+                <div className="space-y-3 text-sm">
+                  {goLoading ? (
+                    <div>Calculando…</div>
+                  ) : (
+                    <>
+                      <div>Destino: {goInfo?.destination || "—"}</div>
+                      <div>Distância (a partir da sua localização): {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
+                      {!goInfo?.distanceKm && locConsent !== "granted" ? <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div> : null}
+                      <div>
+                        <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                      </div>
+                      <div>
+                        <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setGoDrawerOpen(false); setGoInfo(null); }}>{t("close")}</Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {docOpen ? (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setDocOpen(false)} />
+              <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
+                <DialogHeader>{docTitle || "Documentos"}</DialogHeader>
+                <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
+                  {docFiles.length ? (
+                    <ul className="space-y-2">
+                      {docFiles.map((f) => (
+                        <li key={f.name} className="flex items-center justify-between gap-2 rounded border p-2">
+                          <div>
+                            <div className="font-medium">{f.name}</div>
+                            <div className="text-xs text-zinc-600">{f.size ? `${Math.round(f.size / 1024)} KB` : ""}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {f.dataUrl ? (
+                              <a className="underline" href={f.dataUrl} target="_blank" rel="noopener noreferrer">Abrir</a>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-zinc-600">Nenhum documento.</div>
+                  )}
+                  <div className="mt-3 flex justify-end">
+                    <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setDocOpen(false)}>{t("close")}</Button>
+                  </div>
                 </div>
               </div>
             </div>
