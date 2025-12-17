@@ -3438,7 +3438,7 @@ export default function FinalCalendarPage() {
         <DialogHeader>Salvar no seu celular</DialogHeader>
         <div className="space-y-2 text-sm">
           <div className="mt-1">
-            <Button type="button" onClick={saveOnDeviceAndInsertCalendar}>Salvar</Button>
+            <Button type="button" onClick={() => saveOnDeviceAndInsertCalendar()}>Salvar</Button>
           </div>
         </div>
       <DialogFooter>

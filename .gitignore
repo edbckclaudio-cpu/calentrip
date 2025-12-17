@@ -5,3 +5,5 @@ calentrip/.next
 next-env.d.ts
 .next/
 tsconfig.tsbuildinfo
+android/keystore/*.keystore
+android/keystore/*.pem
