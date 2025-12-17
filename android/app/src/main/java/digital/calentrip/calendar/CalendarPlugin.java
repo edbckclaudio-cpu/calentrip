@@ -124,6 +124,7 @@ public class CalendarPlugin extends Plugin {
         String endISO = ev.optString("endISO", "");
         String title = ev.optString("title", "");
         String description = ev.optString("description", "");
+        String location = ev.optString("location", "");
 
         if (TextUtils.isEmpty(startISO) || TextUtils.isEmpty(title)) {
           errors.add("invalid_event_" + i);
@@ -141,9 +142,27 @@ public class CalendarPlugin extends Plugin {
         values.put(CalendarContract.Events.DTSTART, dtStart);
         values.put(CalendarContract.Events.DTEND, dtEnd);
         values.put(CalendarContract.Events.EVENT_TIMEZONE, tz);
+        if (!TextUtils.isEmpty(location)) values.put(CalendarContract.Events.EVENT_LOCATION, location);
 
         Uri uri = cr.insert(CalendarContract.Events.CONTENT_URI, values);
         if (uri != null) {
+          try {
+            String eventIdStr = uri.getLastPathSegment();
+            long eventId = Long.parseLong(eventIdStr);
+            org.json.JSONArray alarms = ev.optJSONArray("alarms");
+            if (alarms != null) {
+              for (int j = 0; j < alarms.length(); j++) {
+                int minutes = alarms.optInt(j, -1);
+                if (minutes > 0) {
+                  ContentValues rem = new ContentValues();
+                  rem.put(CalendarContract.Reminders.EVENT_ID, eventId);
+                  rem.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
+                  rem.put(CalendarContract.Reminders.MINUTES, minutes);
+                  try { cr.insert(CalendarContract.Reminders.CONTENT_URI, rem); } catch (Throwable ignored) {}
+                }
+              }
+            }
+          } catch (Throwable ignored) {}
           added++;
         } else {
           errors.add("insert_failed_" + i);

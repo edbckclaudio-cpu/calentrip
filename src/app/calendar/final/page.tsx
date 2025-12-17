@@ -616,6 +616,44 @@ export default function FinalCalendarPage() {
     } catch { show(t("fileSaveError"), { variant: "error" }); }
   }
 
+  async function saveOnDeviceAndInsertCalendar() {
+    try { await saveCalendarFull(); } catch {}
+    try {
+      if (!isCapAndroid()) return;
+      const toISO = (d: Date) => d.toISOString();
+      const evs = events.map((e) => {
+        const start = parseDT(e.date, e.time);
+        const end = start ? new Date(start.getTime() + 60 * 60 * 1000) : undefined;
+        let location = "";
+        try {
+          if (e.type === "stay") {
+            const m = e.meta as { city?: string; address?: string; kind?: string } | undefined;
+            location = (m?.address || m?.city || "").trim();
+          } else if (e.type === "activity" || e.type === "restaurant") {
+            const r = e.meta as { cityName?: string; address?: string } | undefined;
+            location = (r?.address || r?.cityName || "").trim();
+          } else if (e.type === "transport") {
+            const m = e.meta as { originCity?: string } | undefined;
+            location = (m?.originCity || "").trim();
+          } else if (e.type === "flight") {
+            const fn = e.meta as FlightNote | undefined;
+            location = ((fn?.origin || "") + (fn?.destination ? ` → ${fn.destination}` : "")).trim();
+          }
+        } catch {}
+        const alarms: number[] = [];
+        if (e.type === "flight") { alarms.push(1440, 60); }
+        else if (e.type === "transport") { alarms.push(120); }
+        else if (e.type === "activity" || e.type === "restaurant") { alarms.push(60); }
+        return { startISO: start ? toISO(start) : new Date().toISOString(), endISO: end ? toISO(end) : undefined, title: e.label, description: e.label, location, alarms };
+      });
+      const perm = await Calendar.requestPermissions();
+      if (perm?.granted) {
+        const res = await Calendar.addEvents({ events: evs });
+        if (res.ok && res.added > 0) { show(t("eventsAddedToCalendarMsg"), { variant: "success" }); }
+      }
+    } catch {}
+  }
+
   const openFilesDrawer = useCallback(async () => {
     try {
       if (Capacitor.getPlatform() !== "android") { show(t("androidOnlyMsg"), { variant: "info" }); return; }
@@ -2536,13 +2574,7 @@ export default function FinalCalendarPage() {
             {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
           </button>
           
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
-            const ok = saveCalendarNamed(false);
-            if (ok) {
-              try { await saveCalendarFull(); } catch {}
-              setCalendarHelpOpen(true);
-            }
-          }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={saveOnDeviceAndInsertCalendar}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
             </span>
@@ -3129,12 +3161,7 @@ export default function FinalCalendarPage() {
             URL.revokeObjectURL(url);
             try { openDownloads(); } catch {}
             show(t("icsDownloadedAndroidHelp"), { variant: "info" });
-            }}>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[22px]">calendar_month</span>
-            </span>
-          {sideOpen ? <span className="text-sm font-medium">{t("saveToGoogleCalendarButton")}</span> : null}
-          </button>
+          }} />
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">account_circle</span>
@@ -3171,26 +3198,17 @@ export default function FinalCalendarPage() {
             variant="outline"
             className="px-2 py-1 text-xs rounded-md gap-1"
             disabled={!premiumFlag}
-            onClick={async () => {
-              try {
-                if (saveCalendarNamed()) setCalendarHelpOpen(true);
-                await saveCalendarToFile();
-              } catch {}
-            }}
+            onClick={saveOnDeviceAndInsertCalendar}
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
             <span className="hidden sm:inline">{t("saveLabel")}</span>
           </Button>
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
-            try {
-              const payload = { name: currentSavedName || "", events };
-              if (typeof window !== "undefined") {
-                localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
-                localStorage.setItem("calentrip:auto_load_saved", "1");
-              }
-              window.location.href = "/calendar/month";
-            } catch {}
-          }}>
+          <Button
+            type="button"
+            variant="outline"
+            className="px-2 py-1 text-xs rounded-md gap-1"
+            onClick={saveOnDeviceAndInsertCalendar}
+          >
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">{t("calendarMonth")}</span>
           </Button>
@@ -3402,16 +3420,10 @@ export default function FinalCalendarPage() {
       </div>
 
       <Dialog open={calendarHelpOpen} onOpenChange={setCalendarHelpOpen} placement="bottom" disableBackdropClose>
-        <DialogHeader>{t("saveToGoogleCalendarButton")}</DialogHeader>
+        <DialogHeader>Salvar no seu celular</DialogHeader>
         <div className="space-y-2 text-sm">
-          <div className="font-semibold">Android</div>
-          <div>• Verificamos o Google Calendar. Se não estiver instalado, abrimos a Play Store para instalar.</div>
-          <div>• Geramos e baixamos o arquivo .ics para a pasta Download.</div>
-          <div>• Abrimos o gerenciador de arquivos na pasta Download (quando possível).</div>
-          <div>• Toque em calentrip.ics e escolha salvar no Google Calendar; selecione a conta e confirme.</div>
-          <div className="mt-3">
-            <Button type="button" disabled={!premiumFlag} onClick={() => { try { saveCalendarFull(); } catch {} }}>{t("saveToGoogleCalendarButton")}</Button>
-            <Button type="button" variant="outline" className="ml-2" onClick={() => { try { openDownloads(); } catch {} }}>Abrir pasta Download</Button>
+          <div className="mt-1">
+            <Button type="button" disabled={!premiumFlag} onClick={saveOnDeviceAndInsertCalendar}>Salvar</Button>
           </div>
         </div>
         <DialogFooter>
