@@ -538,142 +538,16 @@ export default function TransportPlanPage() {
                 }} />
               </div>
             </div>
-<<<<<<< HEAD
-          </CardContent>
-        </Card>
-      </div>
-      <Dialog open={nextOpen} onOpenChange={setNextOpen} placement="bottom">
-        <DialogHeader>{t("transportBetween")}</DialogHeader>
-        <div className="space-y-3 text-sm px-4 pb-4">
-          <div className="mb-2">{fromCityModal} → {toCityModal}</div>
-          <ul className="space-y-1 mb-2">
-            <li>
-              <a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700 flex items-center gap-1" href={mRoute?.r2rUrl} target="_blank" rel="noopener noreferrer">
-                <span className="material-symbols-outlined text-[16px]">alt_route</span>
-                <span>{t("seeOptionsOnRome2Rio")}</span>
-              </a>
-            </li>
-            <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">{t("rentalcarsLabel")}</a></li>
-            <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={mRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("googleMapsLabel")}</a></li>
-          </ul>
-          <div>
-            <label className="mb-1 block text-sm">{t("transportModeLabel")}</label>
-            <select className="w-full rounded-md border px-2 py-1 text-sm" value={mMode} onChange={(e) => setMMode(e.target.value as TransportMode)}>
-              <option value="air">{t("modeAir")}</option>
-              <option value="train">{t("modeTrain")}</option>
-              <option value="bus">{t("modeBus")}</option>
-              <option value="car">{t("modeCar")}</option>
-            </select>
-          </div>
-          {mMode !== "car" ? (
-            <div className="space-y-2">
-              <div>
-                <label className="mb-1 block text-sm">{t("transportOriginLabel")}</label>
-                <div className="relative">
-                  <Input
-                    placeholder={t("transportOriginPlaceholder")}
-                    defaultValue={mDep}
-                    type="text"
-                    inputMode="text"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    enterKeyHint="next"
-                    ref={mDepRef}
-                    onChange={(e) => { const v = e.target.value; setMDep(v); }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm">{t("transportDestinationLabel")}</label>
-                <div className="relative">
-                  <Input
-                    placeholder={t("transportDestinationPlaceholder")}
-                    defaultValue={mArr}
-                    type="text"
-                    inputMode="text"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    enterKeyHint="next"
-                    ref={mArrRef}
-                    onChange={(e) => { const v = e.target.value; setMArr(v); }}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-sm">{t("departureTime")}</label>
-                  <Input
-                    placeholder={t("timePlaceholder")}
-                    defaultValue={mDepTime}
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    enterKeyHint="next"
-                    ref={mDepTimeRef}
-                    onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setMDepTime(v); try { if (mDepTimeRef.current) mDepTimeRef.current.value = v; } catch {} }}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
-                  <Input
-                    placeholder={t("timePlaceholder")}
-                    defaultValue={mArrTime}
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    enterKeyHint="next"
-                    ref={mArrTimeRef}
-                    onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setMArrTime(v); try { if (mArrTimeRef.current) mArrTimeRef.current.value = v; } catch {} }}
-                  />
-                </div>
-              </div>
-              <div className="mt-2">
-                <label className="mb-1 block text-sm">{t("transportDocsTitle")}</label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => mCamInputRef.current?.click()}>{t("useCamera")}</Button>
-                  <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => mFileInputRef.current?.click()}>{t("chooseFiles")}</Button>
-                  <span className="text-xs text-zinc-600">{t("attachmentsLabel")}: {mFiles.length}</span>
-                </div>
-                <input ref={mCamInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  try {
-                    const buf = await f.arrayBuffer();
-                    const b64 = typeof window !== "undefined" ? btoa(String.fromCharCode(...new Uint8Array(buf))) : "";
-                    const dataUrl = `data:${f.type};base64,${b64}`;
-                    setMFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size, dataUrl }]);
-                  } catch {
-                    setMFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size }]);
-                  } finally { try { (e.target as HTMLInputElement).value = ""; } catch {} }
-                }} />
-                <input ref={mFileInputRef} type="file" multiple className="hidden" onChange={async (e) => {
-                  const list = Array.from(e.target.files || []);
-                  for (const f of list) {
-                    try {
-                      const buf = await f.arrayBuffer();
-                      const b64 = typeof window !== "undefined" ? btoa(String.fromCharCode(...new Uint8Array(buf))) : "";
-                      const dataUrl = `data:${f.type};base64,${b64}`;
-                      setMFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size, dataUrl }]);
-                    } catch {
-                      setMFiles((prev) => [...prev, { name: f.name, type: f.type, size: f.size }]);
-                    }
-                  }
-                  try { (e.target as HTMLInputElement).value = ""; } catch {}
-                }} />
-              </div>
-            </div>
-=======
->>>>>>> 97d71ea (Transporte: popup próximo trecho; navegação resumo; Calendário Final storage/UI)
           ) : null}
-          <div className="mt-3 flex justify-end">
-            {mMode !== "car" ? (
-              <Button type="button" onClick={() => { saveTransportInModal(); }}>{t("saveTransport")}</Button>
-            ) : (
-              <Button type="button" onClick={() => { setNextOpen(false); router.push("/accommodation/search"); }}>{t("goToSummaryButton")}</Button>
-            )}
+            <div className="mt-3 flex justify-end">
+              {mMode !== "car" ? (
+                <Button type="button" onClick={() => { saveTransportInModal(); }}>{t("saveTransport")}</Button>
+              ) : (
+                <Button type="button" onClick={() => { setNextOpen(false); router.push("/accommodation/search"); }}>{t("goToSummaryButton")}</Button>
+              )}
+            </div>
           </div>
-        </div>
-      </Dialog>
-    </div>
-  );
-}
+        </Dialog>
+      </div>
+    );
+  }
