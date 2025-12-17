@@ -1595,8 +1595,7 @@ export default function FinalCalendarPage() {
     const file = new File([crlf], "calentrip.ics", { type: "text/calendar;charset=utf-8" });
     try {
       const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
-      const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
-      if (canShareFiles && typeof nav.share === "function") {
+      if (typeof nav.share === "function") {
         await nav.share({ files: [file], title: "CalenTrip" });
         const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
         const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
@@ -3114,22 +3113,20 @@ export default function FinalCalendarPage() {
               const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
               if (isAndroid && typeof nav.share === "function") {
                 const perFiles = await buildPerEventFiles();
-                const canShareMany = typeof nav.canShare === "function" && nav.canShare({ files: perFiles });
-                if (canShareMany) {
+                try {
                   await nav.share({ files: perFiles, title: "CalenTrip — eventos (Android)" });
                   show(t("eventsSentToCalendarAndroidMsg"), { variant: "success" });
                   return;
-                } else {
+                } catch {
                   for (const f of perFiles) {
-                    await nav.share({ files: [f], title: f.name });
+                    try { await nav.share({ files: [f], title: f.name }); } catch {}
                   }
                   show(t("eventsSentIndividuallyAndroidMsg"), { variant: "success" });
                   return;
                 }
               }
-              const canShareFiles = typeof nav !== "undefined" && typeof nav.canShare === "function" && nav.canShare({ files: [file] });
-              if (canShareFiles && typeof nav.share === "function") {
-                await nav.share({ files: [file], title: "CalenTrip" });
+              if (typeof nav.share === "function") {
+                try { await nav.share({ files: [file], title: "CalenTrip" }); } catch {}
                 const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
                 const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && typeof window !== "undefined" && "ontouchend" in window);
                 const isAndroid = /Android/.test(ua);
