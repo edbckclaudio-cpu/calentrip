@@ -653,11 +653,9 @@ export default function FinalCalendarPage() {
         else if (e.type === "activity" || e.type === "restaurant") { alarms.push(60); }
         return { startISO: start ? toISO(start) : new Date().toISOString(), endISO: end ? toISO(end) : undefined, title: e.label, description: e.label, location, alarms };
       });
-      const perm = await Calendar.requestPermissions();
-      if (perm?.granted) {
-        const res = await Calendar.addEvents({ events: evs });
-        if (res.ok && res.added > 0) { show(t("eventsAddedToCalendarMsg"), { variant: "success" }); }
-      }
+      try { await Calendar.requestPermissions(); } catch {}
+      const res = await Calendar.addEvents({ events: evs });
+      if (res.ok && res.added > 0) { show(t("eventsAddedToCalendarMsg"), { variant: "success" }); }
     } catch {}
   }
 
@@ -1208,7 +1206,7 @@ export default function FinalCalendarPage() {
           }
         } catch {}
       })();
-      show(t("savedInSearchesMsg"), { variant: "success" });
+      if (!silent) show(t("savedInSearchesMsg"), { variant: "success" });
       return true;
     } catch { show(t("saveErrorMsg"), { variant: "error" }); return false; }
   }

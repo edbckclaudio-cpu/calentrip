@@ -35,6 +35,25 @@ public class CalendarPlugin extends Plugin {
 
   @PluginMethod
   public void requestPermissions(PluginCall call) {
+    JSObject ret = new JSObject();
+    try {
+      if (hasPermission()) {
+        ret.put("granted", true);
+        call.resolve(ret);
+        return;
+      }
+      ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR}, 996);
+      boolean granted = hasPermission();
+      ret.put("granted", granted);
+      call.resolve(ret);
+    } catch (Throwable t) {
+      ret.put("granted", false);
+      call.resolve(ret);
+    }
+  }
+
+  @PluginMethod
+  public void requestPermissions(PluginCall call) {
     boolean granted = hasPermission();
     if (!granted && getActivity() != null) {
       ActivityCompat.requestPermissions(
