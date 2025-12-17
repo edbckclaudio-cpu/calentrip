@@ -3203,6 +3203,15 @@ export default function FinalCalendarPage() {
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">{t("calendarMonth")}</span>
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="px-2 py-1 text-xs rounded-md gap-1"
+            onClick={reloadFromStorage}
+          >
+            <span className="material-symbols-outlined text-[16px]">refresh</span>
+            <span className="hidden sm:inline">Recarregar do storage</span>
+          </Button>
           
           
           
