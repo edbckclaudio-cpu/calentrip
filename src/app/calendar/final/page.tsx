@@ -615,6 +615,13 @@ export default function FinalCalendarPage() {
       if (r?.ok) { show(t("fileSavedOnDevice"), { variant: "success" }); } else { show(t("fileSaveError"), { variant: "error" }); }
     } catch { show(t("fileSaveError"), { variant: "error" }); }
   }
+  function parseDT(date: string, time?: string) {
+    const t = (time || "00:00").padStart(5, "0");
+    const s = `${(date || "").replace(/\//g, "-")}T${t}:00`;
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }
 
   async function saveOnDeviceAndInsertCalendar() {
     try { await saveCalendarFull(); } catch {}
