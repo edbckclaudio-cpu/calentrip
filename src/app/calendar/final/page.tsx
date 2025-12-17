@@ -586,6 +586,16 @@ export default function FinalCalendarPage() {
         (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
       } catch {}
       try {
+        const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
+        const saved = safeParse<{ name?: string; events?: EventItem[] }>(rawSaved);
+        const savedEvents = Array.isArray(saved?.events) ? (saved!.events as EventItem[]) : [];
+        (savedEvents || []).forEach((e) => {
+          const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
+          const label = e.label || "Evento";
+          list.push({ type: typeMap as EventItem["type"], label, date: e.date, time: (e.time || undefined), meta: e.meta });
+        });
+      } catch {}
+      try {
         const seen = new Set<string>();
         const unique = list.filter((e) => {
           const key = e.type === "stay" ? `${e.type}|${e.label}|${(e.date || "").trim()}` : `${e.type}|${e.label}|${(e.date || "").trim()}|${(e.time || "").trim()}`;
@@ -593,7 +603,14 @@ export default function FinalCalendarPage() {
           seen.add(key);
           return true;
         });
-        setEvents(unique);
+        const sortDT = (d: string, t?: string) => {
+          const tt = (t || "00:00").padStart(5, "0");
+          const s = `${(d || "").replace(/\//g, "-")}T${tt}:00`;
+          const x = new Date(s);
+          return Number.isNaN(x.getTime()) ? 0 : x.getTime();
+        };
+        const sorted = [...unique].sort((a, b) => sortDT(a.date, a.time) - sortDT(b.date, b.time));
+        setEvents(sorted);
         show("Calendário recarregado do storage", { variant: "success" });
       } catch {
         show("Falha ao recarregar do storage", { variant: "error" });
@@ -3203,11 +3220,6 @@ export default function FinalCalendarPage() {
             <CardTitle>{t("eventsTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-3 flex items-center gap-2">
-              <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={reloadFromStorage}>
-                <span className="material-symbols-outlined text-[16px]">refresh</span>
-              </Button>
-            </div>
             {sorted.length ? (
               <ul className="space-y-3 text-sm">
                 {sorted.map((ev, idx) => {
