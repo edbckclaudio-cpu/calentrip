@@ -52,21 +52,6 @@ public class CalendarPlugin extends Plugin {
     }
   }
 
-  @PluginMethod
-  public void requestPermissions(PluginCall call) {
-    boolean granted = hasPermission();
-    if (!granted && getActivity() != null) {
-      ActivityCompat.requestPermissions(
-        getActivity(),
-        new String[]{Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR},
-        1001
-      );
-    }
-    JSObject ret = new JSObject();
-    ret.put("granted", hasPermission());
-    call.resolve(ret);
-  }
-
   private long resolveCalendarId(ContentResolver cr) {
     Cursor cursor = null;
     try {
