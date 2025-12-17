@@ -1,6 +1,6 @@
 import { registerPlugin, Capacitor } from "@capacitor/core";
 
-export type EventInput = { startISO: string; endISO?: string; title: string; description?: string };
+export type EventInput = { startISO: string; endISO?: string; title: string; description?: string; location?: string; alarms?: number[] };
 export type AddEventsResult = { ok: boolean; added: number; errors?: string[] };
 
 type CalendarPluginType = {
@@ -22,4 +22,3 @@ export const Calendar = registerPlugin<CalendarPluginType>("CalendarPlugin", {
 export function isCapAndroid() {
   try { return Capacitor.getPlatform() === "android"; } catch { return false; }
 }
-

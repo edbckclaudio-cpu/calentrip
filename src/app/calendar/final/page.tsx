@@ -18,8 +18,7 @@ import { getSavedTrips as getSavedTripsDb, getTripEvents as getTripEventsDb, mig
 import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
 import { alarmForEvent } from "@/lib/ics";
 
-const safeParse = <T,>(s: string | null): T | null => { try { return s ? (JSON.parse(s) as T) : null; } catch { return null; } };
-
+ const safeParse = <T,>(s: string | null): T | null => { try { return s ? (JSON.parse(s) as T) : null; } catch { return null; } };
  type SavedFile = { name: string; type: string; size: number; id?: string; dataUrl?: string };
  type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: SavedFile[] };
 
@@ -549,8 +548,8 @@ export default function FinalCalendarPage() {
           const returnTime = isSame ? (ts.returnTime || "") : (ts.inbound?.time || "");
           const outLabel = origin && destination && departDate ? `Voo de ida: ${departDate}${(departTime || "").trim() ? ` • ${(departTime || "").trim()}` : ""} • ${origin} → ${destination}` : "";
           const inLabel = origin && destination && returnDate ? `Voo de volta: ${returnDate}${(returnTime || "").trim() ? ` • ${(returnTime || "").trim()}` : ""} • ${destination} → ${origin}` : "";
-          if (outLabel) list.push({ type: "flight", label: outLabel, date: departDate!, time: (departTime || undefined), meta: { leg: "outbound", origin: origin!, destination: destination!, date: departDate! } as unknown as FlightNote });
-          if (inLabel) list.push({ type: "flight", label: inLabel, date: returnDate!, time: (returnTime || undefined), meta: { leg: "inbound", origin: destination!, destination: origin!, date: returnDate! } as unknown as FlightNote });
+          if (outLabel) list.push({ type: "flight", label: outLabel, date: departDate, time: (departTime || undefined), meta: { leg: "outbound", origin, destination, date: departDate } as unknown as FlightNote });
+          if (inLabel) list.push({ type: "flight", label: inLabel, date: returnDate, time: (returnTime || undefined), meta: { leg: "inbound", origin: destination, destination: origin, date: returnDate } as unknown as FlightNote });
         }
       } catch {}
       try {
@@ -582,17 +581,9 @@ export default function FinalCalendarPage() {
       } catch {}
       try {
         const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
-        const recs: RecordItem[] = safeParse<RecordItem[]>(rawEnt) || [];
-        (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
-      } catch {}
-      try {
-        const rawSaved = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
-        const saved = safeParse<{ name?: string; events?: EventItem[] }>(rawSaved);
-        const savedEvents = Array.isArray(saved?.events) ? (saved!.events as EventItem[]) : [];
-        (savedEvents || []).forEach((e) => {
-          const typeMap = (e.type === "flight" || e.type === "activity" || e.type === "restaurant" || e.type === "transport" || e.type === "stay") ? e.type : "activity";
-          const label = e.label || "Evento";
-          list.push({ type: typeMap as EventItem["type"], label, date: e.date, time: (e.time || undefined), meta: e.meta });
+        const recs = safeParse<RecordItem[]>(rawEnt) || [];
+        (Array.isArray(recs) ? recs : []).filter((r) => r && (r.kind === "activity" || r.kind === "restaurant") && typeof r.title === "string").forEach((r) => {
+          list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r });
         });
       } catch {}
       try {
@@ -603,14 +594,7 @@ export default function FinalCalendarPage() {
           seen.add(key);
           return true;
         });
-        const sortDT = (d: string, t?: string) => {
-          const tt = (t || "00:00").padStart(5, "0");
-          const s = `${(d || "").replace(/\//g, "-")}T${tt}:00`;
-          const x = new Date(s);
-          return Number.isNaN(x.getTime()) ? 0 : x.getTime();
-        };
-        const sorted = [...unique].sort((a, b) => sortDT(a.date, a.time) - sortDT(b.date, b.time));
-        setEvents(sorted);
+        setEvents(unique);
         show("Calendário recarregado do storage", { variant: "success" });
       } catch {
         show("Falha ao recarregar do storage", { variant: "error" });
@@ -2444,6 +2428,13 @@ export default function FinalCalendarPage() {
           <button type="button" className="rounded-md p-2" onClick={() => setSideOpen((v) => !v)}>
             <span className="material-symbols-outlined text-[24px]">menu</span>
           </button>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={reloadFromStorage}>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
+              <span className="material-symbols-outlined text-[22px] text-[#007AFF]">refresh</span>
+            </span>
+            {sideOpen ? <span className="text-sm font-medium">Recarregar do storage</span> : null}
+          </button>
+          {/* botão de instalação removido conforme solicitação */}
         </div>
         <div className="p-2 space-y-2">
           <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2">
@@ -3203,15 +3194,6 @@ export default function FinalCalendarPage() {
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span className="hidden sm:inline">{t("calendarMonth")}</span>
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="px-2 py-1 text-xs rounded-md gap-1"
-            onClick={reloadFromStorage}
-          >
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
-            <span className="hidden sm:inline">Recarregar do storage</span>
-          </Button>
           
           
           
@@ -3222,6 +3204,11 @@ export default function FinalCalendarPage() {
             <CardTitle>{t("eventsTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-3 flex items-center gap-2">
+              <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={reloadFromStorage}>
+                <span className="material-symbols-outlined text-[16px]">refresh</span>
+              </Button>
+            </div>
             {sorted.length ? (
               <ul className="space-y-3 text-sm">
                 {sorted.map((ev, idx) => {
