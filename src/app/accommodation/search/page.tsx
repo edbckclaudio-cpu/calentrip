@@ -115,7 +115,7 @@ export default function AccommodationSearchPage() {
         } catch {}
       } catch {}
     })();
-  }, [cities]);
+  }, [cities, t]);
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
@@ -438,10 +438,10 @@ export default function AccommodationSearchPage() {
           const n = cities[i + 1];
           const seg = c.transportToNext;
           if (seg) {
-            const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+            const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
             const date = c.checkout || n?.checkin || "";
             const time = seg.depTime || "11:00";
-            next.push({ name: "Transporte", label, date, time, type: "transport" });
+            next.push({ name: t("transport"), label, date, time, type: "transport" });
           }
         }
         const seen = new Set<string>();
@@ -458,7 +458,7 @@ export default function AccommodationSearchPage() {
         } catch {}
       } catch {}
     })();
-  }, [cities]);
+  }, [cities, t]);
 
   useEffect(() => {
     try {
@@ -716,7 +716,7 @@ export default function AccommodationSearchPage() {
                   <Dialog open onOpenChange={() => setTransportIdx(null)}>
                     <div className="fixed inset-0 z-50 w-full md:inset-y-0 md:right-0 md:max-w-md rounded-none md:rounded-l-lg bg-white shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800 flex flex-col h-screen">
                       <div className="p-4">
-                        <DialogHeader>Transporte entre cidades</DialogHeader>
+                        <DialogHeader>{t("transportBetween")} {t("and")}</DialogHeader>
                       </div>
                       <div className="px-4 pb-4 flex-1 overflow-y-auto text-sm">
                         {(() => {

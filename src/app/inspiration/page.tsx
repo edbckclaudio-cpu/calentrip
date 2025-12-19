@@ -3,12 +3,13 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
+import { useI18n } from "@/lib/i18n";
 
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: unknown };
 
-function italyEvents(): EventItem[] {
+function italyEvents(t: (k: string) => string): EventItem[] {
   const stay = (kind: "checkin" | "checkout", city: string, date: string, time: string, address: string): EventItem => ({ type: "stay", label: `${kind === "checkin" ? "Check-in hospedagem" : "Checkout hospedagem"}: ${city} • Endereço: ${address}`, date, time, meta: { city, address, kind } });
-  const transport = (mode: "TRAIN" | "CAR" | "BUS" | "AIR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `Transporte: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
+  const transport = (mode: "TRAIN" | "CAR" | "BUS" | "AIR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `${t("transport")}: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
   const activity = (date: string, time: string, title: string): EventItem => ({ type: "activity", label: `Atividade: ${title}`, date, time });
   const restaurant = (date: string, time: string, title: string): EventItem => ({ type: "restaurant", label: `Restaurante: ${title}`, date, time });
   const list: EventItem[] = [];
@@ -70,9 +71,9 @@ function italyEvents(): EventItem[] {
   return list;
 }
 
-function brazilEvents(): EventItem[] {
+function brazilEvents(t: (k: string) => string): EventItem[] {
   const stay = (kind: "checkin" | "checkout", city: string, date: string, time: string, address: string): EventItem => ({ type: "stay", label: `${kind === "checkin" ? "Check-in hospedagem" : "Checkout hospedagem"}: ${city} • Endereço: ${address}`, date, time, meta: { city, address, kind } });
-  const transport = (mode: "AIR" | "BUS" | "CAR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `Transporte: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
+  const transport = (mode: "AIR" | "BUS" | "CAR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `${t("transport")}: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
   const activity = (date: string, time: string, title: string): EventItem => ({ type: "activity", label: `Atividade: ${title}`, date, time });
   const restaurant = (date: string, time: string, title: string): EventItem => ({ type: "restaurant", label: `Restaurante: ${title}`, date, time });
   const list: EventItem[] = [];
@@ -96,9 +97,9 @@ function brazilEvents(): EventItem[] {
   return list;
 }
 
-function croatiaEvents(): EventItem[] {
+function croatiaEvents(t: (k: string) => string): EventItem[] {
   const stay = (kind: "checkin" | "checkout", city: string, date: string, time: string, address: string): EventItem => ({ type: "stay", label: `${kind === "checkin" ? "Check-in hospedagem" : "Checkout hospedagem"}: ${city} • Endereço: ${address}`, date, time, meta: { city, address, kind } });
-  const transport = (mode: "BUS" | "CAR" | "AIR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `Transporte: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
+  const transport = (mode: "BUS" | "CAR" | "AIR", dep: string, arr: string, date: string, time: string): EventItem => ({ type: "transport", label: `${t("transport")}: ${dep} → ${arr} • ${mode}`, date, time, meta: { mode: mode.toLowerCase(), dep, arr, depTime: time } });
   const activity = (date: string, time: string, title: string): EventItem => ({ type: "activity", label: `Atividade: ${title}`, date, time });
   const restaurant = (date: string, time: string, title: string): EventItem => ({ type: "restaurant", label: `Restaurante: ${title}`, date, time });
   const list: EventItem[] = [];
@@ -144,6 +145,7 @@ export default function InspirationPage() {
 }
 
 function Carousel() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<"Itália" | "Brasil" | "Croácia" | null>(null);
   const items = [
@@ -158,7 +160,7 @@ function Carousel() {
   function prev() { setIndex((i) => (i - 1 + items.length) % items.length); }
   function saveToLocal(target: "final" | "month") {
     try {
-      const events = selected === "Brasil" ? brazilEvents() : selected === "Croácia" ? croatiaEvents() : italyEvents();
+      const events = selected === "Brasil" ? brazilEvents(t) : selected === "Croácia" ? croatiaEvents(t) : italyEvents(t);
       const name = selected === "Brasil" ? "BRASIL-2026" : selected === "Croácia" ? "CROACIA-2026" : "ITALIA-2026";
       const payload = { name, events };
       if (typeof window !== "undefined") {

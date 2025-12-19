@@ -587,10 +587,10 @@ export default function MonthCalendarPage() {
       const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta }> }) : null;
       const cities = Array.isArray(summary?.cities) ? summary!.cities! : [];
       cities.forEach((c, i) => {
-        const cityName = c.name || `Cidade ${i + 1}`;
-        const addr = c.address || "(endereço não informado)";
-        if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
-        if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+        const cityName = c.name || `${t("cityGeneric")} ${i + 1}`;
+        const addr = c.address || t("addressNotProvided");
+        if (c.checkin) list.push({ type: "stay", label: `${t("checkinLabel")} ${t("accommodationDialogTitle")}: ${cityName} • ${t("addressWord")}: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
+        if (c.checkout) list.push({ type: "stay", label: `${t("checkoutLabel")} ${t("accommodationDialogTitle")}: ${cityName} • ${t("addressWord")}: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
       });
       for (let i = 0; i < cities.length - 1; i++) {
         const c = cities[i];
@@ -614,9 +614,9 @@ export default function MonthCalendarPage() {
         return true;
       });
       setEvents(unique);
-      show("Calendário recarregado do storage", { variant: "success", duration: 2000, sticky: false });
+      show(t("storageReloadedMsg"), { variant: "success" });
     } catch {
-      show("Falha ao recarregar do storage", { variant: "error" });
+      show(t("storageReloadErrorMsg"), { variant: "error" });
     }
   }
   async function exportICS() {
@@ -835,36 +835,36 @@ export default function MonthCalendarPage() {
         const list: EventItem[] = [];
         const tripsForList = target ? [target] : trips;
         const addDays = (d: string, days: number) => { const dt = new Date(`${d}T00:00:00`); if (Number.isNaN(dt.getTime())) return d; dt.setDate(dt.getDate() + days); const p = (n: number) => String(n).padStart(2, "0"); return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`; };
-        tripsForList.forEach((t) => {
-          if (t.flightNotes && t.flightNotes.length) {
-            t.flightNotes.forEach((fn) => {
-              const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
+        tripsForList.forEach((trip) => {
+          if (trip.flightNotes && trip.flightNotes.length) {
+            trip.flightNotes.forEach((fn) => {
+              const legLabel = fn.leg === "outbound" ? t("outboundFlight") : t("inboundFlight");
               list.push({ type: "flight", label: `${legLabel}: ${fn.origin} → ${fn.destination}`, date: fn.date, time: fn.departureTime || undefined, meta: fn });
               if (fn.arrivalTime) {
                 const arrDate = fn.arrivalNextDay ? addDays(fn.date, 1) : fn.date;
-                const arrLabel = fn.leg === "outbound" ? "Chegada voo de ida" : "Chegada voo de volta";
+                const arrLabel = fn.leg === "outbound" ? t("arrivalOutboundLabel") : t("arrivalInboundLabel");
                 list.push({ type: "flight", label: `${arrLabel}: ${fn.destination}`, date: arrDate, time: fn.arrivalTime || undefined, meta: fn });
               }
             });
           } else {
-            list.push({ type: "flight", label: t.title, date: t.date });
+            list.push({ type: "flight", label: trip.title, date: trip.date });
           }
         });
         const rawSummary = typeof window !== "undefined" ? localStorage.getItem("calentrip_trip_summary") : null;
         const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: Array<{ name?: string; checkin?: string; checkout?: string; address?: string; transportToNext?: TransportSegmentMeta }> }) : null;
         const cities = Array.isArray(summary?.cities) ? summary!.cities! : [];
         cities.forEach((c, i) => {
-          const cityName = c.name || `Cidade ${i + 1}`;
-          const addr = c.address || "(endereço não informado)";
-          if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
-          if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+          const cityName = c.name || `${t("cityGeneric")} ${i + 1}`;
+          const addr = c.address || t("addressNotProvided");
+          if (c.checkin) list.push({ type: "stay", label: `${t("checkinLabel")} ${t("accommodationDialogTitle")}: ${cityName} • ${t("addressWord")}: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
+          if (c.checkout) list.push({ type: "stay", label: `${t("checkoutLabel")} ${t("accommodationDialogTitle")}: ${cityName} • ${t("addressWord")}: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
         });
         for (let i = 0; i < cities.length - 1; i++) {
           const c = cities[i];
           const n = cities[i + 1];
           const seg = c.transportToNext;
           if (seg) {
-            const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+            const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
             const date = c.checkout || n?.checkin || "";
             const time = seg.depTime || "11:00";
             list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -872,7 +872,7 @@ export default function MonthCalendarPage() {
         }
         const rawRecs = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
         const recs: RecordItem[] = rawRecs ? (JSON.parse(rawRecs) as RecordItem[]) : [];
-        (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
+        (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `${t("activityWord")}: ${r.title} (${r.cityName})` : `${t("restaurantWord")}: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
         const seen = new Set<string>();
         const unique = list.filter((e) => {
           const key = e.type === "stay"
@@ -886,7 +886,7 @@ export default function MonthCalendarPage() {
         setEvents(unique);
       } catch {}
     })();
-  }, [status, loadedFromSaved]);
+  }, [status, loadedFromSaved, t]);
 
   useEffect(() => {
     (async () => {
@@ -955,14 +955,14 @@ export default function MonthCalendarPage() {
   }, [tripMonth, grouped]);
 
   const dayTitle = useMemo(() => {
-    if (!dayOpen) return "Atividades do dia";
+    if (!dayOpen) return t("dayActivitiesLabel");
     const loc = lang === "pt" ? "pt-BR" : lang === "es" ? "es-ES" : "en-US";
     const d = new Date(`${dayOpen}T00:00:00`);
-    if (Number.isNaN(d.getTime())) return "Atividades do dia";
+    if (Number.isNaN(d.getTime())) return t("dayActivitiesLabel");
     const dayNum = String(d.getDate());
     const dow = new Intl.DateTimeFormat(loc, { weekday: "long" }).format(d);
-    return `Atividades do dia: ${dayNum} • ${dow}`;
-  }, [dayOpen, lang]);
+    return `${t("dayActivitiesLabel")}: ${dayNum} • ${dow}`;
+  }, [dayOpen, lang, t]);
 
   function changeDay(delta: number) {
     if (!dayOpen) return;
@@ -982,7 +982,7 @@ export default function MonthCalendarPage() {
       {gating?.show ? (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
           <div className="max-w-md w-full bg-white rounded-xl p-5 space-y-3">
-            <div className="text-lg font-semibold">{gating.reason === "anon" ? "Faça login para desbloquear" : "Assinatura necessária"}</div>
+            <div className="text-lg font-semibold">{gating.reason === "anon" ? t("loginUnlockTitle") : t("subscriptionNeededTitle")}</div>
             <div className="text-sm text-zinc-700">
               {gating.reason === "anon" ? (
                 <div>{t("loginUnlockText")}</div>
@@ -1033,8 +1033,8 @@ export default function MonthCalendarPage() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold">Entrar</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="text-xs" onClick={() => signIn("google")}>Google</button>
-                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>Demo</button>
+                  <button type="button" className="text-xs" onClick={() => signIn("google")}>{t("signInWithGoogle")}</button>
+                  <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>{t("signInDemo")}</button>
                     </div>
                   </div>
                 ) : null}
@@ -1045,13 +1045,13 @@ export default function MonthCalendarPage() {
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
             <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
           </span>
-          {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
+          {sideOpen ? <span className="text-sm font-medium">{t("calendarList")}</span> : null}
         </button>
         <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={reloadFromStorage}>
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
             <span className="material-symbols-outlined text-[22px] text-[#007AFF]">refresh</span>
           </span>
-          {sideOpen ? <span className="text-sm font-medium">Recarregar do storage</span> : null}
+          {sideOpen ? <span className="text-sm font-medium">{t("reloadStorageButton")}</span> : null}
         </button>
         <button
           type="button"
@@ -1072,33 +1072,33 @@ export default function MonthCalendarPage() {
         <div className="sticky top-0 z-30 -mt-4 mb-2 px-3 py-2 bg-white/80 dark:bg-black/60 backdrop-blur border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-end gap-2">
           <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.close(); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>
             <span className="material-symbols-outlined text-[18px] mr-1">list_alt</span>
-            Voltar para lista
+            {t("backToListButton")}
           </Button>
           <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={exportICS}>
             <span className="material-symbols-outlined text-[18px] mr-1">download</span>
-            Exportar .ics
+            {t("exportIcsButton")}
           </Button>
         </div>
-        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Calendário da viagem</h1>
+        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">{t("tripCalendarTitle")}</h1>
         <div className="text-sm text-zinc-700 dark:text-zinc-300">{monthLabel}</div>
         
         <div className="mt-2 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
           <span className="material-symbols-outlined text-[18px] text-[#febb02]">sticky_note_2</span>
           <span>
-            Toque em uma data para ver atividades e detalhes. Datas com eventos têm anel amarelo; dias de voo aparecem destacados.
+            {t("monthHelpText")}
           </span>
         </div>
       </div>
 
       <div className="container-page">
         <div className="mb-2 flex items-center gap-3 text-xs">
-          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#007AFF]"></span><span>Voo</span></div>
+          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#007AFF]"></span><span>{t("flightWord")}</span></div>
           <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#febb02]"></span><span>{t("accommodationDialogTitle")}</span></div>
-          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#34c759]"></span><span>Atividades</span></div>
+          <div className="inline-flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-[#34c759]"></span><span>{t("activitiesWord")}</span></div>
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Mesma viagem</CardTitle>
+            <CardTitle>{t("sameTripLabel")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-7 gap-2 text-sm">

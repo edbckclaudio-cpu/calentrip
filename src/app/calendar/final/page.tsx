@@ -66,7 +66,7 @@ export default function FinalCalendarPage() {
   const [stayDrawerOpen, setStayDrawerOpen] = useState(false);
   const [stayLoading, setStayLoading] = useState(false);
   const [stayInfo, setStayInfo] = useState<{ origin?: string; destination?: string; distanceKm?: number; drivingMin?: number; walkingMin?: number; busMin?: number; trainMin?: number; uberUrl?: string; gmapsUrl?: string; r2rUrl?: string; mapUrl?: string; callTime?: string; notifyAt?: string } | null>(null);
-  const [stayCandidates, setStayCandidates] = useState<Array<{ name: string; lat: number; lon: number }>>([]);
+  const [stayCandidates, setStayCandidates] = useState<Array<{ name: string; lat: number; lon: number; kind?: "air" | "train" | "bus" }>>([]);
   const [stayChosenIdx, setStayChosenIdx] = useState<number | null>(null);
   const arrivalWatchIds = useRef<Record<string, number>>({});
   const arrivalNotified = useRef<Record<string, boolean>>({});
@@ -233,7 +233,7 @@ export default function FinalCalendarPage() {
             if (o && d && dd) {
               list.push({
                 type: "flight",
-                label: `Voo de ida: ${dd} â€¢ ${(tsObj.departTime || "").trim()} â€¢ ${o} â†’ ${d}${(tsObj.departFlightNumber || "").trim() ? ` â€¢ ${tsObj.departFlightNumber}` : ""}`,
+                label: `${t("outboundFlight")}: ${dd} • ${(tsObj.departTime || "").trim()} • ${o} → ${d}${(tsObj.departFlightNumber || "").trim() ? ` • ${tsObj.departFlightNumber}` : ""}`,
                 date: dd,
                 time: (tsObj.departTime || undefined),
                 meta: { leg: "outbound", origin: o, destination: d, date: dd, departureTime: tsObj.departTime || undefined, flightNumber: tsObj.departFlightNumber || undefined } as unknown as FlightNote,
@@ -242,7 +242,7 @@ export default function FinalCalendarPage() {
             if (o && d && rd) {
               list.push({
                 type: "flight",
-                label: `Voo de volta: ${rd} â€¢ ${(tsObj.returnTime || "").trim()} â€¢ ${d} â†’ ${o}${(tsObj.returnFlightNumber || "").trim() ? ` â€¢ ${tsObj.returnFlightNumber}` : ""}`,
+                label: `${t("inboundFlight")}: ${rd} • ${(tsObj.returnTime || "").trim()} • ${d} → ${o}${(tsObj.returnFlightNumber || "").trim() ? ` • ${tsObj.returnFlightNumber}` : ""}`,
                 date: rd,
                 time: (tsObj.returnTime || undefined),
                 meta: { leg: "inbound", origin: d, destination: o, date: rd, departureTime: tsObj.returnTime || undefined, flightNumber: tsObj.returnFlightNumber || undefined } as unknown as FlightNote,
@@ -254,7 +254,7 @@ export default function FinalCalendarPage() {
             if (ob?.origin && ob?.destination && ob?.date) {
               list.push({
                 type: "flight",
-                label: `Voo de ida: ${ob.date} â€¢ ${(ob.time || "").trim()} â€¢ ${ob.origin} â†’ ${ob.destination}${(ob.flightNumber || "").trim() ? ` â€¢ ${ob.flightNumber}` : ""}`,
+                label: `${t("outboundFlight")}: ${ob.date} • ${(ob.time || "").trim()} • ${ob.origin} → ${ob.destination}${(ob.flightNumber || "").trim() ? ` • ${ob.flightNumber}` : ""}`,
                 date: ob.date,
                 time: (ob.time || undefined),
                 meta: { leg: "outbound", origin: ob.origin, destination: ob.destination, date: ob.date, departureTime: ob.time || undefined, flightNumber: ob.flightNumber || undefined } as unknown as FlightNote,
@@ -263,7 +263,7 @@ export default function FinalCalendarPage() {
             if (ib?.origin && ib?.destination && ib?.date) {
               list.push({
                 type: "flight",
-                label: `Voo de volta: ${ib.date} â€¢ ${(ib.time || "").trim()} â€¢ ${ib.origin} â†’ ${ib.destination}${(ib.flightNumber || "").trim() ? ` â€¢ ${ib.flightNumber}` : ""}`,
+                label: `${t("inboundFlight")}: ${ib.date} • ${(ib.time || "").trim()} • ${ib.origin} → ${ib.destination}${(ib.flightNumber || "").trim() ? ` • ${ib.flightNumber}` : ""}`,
                 date: ib.date,
                 time: (ib.time || undefined),
                 meta: { leg: "inbound", origin: ib.origin, destination: ib.destination, date: ib.date, departureTime: ib.time || undefined, flightNumber: ib.flightNumber || undefined } as unknown as FlightNote,
@@ -321,7 +321,7 @@ export default function FinalCalendarPage() {
       const ordered = [...dedup].sort((a, b) => sortDT(a.date, a.time) - sortDT(b.date, b.time));
       setEvents(ordered);
     } catch {}
-  }, [timeForFlightNote]);
+  }, [timeForFlightNote, t]);
 
   useEffect(() => {
     try {
@@ -341,7 +341,7 @@ export default function FinalCalendarPage() {
         });
       }
     } catch {}
-  }, [composeFromLocal]);
+  }, [composeFromLocal, t]);
 
   useEffect(() => {
     (async () => {
@@ -481,7 +481,7 @@ export default function FinalCalendarPage() {
     (async () => {
       try { await composeFromLocal(); } catch {}
     })();
-  }, [composeFromLocal]);
+  }, [composeFromLocal, t]);
 
   useEffect(() => {
     try {
@@ -507,7 +507,7 @@ export default function FinalCalendarPage() {
         const n = cities[i + 1];
         const seg = c.transportToNext;
         if (seg) {
-          const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+          const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
           const date = c.checkout || n?.checkin || "";
           const time = seg.depTime || "11:00";
           list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -531,7 +531,7 @@ export default function FinalCalendarPage() {
         });
       });
     } catch {}
-  }, [composeFromLocal]);
+  }, [composeFromLocal, t]);
 
   async function reloadFromStorage() {
     try {
@@ -574,7 +574,7 @@ export default function FinalCalendarPage() {
           const n = cities[i + 1];
           const seg = c.transportToNext;
           if (seg) {
-            const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+            const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
             const date = c.checkout || n?.checkin || "";
             const time = seg.depTime || "11:00";
             list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -762,7 +762,7 @@ export default function FinalCalendarPage() {
         } catch {}
       })();
     } catch {}
-  }, [composeFromLocal, timeForFlightNote]);
+  }, [composeFromLocal, timeForFlightNote, t]);
 
   useEffect(() => {
     (async () => {
@@ -851,7 +851,7 @@ export default function FinalCalendarPage() {
               const n = cities[i + 1];
               const seg = c.transportToNext;
               if (seg) {
-                const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+                const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
                 const date = c.checkout || n?.checkin || "";
                 const time = seg.depTime || "11:00";
                 extra.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -911,7 +911,7 @@ export default function FinalCalendarPage() {
               const n = cities[i + 1];
               const seg = c.transportToNext;
               if (seg) {
-                const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+                const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
                 const date = c.checkout || n?.checkin || "";
                 const time = seg.depTime || "11:00";
                 list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -949,7 +949,7 @@ export default function FinalCalendarPage() {
         }
       } catch {}
     })();
-  }, [composeFromLocal, timeForFlightNote]);
+  }, [composeFromLocal, timeForFlightNote, t]);
 
   useEffect(() => {
     try {
@@ -960,7 +960,7 @@ export default function FinalCalendarPage() {
       }, 600);
       return () => { try { clearTimeout(id); } catch {} };
     } catch {}
-  }, [composeFromLocal, timeForFlightNote]);
+  }, [composeFromLocal, timeForFlightNote, t]);
 
   useEffect(() => {
     try {
@@ -1134,7 +1134,7 @@ export default function FinalCalendarPage() {
             const n = cities[i + 1];
             const seg = c.transportToNext;
             if (seg) {
-              const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+              const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
               const date = c.checkout || n?.checkin || "";
               const time = seg.depTime || "11:00";
               list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -1724,7 +1724,7 @@ export default function FinalCalendarPage() {
         const n = cities[i + 1];
         const seg = c.transportToNext;
         if (seg) {
-          const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+          const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
           const date = c.checkout || n?.checkin || "";
           const time = seg.depTime || "11:00";
           list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -1745,7 +1745,7 @@ export default function FinalCalendarPage() {
       if (!loadedFromSaved) setEvents(unique);
       } catch {}
     })();
-  }, [loadedFromSaved]);
+  }, [loadedFromSaved, t]);
 
   async function openTransportDrawer(item: EventItem) {
     if (item.type !== "flight") return;
@@ -1866,74 +1866,56 @@ export default function FinalCalendarPage() {
     const o = await geocode(originAddr);
     let destLabel = depPoint;
     let destLatLon: { lat: number; lon: number } | null = null;
-    const cityForSearch = (seg.originCity || depPoint).trim();
+    const cityBase = (seg.originCity || (originAddr.split(",")[0] || depPoint)).trim();
+    const countryHint = (o?.display || "").split(",").slice(-1)[0]?.trim() || "";
+    const cityForSearch = countryHint ? `${cityBase} ${countryHint}` : cityBase;
     const looksLikeCityOnly = !/[,\d]/.test(depPoint) && !/(rodovi|terminal|est(a|ã)\w+|bus|gare|station)/i.test(depPoint);
-    if (seg.mode === "bus" && looksLikeCityOnly && cityForSearch) {
+    if (looksLikeCityOnly && cityForSearch) {
       try {
-        const fetchList = async (q: string) => {
-          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`;
+        const fetchList = async (q: string, limit = 8) => {
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=${limit}`;
           const res = await fetch(url, { headers: { Accept: "application/json" } });
           const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
           return js.map((r) => ({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon) }));
         };
-        const list1 = await fetchList(`rodoviária ${cityForSearch}`);
-        const list2 = await fetchList(`bus station ${cityForSearch}`);
+        const bus1 = await fetchList(`rodoviária ${cityForSearch}`, 6);
+        const bus2 = await fetchList(`bus station ${cityForSearch}`, 6);
+        const train1 = await fetchList(`estação de trem ${cityForSearch}`, 8);
+        const train2 = await fetchList(`train station ${cityForSearch}`, 8);
+        const train3 = await fetchList(`gare ${cityForSearch}`, 8);
+        const airportsRaw = await searchAirportsAsync(cityBase);
+        const filteredAir = airportsRaw.filter((a) => a.city.toLowerCase() === cityBase.toLowerCase()).slice(0, 6);
+        const orderMap: Record<string, number> = {};
+        filteredAir.forEach((a, i) => { orderMap[`${a.city} – ${a.name} (${a.iata})`] = i; });
+        const airNames = filteredAir.map((a) => `${a.city} – ${a.name} (${a.iata})`);
+        const airGeos: Array<{ name: string; lat: number; lon: number; pref?: number }> = [];
+        for (const n of airNames) {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(n)}&format=json&limit=1`;
+            const res = await fetch(url, { headers: { Accept: "application/json" } });
+            const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+            const r = js[0];
+            if (r) airGeos.push({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon), pref: orderMap[n] ?? 999 });
+          } catch {}
+        }
+        airGeos.sort((a, b) => (a.pref ?? 999) - (b.pref ?? 999));
         const seen = new Set<string>();
-        const merged: Array<{ name: string; lat: number; lon: number }> = [];
-        [...list1, ...list2].forEach((it) => {
+        const busAll: Array<{ name: string; lat: number; lon: number; kind: "bus" }> = [...bus1, ...bus2].map((it) => ({ ...it, kind: "bus" }));
+        const trainAll: Array<{ name: string; lat: number; lon: number; kind: "train" }> = [...train1, ...train2, ...train3].map((it) => ({ ...it, kind: "train" }));
+        const airAll: Array<{ name: string; lat: number; lon: number; kind: "air" }> = airGeos.map((g) => ({ name: g.name, lat: g.lat, lon: g.lon, kind: "air" }));
+        const mergedAll: Array<{ name: string; lat: number; lon: number; kind?: "air" | "train" | "bus" }> = [];
+        [...busAll, ...trainAll, ...airAll].forEach((it) => {
           const key = `${Math.round(it.lat * 10000)}|${Math.round(it.lon * 10000)}`;
-          if (!seen.has(key)) { seen.add(key); merged.push(it); }
+          if (!seen.has(key)) { seen.add(key); mergedAll.push(it); }
         });
-        const cityLow = cityForSearch.toLowerCase();
-        const cityBusPrefs: Record<string, string[]> = {
+        const cityLow = cityBase.toLowerCase();
+        const busPrefs: Record<string, string[]> = {
           ["são paulo"]: ["tietê", "terminal tietê"],
           ["sao paulo"]: ["tiete", "terminal tiete"],
           ["rio de janeiro"]: ["novo rio"],
           ["porto"]: ["campo 24 de agosto"],
         };
-        const rankBus = (n: string) => {
-          const s = (n || "").toLowerCase();
-          let score = 100;
-          if (s.includes(cityLow)) score -= 10;
-          if (/(central|centrale)/.test(s)) score -= 15;
-          if (/(rodovi|terminal|gare routière|autostazione)/.test(s)) score -= 10;
-          const prefs = cityBusPrefs[cityLow] || [];
-          for (const k of prefs) { if (s.includes(k)) score -= 40; }
-          return score;
-        };
-        merged.sort((a, b) => rankBus(a.name) - rankBus(b.name));
-        if (merged.length) {
-          setStayCandidates(merged.slice(0, 6));
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:bus_station_selection") : null;
-          const map = raw ? JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }> : {};
-          const saved = map[cityForSearch];
-          const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
-          const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
-          destLabel = chosen.name;
-          destLatLon = { lat: chosen.lat, lon: chosen.lon };
-          setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
-        }
-      } catch {}
-    }
-    if (seg.mode === "train" && looksLikeCityOnly && cityForSearch) {
-      try {
-        const fetchList = async (q: string) => {
-          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8`;
-          const res = await fetch(url, { headers: { Accept: "application/json" } });
-          const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
-          return js.map((r) => ({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon) }));
-        };
-        const list1 = await fetchList(`estação de trem ${cityForSearch}`);
-        const list2 = await fetchList(`train station ${cityForSearch}`);
-        const list3 = await fetchList(`gare ${cityForSearch}`);
-        const seen = new Set<string>();
-        const merged: Array<{ name: string; lat: number; lon: number }> = [];
-        [...list1, ...list2, ...list3].forEach((it) => {
-          const key = `${Math.round(it.lat * 10000)}|${Math.round(it.lon * 10000)}`;
-          if (!seen.has(key)) { seen.add(key); merged.push(it); }
-        });
-        const cityLow = cityForSearch.toLowerCase();
-        const cityTrainPrefs: Record<string, string[]> = {
+        const trainPrefs: Record<string, string[]> = {
           ["firenze"]: ["santa maria novella", "smn"],
           ["florence"]: ["santa maria novella", "smn"],
           ["roma"]: ["termini"],
@@ -1955,58 +1937,30 @@ export default function FinalCalendarPage() {
           ["madrid"]: ["atocha"],
           ["barcelona"]: ["sants"],
         };
-        const rank = (n: string) => {
+        const score = (n: string) => {
           const s = (n || "").toLowerCase();
-          let score = 100;
-          if (s.includes(cityLow)) score -= 20;
-          if (/termini/.test(s)) score -= 50;
-          if (/(centrale|central|hauptbahnhof|hbf)/.test(s)) score -= 40;
-          if (/(santa maria novella|smn)/.test(s)) score -= 45;
-          if (/(gare du nord|gare de lyon)/.test(s)) score -= 35;
-          if (/(stazione|station|gare)/.test(s)) score -= 10;
-          const prefs = cityTrainPrefs[cityLow] || [];
-          for (const k of prefs) { if (s.includes(k)) score -= 50; }
-          return score;
+          let v = 100;
+          if (s.includes(cityLow)) v -= 10;
+          if (/(termini)/.test(s)) v -= 50;
+          if (/(centrale|central|hauptbahnhof|hbf)/.test(s)) v -= 40;
+          if (/(santa maria novella|smn)/.test(s)) v -= 45;
+          if (/(gare du nord|gare de lyon)/.test(s)) v -= 35;
+          if (/(rodovi|terminal|gare routière|autostazione)/.test(s)) v -= 10;
+          if (/(stazione|station|gare)/.test(s)) v -= 10;
+          for (const k of busPrefs[cityLow] || []) { if (s.includes(k)) v -= 40; }
+          for (const k of trainPrefs[cityLow] || []) { if (s.includes(k)) v -= 50; }
+          return v;
         };
-        merged.sort((a, b) => rank(a.name) - rank(b.name));
-        if (merged.length) {
-          setStayCandidates(merged.slice(0, 6));
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:train_station_selection") : null;
+        mergedAll.sort((a, b) => score(a.name) - score(b.name));
+        if (mergedAll.length) {
+          const top = mergedAll.slice(0, 10);
+          setStayCandidates(top);
+          const key = "calentrip:departure_point_selection";
+          const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null;
           const map = raw ? (JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }>) : {};
-          const saved = map[cityForSearch];
-          const idxSaved = saved ? merged.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
-          const chosen = idxSaved >= 0 ? merged[idxSaved] : merged[0];
-          destLabel = chosen.name;
-          destLatLon = { lat: chosen.lat, lon: chosen.lon };
-          setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
-        }
-      } catch {}
-    }
-    if (seg.mode === "air" && looksLikeCityOnly && cityForSearch) {
-      try {
-        const airports = await searchAirportsAsync(cityForSearch);
-        const filtered = airports.filter((a) => a.city.toLowerCase() === cityForSearch.toLowerCase()).slice(0, 6);
-        const orderMap: Record<string, number> = {};
-        filtered.forEach((a, i) => { orderMap[`${a.city} – ${a.name} (${a.iata})`] = i; });
-        const names = filtered.map((a) => `${a.city} – ${a.name} (${a.iata})`);
-        const geos: Array<{ name: string; lat: number; lon: number; pref?: number }> = [];
-        for (const n of names) {
-          try {
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(n)}&format=json&limit=1`;
-            const res = await fetch(url, { headers: { Accept: "application/json" } });
-            const js = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
-            const r = js[0];
-            if (r) geos.push({ name: r.display_name, lat: Number(r.lat), lon: Number(r.lon), pref: orderMap[n] ?? 999 });
-          } catch {}
-        }
-        if (geos.length) {
-          geos.sort((a, b) => (a.pref ?? 999) - (b.pref ?? 999));
-          setStayCandidates(geos.map((g) => ({ name: g.name, lat: g.lat, lon: g.lon })).slice(0, 6));
-          const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:airport_selection") : null;
-          const map = raw ? (JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }>) : {};
-          const saved = map[cityForSearch];
-          const idxSaved = saved ? geos.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
-          const chosen = idxSaved >= 0 ? geos[idxSaved] : geos[0];
+          const saved = map[cityBase] || map[cityForSearch];
+          const idxSaved = saved ? top.findIndex((c) => Math.abs(c.lat - saved.lat) < 0.001 && Math.abs(c.lon - saved.lon) < 0.001) : -1;
+          const chosen = idxSaved >= 0 ? top[idxSaved] : top[0];
           destLabel = chosen.name;
           destLatLon = { lat: chosen.lat, lon: chosen.lon };
           setStayChosenIdx(idxSaved >= 0 ? idxSaved : 0);
@@ -3829,7 +3783,7 @@ export default function FinalCalendarPage() {
                   <div>Destino: {stayInfo?.destination || "—"}</div>
                   {stayCandidates.length > 1 ? (
                     <div>
-                      <div className="text-xs text-zinc-600">{(() => { const ev = editIdx !== null ? events[editIdx] : null; const seg = ev?.meta as TransportSegmentMeta | undefined; return seg?.mode === "train" ? "Escolha a estação de trem:" : seg?.mode === "air" ? "Escolha o aeroporto:" : "Escolha a rodoviária:"; })()}</div>
+                      <div className="text-xs text-zinc-600">{t("transportOriginLabel")}</div>
                       <Select className="mt-1" value={String(stayChosenIdx ?? 0)} onChange={async (e) => {
                         const i = Number((e.target as HTMLSelectElement).value);
                         const c = stayCandidates[i];
@@ -3873,8 +3827,7 @@ export default function FinalCalendarPage() {
                             callTime = fmt(callAt);
                             notifyAt = `${callAt.toLocaleDateString()} ${fmt(callAt)}`;
                             try {
-                              const evSeg = ev?.meta as TransportSegmentMeta | undefined;
-                              const key = evSeg?.mode === "train" ? "calentrip:train_station_selection" : evSeg?.mode === "air" ? "calentrip:airport_selection" : "calentrip:bus_station_selection";
+                              const key = "calentrip:departure_point_selection";
                               const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null;
                               const map = raw ? (JSON.parse(raw) as Record<string, { name: string; lat: number; lon: number }>) : {};
                               map[cityForSearch] = { name: c.name, lat: c.lat, lon: c.lon };
@@ -3884,7 +3837,10 @@ export default function FinalCalendarPage() {
                           setStayInfo((prev) => ({ ...(prev || {}), destination: c.name, distanceKm, drivingMin: drivingWithTrafficMin ?? drivingMin, walkingMin, gmapsUrl, uberUrl, callTime, notifyAt }));
                         } catch {}
                       }}>
-                        {stayCandidates.map((c, i) => (<option key={`opt-${i}`} value={String(i)}>{c.name}</option>))}
+                        {stayCandidates.map((c, i) => {
+                          const label = c.kind === "air" ? `${t("airport")}: ${c.name}` : c.kind === "train" ? `${t("trainStation")}: ${c.name}` : `${t("busStation")}: ${c.name}`;
+                          return (<option key={`opt-${i}`} value={String(i)}>{label}</option>);
+                        })}
                       </Select>
                     </div>
                   ) : null}
