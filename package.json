@@ -16,7 +16,8 @@
     "cap:sync": "npm run cap:update",
     "cap:aab": "cd android && gradlew.bat bundleRelease",
     "cap:apk": "cd android && gradlew.bat assembleRelease",
-    "cap:clean": "cd android && gradlew.bat clean"
+    "cap:clean": "cd android && gradlew.bat clean",
+    "play:upload": "node scripts/upload-play-internal.mjs"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^7.0.2",
@@ -24,6 +25,7 @@
     "@capacitor/preferences": "^7.0.2",
     "firebase": "^12.6.0",
     "google-auth-library": "^9.15.1",
+    "googleapis": "^169.0.0",
     "next": "16.0.7",
     "next-auth": "^4.24.13",
     "react": "19.2.1",

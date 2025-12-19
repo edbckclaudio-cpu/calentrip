@@ -130,11 +130,11 @@ export default function FinalCalendarPage() {
     return (ts.inbound?.date || "").trim();
   }
 
-  const timeForFlightNote = useCallback((fn: FlightNote, label?: string): string | undefined => {
+  const timeForFlightNote = useCallback((fn: FlightNote): string | undefined => {
     if ((fn.departureTime || "").trim()) return (fn.departureTime || "").trim();
     const ts = readTripSearch();
     if (!ts) return undefined;
-    const leg = (label && label.startsWith("Voo de ida")) ? "outbound" : (label && label.startsWith("Voo de volta")) ? "inbound" : fn.leg;
+    const leg = fn.leg;
     if (ts.mode === "same") {
       return leg === "outbound" ? (ts.departTime || undefined) : leg === "inbound" ? (ts.returnTime || undefined) : undefined;
     } else {
@@ -154,20 +154,20 @@ export default function FinalCalendarPage() {
         setEvents((prev) => {
           const list: EventItem[] = [];
           cities.forEach((c, i) => {
-            const cityName = c.name || `Cidade ${i + 1}`;
-            const addr = c.address || "(endereço não informado)";
-            if (c.checkin) list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
-            if (c.checkout) list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+            const cityName = c.name || `${t("cityGeneric")} ${i + 1}`;
+            const addr = c.address || t("addressNotProvided");
+            if (c.checkin) list.push({ type: "stay", label: `${t("stayCheckinLabel")}: ${cityName} • ${t("addressLabel")}: ${addr}`, date: c.checkin, time: "14:00", meta: { city: cityName, address: addr, kind: "checkin" } });
+            if (c.checkout) list.push({ type: "stay", label: `${t("stayCheckoutLabel")}: ${cityName} • ${t("addressLabel")}: ${addr}`, date: c.checkout, time: "11:00", meta: { city: cityName, address: addr, kind: "checkout" } });
             const seg = c.transportToNext;
             const next = cities[i + 1];
             if (seg && next) {
-              const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(next?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+              const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(next?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
               const date = c.checkout || next?.checkin || "";
               const time = seg.depTime || "11:00";
               list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
             }
           });
-          (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
+          (recs || []).forEach((r) => list.push({ type: r.kind, label: r.kind === "activity" ? `${t("activityWord")}: ${r.title} (${r.cityName})` : `${t("restaurantWord")}: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r }));
           const s = new Set<string>();
           const merged = [...prev, ...list];
           return merged.filter((e) => {
@@ -181,7 +181,7 @@ export default function FinalCalendarPage() {
         });
       } catch {}
     })();
-  }, []);
+  }, [t]);
 
   const composeFromLocal = useCallback(async () => {
     try {
@@ -211,11 +211,11 @@ export default function FinalCalendarPage() {
       const notes = (targetTrip?.flightNotes || []) as FlightNote[];
       const seenFlights = new Set<string>();
       notes.forEach((fn) => {
-        const legLabel = fn.leg === "outbound" ? "Voo de ida" : "Voo de volta";
+        const legLabel = fn.leg === "outbound" ? t("outboundFlight") : t("inboundFlight");
         const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
         if (!seenFlights.has(sig)) {
           seenFlights.add(sig);
-          const dep = timeForFlightNote(fn, legLabel) || (fn.departureTime || "").trim();
+          const dep = timeForFlightNote(fn) || (fn.departureTime || "").trim();
           const arr = fn.arrivalTime || "";
           list.push({ type: "flight", label: `${legLabel}: ${fn.date} • ${dep}${arr ? ` → ${arr}${fn.arrivalNextDay ? " (+1d)" : ""}` : ""} • ${fn.origin} → ${fn.destination}${fn.flightNumber ? ` • ${fn.flightNumber}` : ""}`, date: fn.date, time: dep || undefined, meta: fn });
         }
@@ -276,15 +276,15 @@ export default function FinalCalendarPage() {
       const summary = rawSummary ? (JSON.parse(rawSummary) as { cities?: CityPersist[] }) : null;
       const cities = Array.isArray(summary?.cities) ? (summary!.cities as CityPersist[]) : [];
       cities.forEach((c, i) => {
-        const cityName = c.name || `Cidade ${i + 1}`;
-        const addr = c.address || "(endereço não informado)";
+        const cityName = c.name || `${t("cityGeneric")} ${i + 1}`;
+        const addr = c.address || t("addressNotProvided");
         if (c.checkin) {
           let ciTime = i === 0 ? "23:59" : "17:00";
           try { if (i === 0 && localStorage.getItem("calentrip:arrivalNextDay_outbound") === "true") ciTime = "14:00"; } catch {}
-          list.push({ type: "stay", label: `Check-in hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
+          list.push({ type: "stay", label: `${t("stayCheckinLabel")}: ${cityName} • ${t("addressLabel")}: ${addr}`, date: c.checkin, time: ciTime, meta: { city: cityName, address: addr, kind: "checkin" } });
         }
         if (c.checkout) {
-          list.push({ type: "stay", label: `Checkout hospedagem: ${cityName} • Endereço: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
+          list.push({ type: "stay", label: `${t("stayCheckoutLabel")}: ${cityName} • ${t("addressLabel")}: ${addr}`, date: c.checkout, time: "08:00", meta: { city: cityName, address: addr, kind: "checkout" } });
         }
       });
       for (let i = 0; i < cities.length - 1; i++) {
@@ -292,7 +292,7 @@ export default function FinalCalendarPage() {
         const n = cities[i + 1];
         const seg = c.transportToNext;
         if (seg) {
-          const label = `Transporte: ${(c.name || `Cidade ${i + 1}`)} → ${(n?.name || `Cidade ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
+          const label = `${t("transport")}: ${(c.name || `${t("cityGeneric")} ${i + 1}`)} → ${(n?.name || `${t("cityGeneric")} ${i + 2}`)} • ${(seg.mode || "").toUpperCase()}`;
           const date = c.checkout || n?.checkin || "";
           const time = seg.depTime || "11:00";
           list.push({ type: "transport", label, date, time, meta: { ...seg, originAddress: c.address, originCity: c.name } });
@@ -301,7 +301,7 @@ export default function FinalCalendarPage() {
       const rawEnt = typeof window !== "undefined" ? localStorage.getItem("calentrip:entertainment:records") : null;
       const recs: RecordItem[] = rawEnt ? JSON.parse(rawEnt) : [];
       (recs || []).forEach((r) => {
-        list.push({ type: r.kind, label: r.kind === "activity" ? `Atividade: ${r.title} (${r.cityName})` : `Restaurante: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r });
+        list.push({ type: r.kind, label: r.kind === "activity" ? `${t("activityWord")}: ${r.title} (${r.cityName})` : `${t("restaurantWord")}: ${r.title} (${r.cityName})`, date: r.date, time: r.time, meta: r });
       });
       const seen = new Set<string>();
       const dedup = list.filter((e) => {
@@ -474,7 +474,7 @@ export default function FinalCalendarPage() {
         });
       });
     } catch {}
-  }, []);
+  }, [t]);
   useEffect(() => { addFlightsFromTripSearch(); }, [addFlightsFromTripSearch]);
 
   useEffect(() => {
@@ -816,7 +816,7 @@ export default function FinalCalendarPage() {
             }
             let time: string | undefined;
             if (typeMap === "flight") {
-              time = meta?.departureTime || (e.time || undefined) || (meta ? timeForFlightNote(meta, label) : undefined);
+              time = meta?.departureTime || (e.time || undefined) || (meta ? timeForFlightNote(meta) : undefined);
               if (!time && label) {
                 const afterDate = label.split(" • ").slice(1)[0] || "";
                 const m = afterDate.match(/\b(\d{2}:\d{2})\b/);
@@ -879,7 +879,7 @@ export default function FinalCalendarPage() {
             const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
             if (!seenFlights.has(sig)) {
               seenFlights.add(sig);
-              const dep = timeForFlightNote(fn, legLabel) || (fn.departureTime || "").trim();
+              const dep = timeForFlightNote(fn) || (fn.departureTime || "").trim();
               const arr = fn.arrivalTime || "";
               list.push({
                 type: "flight",
@@ -1107,7 +1107,7 @@ export default function FinalCalendarPage() {
               const sig = `${fn.leg}|${fn.origin}|${fn.destination}|${fn.date}`;
               if (!seenFlights.has(sig)) {
                 seenFlights.add(sig);
-                const dep = timeForFlightNote(fn, legLabel) || (fn.departureTime || "").trim();
+                const dep = timeForFlightNote(fn) || (fn.departureTime || "").trim();
                 list.push({ type: "flight", label: `${legLabel}: ${fn.date} • ${dep ? `${dep} • ` : ""}${fn.origin} → ${fn.destination}${fn.flightNumber ? ` • ${fn.flightNumber}` : ""}`, date: fn.date, time: dep || undefined, meta: fn });
               }
             });
