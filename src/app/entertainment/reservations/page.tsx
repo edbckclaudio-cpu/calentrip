@@ -303,6 +303,94 @@ export default function EntertainmentReservationsPage() {
     } catch { return []; }
   }
 
+  async function geocodeCityOSM(q: string): Promise<{ lat: number; lon: number } | null> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const js = (await res.json()) as Array<{ lat: string; lon: string }>;
+      const first = js[0];
+      if (!first) return null;
+      return { lat: Number(first.lat), lon: Number(first.lon) };
+    } catch { return null; }
+  }
+
+  async function fetchOverpassAttractions(lat: number, lon: number, limit = 12): Promise<AISuggestion[]> {
+    const q = `[out:json][timeout:25];
+      (
+        node(around:8000,${lat},${lon})[tourism];
+        way(around:8000,${lat},${lon})[tourism];
+        node(around:8000,${lat},${lon})[leisure=park];
+        way(around:8000,${lat},${lon})[leisure=park];
+        node(around:8000,${lat},${lon})[amenity=theatre];
+        way(around:8000,${lat},${lon})[amenity=theatre];
+      );
+      out tags;`;
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`;
+    try {
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const js = await res.json();
+      const elems: Array<{ tags?: Record<string, string> }> = js?.elements || [];
+      const mapped = elems.map((e) => {
+        const tags = e.tags || {};
+        const name = tags.name || tags["name:pt"] || tags["name:en"] || "";
+        let category: AISuggestion["category"] = "attraction";
+        if (tags.tourism === "museum") category = "museum";
+        else if (tags.leisure === "park" || tags.tourism === "park") category = "park";
+        else if (tags.amenity === "theatre" || tags.tourism === "theatre") category = "theatre";
+        const url = tags.website || tags.url || null;
+        let free: boolean | null = null;
+        let price: string | null = null;
+        let prebook: boolean | null = null;
+        let lead: string | null = null;
+        if (category === "park") { free = true; prebook = false; lead = "-"; }
+        else if (category === "museum") { free = false; price = "€10–€25"; prebook = true; lead = "1–2 semanas"; }
+        else if (category === "theatre") { free = false; price = "€20–€80"; prebook = true; lead = "1–4 semanas"; }
+        return { name, category, free, price, prebook, lead, url } as AISuggestion;
+      }).filter((x) => x.name);
+      return mapped.slice(0, limit);
+    } catch { return []; }
+  }
+
+  async function fetchWikipediaNearby(lat: number, lon: number, limit = 12): Promise<AISuggestion[]> {
+    const url = `https://pt.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}%7C${lon}&gsradius=10000&gslimit=${limit}&format=json&origin=*`;
+    try {
+      const res = await fetch(url);
+      const js = await res.json();
+      const list: Array<{ title?: string }> = js?.query?.geosearch || [];
+      return list.map((r) => {
+        const title = r?.title || "";
+        const pageUrl = title ? `https://pt.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}` : null;
+        return { name: title, category: "attraction", free: null, price: null, prebook: null, lead: null, url: pageUrl } as AISuggestion;
+      }).filter((x) => x.name);
+    } catch { return []; }
+  }
+
+  async function fetchOverpassRestaurants(lat: number, lon: number, limit = 20): Promise<RestaurantSuggestion[]> {
+    const q = `[out:json][timeout:25];
+      (
+        node(around:8000,${lat},${lon})[amenity=restaurant];
+        way(around:8000,${lat},${lon})[amenity=restaurant];
+      );
+      out tags;`;
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`;
+    try {
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const js = await res.json();
+      const elems: Array<{ tags?: Record<string, string> }> = js?.elements || [];
+      const mapped = elems.map((e) => {
+        const tags = e.tags || {};
+        const name = tags.name || tags["name:pt"] || tags["name:en"] || "";
+        const cuisineRaw = tags.cuisine || "";
+        const cuisine = cuisineRaw ? cuisineRaw.split(";").map((s) => s.trim()).filter(Boolean) : [];
+        const price = null;
+        const reservation = null;
+        const url = tags.website || tags.url || null;
+        return { name, cuisine, price, reservation, url } as RestaurantSuggestion;
+      }).filter((x) => x.name);
+      return mapped.slice(0, limit);
+    } catch { return []; }
+  }
+
   async function openAISuggestions(idx: number) {
     setAiOpenIdx(idx);
     setAiItems([]);
@@ -320,7 +408,18 @@ export default function EntertainmentReservationsPage() {
         { qid: "Q570116", cat: "attraction" }
       ];
       const resultsCats = await Promise.all(cats.map((c) => fetchCategoryItems(qid, c.qid, c.cat, 8)));
-      const items = ([] as AISuggestion[]).concat(...resultsCats);
+      let items = ([] as AISuggestion[]).concat(...resultsCats);
+      if (!items.length) {
+        const geo = await geocodeCityOSM(cityName);
+        if (geo) {
+          const osm = await fetchOverpassAttractions(geo.lat, geo.lon, 12);
+          items = osm;
+          if (!items.length) {
+            const wiki = await fetchWikipediaNearby(geo.lat, geo.lon, 12);
+            items = wiki;
+          }
+        }
+      }
       setAiItems(items);
       const startISO = (cities[idx]?.checkin || "").replace(/\//g, "-");
       const endISO = (cities[idx]?.checkout || startISO).replace(/\//g, "-");
@@ -356,7 +455,14 @@ export default function EntertainmentReservationsPage() {
       const cityName = cities[idx]?.name || "";
       const qid = await fetchCityQid(cityName);
       if (!qid) { setRestError("Não foi possível identificar a cidade no Wikidata"); setRestLoading(false); return; }
-      const items = await fetchRestaurantItems(qid, 14);
+      let items = await fetchRestaurantItems(qid, 14);
+      if (!items.length) {
+        const geo = await geocodeCityOSM(cityName);
+        if (geo) {
+          const osm = await fetchOverpassRestaurants(geo.lat, geo.lon, 20);
+          items = osm;
+        }
+      }
       setRestItems(items);
       setRestDateMap({}); setRestTimeMap({}); setRestFilesMap({});
     } catch { setRestError("Falha ao buscar restaurantes"); }

@@ -51,11 +51,8 @@ body {
 /* Pulse only the ring/glow, keep content solid */
 .pulse-ring {
   animation: ringPulse 1.2s ease-in-out infinite, bgPulse 1.2s ease-in-out infinite;
-  color: #fff !important;
 }
-.pulse-ring * {
-  color: #fff !important;
-}
+/* Do NOT override text color; keep default theme colors */
 
 @keyframes ringPulse {
   0%, 100% {
