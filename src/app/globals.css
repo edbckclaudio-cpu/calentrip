@@ -52,7 +52,17 @@ body {
 .pulse-ring {
   animation: ringPulse 1.2s ease-in-out infinite, bgPulse 1.2s ease-in-out infinite;
 }
-/* Do NOT override text color; keep default theme colors */
+button.pulse-ring,
+button.animate-pulse { color: #000000 !important; }
+button.pulse-ring .material-symbols-outlined,
+button.animate-pulse .material-symbols-outlined { color: #000000 !important; }
+
+@media (prefers-color-scheme: dark) {
+  button.pulse-ring,
+  button.animate-pulse { color: #ffffff !important; }
+  button.pulse-ring .material-symbols-outlined,
+  button.animate-pulse .material-symbols-outlined { color: #ffffff !important; }
+}
 
 @keyframes ringPulse {
   0%, 100% {
