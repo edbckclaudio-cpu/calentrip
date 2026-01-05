@@ -78,10 +78,9 @@ export default function ProfilePage() {
                     <div className="text-xs text-zinc-600">{session?.user?.email || ""}</div>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mt-3">
+                <div className="grid grid-cols-2 gap-2 mt-3">
                   <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Minhas Viagens</Button>
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/support"; } catch {} }}>Meus Dados</Button>
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/legal/privacy"; } catch {} }}>Configurações</Button>
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout"; } catch {} }}>Pagamento</Button>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button type="button" variant="outline" onClick={() => signOut()}>Sair</Button>
@@ -95,10 +94,9 @@ export default function ProfilePage() {
                     <Button type="button" className="h-10 rounded-lg" onClick={() => { try { window.location.href = "/login?next=/profile"; } catch {} }}>Entre ou cadastre-se</Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mt-4 opacity-50">
-                  <Button type="button" variant="outline" disabled>Meus Dados</Button>
+                <div className="grid grid-cols-2 gap-2 mt-4 opacity-50">
                   <Button type="button" variant="outline" disabled>Minhas Viagens</Button>
-                  <Button type="button" variant="outline" disabled>Configurações</Button>
+                  <Button type="button" variant="outline" disabled>Pagamento</Button>
                 </div>
               </>
             )}

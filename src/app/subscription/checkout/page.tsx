@@ -10,6 +10,23 @@ export default function SubscriptionCheckoutPage() {
   const { t } = useI18n();
   const [price, setPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  async function handlePurchase() {
+    try {
+      setLoading(true);
+      const mod = await import("@/lib/billing");
+      if (!mod || typeof mod.completePurchaseForTrip !== "function") {
+        try { alert("Compra indisponível no momento."); } catch {}
+        return;
+      }
+      const userId = session?.user?.email || session?.user?.name || undefined;
+      const r = await mod.completePurchaseForTrip("global", userId);
+      if (r?.ok) { window.location.href = "/profile"; }
+    } catch {
+      try { alert("Falha ao iniciar a compra."); } catch {}
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -23,9 +40,9 @@ export default function SubscriptionCheckoutPage() {
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
-      <div className="container-page flex items-center gap-3">
-        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
-          <span className="material-symbols-outlined text-[20px]">close</span>
+      <div className="container-page flex items-center gap-2">
+        <button type="button" className="rounded-md p-1 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+          <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
         <div>
           <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Assinatura</h1>
@@ -49,21 +66,7 @@ export default function SubscriptionCheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm text-zinc-600">Pagamento via Google Play Billing</div>
-            <Button
-              type="button"
-              className="h-11 rounded-lg font-semibold tracking-wide"
-              disabled={loading}
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  const mod = await import("@/lib/billing");
-                  const userId = session?.user?.email || session?.user?.name || undefined;
-                  const r = await mod.completePurchaseForTrip("global", userId);
-                  if (r?.ok) { window.location.href = "/profile"; }
-                } catch {}
-                finally { setLoading(false); }
-              }}
-            >
+            <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide" disabled={loading} onClick={handlePurchase}>
               {price ? `Comprar (${price}/mês)` : "Comprar"}
             </Button>
             <div className="text-xs text-zinc-500">Se estiver no navegador, abra o app Android instalado via Google Play para concluir.</div>

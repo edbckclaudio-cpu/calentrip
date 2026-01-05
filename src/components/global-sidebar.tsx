@@ -61,7 +61,7 @@ export default function GlobalSidebar() {
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">PF</span>
                 {sideOpen ? (
                   <div className="flex-1">
-                    <div className="text-sm font-semibold">{t("profileAccessText")}</div>
+                    <div className="text-sm font-semibold">{t("signInTitle")}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2">
                       <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("openProfileButton")}</button>
