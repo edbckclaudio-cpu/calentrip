@@ -7,6 +7,7 @@ import { isTripPremium } from "@/lib/premium";
 import { useToast } from "@/components/ui/toast";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { Capacitor } from "@capacitor/core";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -19,6 +20,8 @@ export default function ProfilePage() {
   const [premiumUntil, setPremiumUntil] = useState("");
   const { show } = useToast();
   const { t } = useI18n();
+  const [priceLabel, setPriceLabel] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
     setTrips(getTrips());
@@ -33,6 +36,16 @@ export default function ProfilePage() {
         setPremiumUntil(`${dd}/${mm}`);
       } else setPremiumUntil("");
     } catch { setPremiumUntil(""); }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const mod = await import("@/lib/billing");
+        const info = await mod.ensureProduct(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "trip_premium");
+        if (info?.price) setPriceLabel(info.price);
+      } catch {}
+    })();
   }, []);
 
   return (
@@ -83,8 +96,10 @@ export default function ProfilePage() {
                     <Button
                       type="button"
                       className="h-11 rounded-lg font-semibold tracking-wide"
+                      disabled={purchasing}
                       onClick={async () => {
                         try {
+                          setPurchasing(true);
                           const mod = await import("@/lib/billing");
                           const userId = session?.user?.email || session?.user?.name || undefined;
                           const r = await mod.completePurchaseForTrip("global", userId);
@@ -102,10 +117,14 @@ export default function ProfilePage() {
                             show(msg, { variant: "error" });
                           }
                         } catch { show(t("purchaseError"), { variant: "error" }); }
+                        finally { setPurchasing(false); }
                       }}
                     >
-                      {t("subscribeMonthlyButton")}
+                      {priceLabel ? `${t("subscribeMonthlyButton").split("(")[0].trim()} (${priceLabel}/mês)` : t("subscribeMonthlyButton")}
                     </Button>
+                  ) : null}
+                  {!Capacitor.isNativePlatform() && !purchasing ? (
+                    <div className="text-xs text-zinc-500">Para comprar, abra o app Android instalado via Google Play.</div>
                   ) : null}
                 </div>
               </>

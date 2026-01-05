@@ -2479,8 +2479,8 @@ export default function FinalCalendarPage() {
                     <div className="text-sm font-semibold">Entrar</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="text-xs" onClick={() => signIn("google")}>Google</button>
-                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/flights/search" })}>Demo</button>
+                      <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>Google</button>
+                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile", redirect: true })}>Demo</button>
                     </div>
                   </div>
                 ) : null}

@@ -6,7 +6,10 @@ import { google } from "googleapis"
 const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS
 const packageName = process.env.PLAY_PACKAGE_NAME || "digital.calentrip.android"
 const aabPath = process.env.PLAY_AAB_PATH || path.resolve("android/app/build/outputs/bundle/release/app-release.aab")
-const track = process.env.PLAY_TRACK || "internal"
+let track = process.env.PLAY_TRACK || "internal"
+// Map console naming to API track IDs
+if (track === "closed") track = "alpha"
+if (track === "open") track = "beta"
 const dry = process.env.DRY_RUN === "1"
 
 function fail(msg, code = 1) {
