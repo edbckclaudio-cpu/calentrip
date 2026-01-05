@@ -4,6 +4,7 @@ import { GoogleAuth } from "google-auth-library"
 import { google } from "googleapis"
 
 const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS
+const keyJsonRaw = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || process.env.ANDROID_PUBLISHER_SERVICE_ACCOUNT_JSON || ""
 const packageName = process.env.PLAY_PACKAGE_NAME || "digital.calentrip.android"
 const aabPath = process.env.PLAY_AAB_PATH || path.resolve("android/app/build/outputs/bundle/release/app-release.aab")
 let track = process.env.PLAY_TRACK || "internal"
@@ -19,16 +20,26 @@ function fail(msg, code = 1) {
 
 if (!fs.existsSync(aabPath)) fail(`AAB not found at ${aabPath}`)
 
-if (dry || !keyFile || !fs.existsSync(keyFile)) {
+const hasKeyFile = !!keyFile && fs.existsSync(keyFile)
+const hasKeyJson = !!keyJsonRaw && keyJsonRaw.trim().length > 0
+if (dry || (!hasKeyFile && !hasKeyJson)) {
   console.log("DRY_RUN")
   console.log(`package=${packageName}`)
   console.log(`aab=${aabPath}`)
   console.log(`track=${track}`)
+  console.log(`auth=${hasKeyFile ? "file" : hasKeyJson ? "env_json" : "missing"}`)
   process.exit(0)
 }
 
 async function main() {
-  const auth = new GoogleAuth({ keyFile, scopes: ["https://www.googleapis.com/auth/androidpublisher"] })
+  let auth
+  if (hasKeyFile) {
+    auth = new GoogleAuth({ keyFile, scopes: ["https://www.googleapis.com/auth/androidpublisher"] })
+  } else {
+    const raw = keyJsonRaw.trim().startsWith("{") ? keyJsonRaw.trim() : Buffer.from(keyJsonRaw.trim(), "base64").toString("utf8")
+    const credentials = JSON.parse(raw)
+    auth = new GoogleAuth({ credentials, scopes: ["https://www.googleapis.com/auth/androidpublisher"] })
+  }
   const client = await auth.getClient()
   const androidpublisher = google.androidpublisher({ version: "v3", auth: client })
 

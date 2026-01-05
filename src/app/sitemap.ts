@@ -18,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/profile",
     "/support",
     "/login",
+    "/subscription/checkout",
   ];
   return links.map((p) => ({ url: `${base}${p}`, lastModified: now, changeFrequency: "daily", priority: p === "/" ? 1 : 0.7 }));
 }

@@ -2,12 +2,14 @@
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function LoginPage() {
   const { t } = useI18n();
   const { status } = useSession();
-  const [loadingProvider, setLoadingProvider] = useState<"google" | "demo" | null>(null);
+  const [loadingProvider, setLoadingProvider] = useState<"google" | "demo" | "email" | null>(null);
+  const [email, setEmail] = useState("");
+  const redirected = useRef(false);
   const nextParam = useMemo(() => {
     try {
       if (typeof window === "undefined") return null;
@@ -25,14 +27,20 @@ export default function LoginPage() {
   const callbackUrl = safe(nextParam) || fallback;
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status === "authenticated" && !redirected.current) {
+      redirected.current = true;
       try { window.location.href = callbackUrl; } catch {}
     }
   }, [status, callbackUrl]);
 
   return (
     <div className="container-page py-6 space-y-4">
-      <h1 className="text-2xl font-semibold text-[var(--brand)]">{t("loginUnlockTitle")}</h1>
+      <div className="flex items-center gap-3">
+        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
+          <span className="material-symbols-outlined text-[20px]">close</span>
+        </button>
+        <h1 className="text-2xl font-semibold text-[var(--brand)]">{t("loginUnlockTitle")}</h1>
+      </div>
       <p className="text-sm text-zinc-700 dark:text-zinc-300">{t("loginUnlockText")}</p>
       <div className="flex items-center gap-2">
         <Button
@@ -50,6 +58,31 @@ export default function LoginPage() {
         >
           {t("signInDemo")}
         </Button>
+      </div>
+      <div className="mt-4 space-y-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Seu e-mail"
+          className="w-full rounded-md border border-zinc-200 dark:border-zinc-800 px-3 h-10 bg-white dark:bg-black"
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!email || !email.includes("@")) return;
+              setLoadingProvider("email");
+              const pwd = "demo1234";
+              signIn("credentials", { email, password: pwd, callbackUrl, redirect: true });
+            }}
+            disabled={loadingProvider !== null}
+          >
+            Próximo
+          </Button>
+          <span className="text-xs text-zinc-500">Se não existir, criaremos sua conta automaticamente.</span>
+        </div>
       </div>
     </div>
   );

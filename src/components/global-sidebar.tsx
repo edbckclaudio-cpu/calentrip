@@ -29,7 +29,14 @@ export default function GlobalSidebar() {
           </button>
         </div>
         <div className="p-2 space-y-2">
-          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2">
+          <div
+            className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2 cursor-pointer"
+            onClick={() => {
+              try {
+                if (status !== "authenticated") window.location.href = "/profile";
+              } catch {}
+            }}
+          >
             {status === "authenticated" ? (
               <div className="flex items-center gap-2">
                 {session?.user?.image ? (
@@ -50,15 +57,14 @@ export default function GlobalSidebar() {
                 ) : null}
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">PF</span>
                 {sideOpen ? (
                   <div className="flex-1">
-                    <div className="text-sm font-semibold">{t("signInTitle")}</div>
+                    <div className="text-sm font-semibold">{t("profileAccessText")}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>{t("googleWord")}</button>
-                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile", redirect: true })}>{t("demoWord")}</button>
+                    <div className="mt-2">
+                      <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("openProfileButton")}</button>
                     </div>
                   </div>
                 ) : null}

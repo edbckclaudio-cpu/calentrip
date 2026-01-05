@@ -50,31 +50,55 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
-      <div className="container-page">
-        <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">{t("profileTitle")}</h1>
-        <p className="text-sm text-zinc-600">{t("profileSubtitleMonthly")}</p>
+      <div className="container-page flex items-center gap-3">
+        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
+          <span className="material-symbols-outlined text-[20px]">close</span>
+        </button>
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">{t("profileTitle")}</h1>
+          <p className="text-sm text-zinc-600">{t("profileSubtitleMonthly")}</p>
+        </div>
       </div>
 
       <div className="container-page grid gap-4 md:grid-cols-2">
-        <Card className="rounded-xl shadow-md">
+        <Card
+          className={status === "authenticated" ? "rounded-xl shadow-md" : "rounded-xl shadow-md cursor-pointer"}
+          onClick={status === "authenticated" ? undefined : () => { try { window.location.href = "/login?next=/subscription/checkout"; } catch {} }}
+        >
           <CardHeader>
             <CardTitle>Conta</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {status === "authenticated" ? (
               <>
-                <div>Nome: {session?.user?.name || "Usuário"}</div>
-                <div>E-mail: {session?.user?.email || ""}</div>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
+                  <div>
+                    <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
+                    <div className="text-xs text-zinc-600">{session?.user?.email || ""}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Minhas Viagens</Button>
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/support"; } catch {} }}>Meus Dados</Button>
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/legal/privacy"; } catch {} }}>Configurações</Button>
+                </div>
                 <div className="flex gap-2 mt-2">
                   <Button type="button" variant="outline" onClick={() => signOut()}>Sair</Button>
                 </div>
               </>
             ) : (
               <>
-                <div>{t("loginUnlockText")}</div>
-                <div className="flex gap-2 mt-2">
-                  <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
-                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile" })}>{t("signInDemo")}</Button>
+                <div className="rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black p-4 text-center">
+                  <div className="text-base font-semibold">Faça login para desbloquear recursos premium</div>
+                  <div className="mt-2">
+                    <Button type="button" className="h-10 rounded-lg" onClick={() => { try { window.location.href = "/login?next=/profile"; } catch {} }}>Entre ou cadastre-se</Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-4 opacity-50">
+                  <Button type="button" variant="outline" disabled>Meus Dados</Button>
+                  <Button type="button" variant="outline" disabled>Minhas Viagens</Button>
+                  <Button type="button" variant="outline" disabled>Configurações</Button>
                 </div>
               </>
             )}
@@ -92,6 +116,12 @@ export default function ProfilePage() {
                 <div>{t("statusLabel")}: {premiumActive ? `${t("activeStatus")}${premiumUntil ? ` (${t("untilWord")} ${premiumUntil})` : ""}` : t("inactiveStatus")}</div>
                 <div className="space-y-2">
                   <div className="text-zinc-600">{t("subMonthlyText")}</div>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout"; } catch {} }}>
+                      Assinar agora
+                    </Button>
+                    <span className="text-xs text-zinc-500">Revisar benefícios e concluir compra</span>
+                  </div>
                   {!premiumActive ? (
                     <Button
                       type="button"
