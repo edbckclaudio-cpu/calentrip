@@ -41,7 +41,7 @@ export default function SubscriptionCheckoutPage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-2">
-        <button type="button" className="rounded-md p-1 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+        <button type="button" className="rounded-md p-1 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
           <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
         <div>

@@ -59,6 +59,17 @@ export default function ProfilePage() {
           <p className="text-sm text-zinc-600">{t("profileSubtitleMonthly")}</p>
         </div>
       </div>
+      <div className="container-page flex justify-center">
+        <Button
+          type="button"
+          className="h-12 w-64 bg-[var(--brand)] text-white font-semibold rounded-lg shadow-lg hover:brightness-95"
+          onClick={() => {
+            try { window.location.href = "/"; } catch {}
+          }}
+        >
+          Ir para Tela Inicial
+        </Button>
+      </div>
 
       <div className="container-page grid gap-4 md:grid-cols-2">
         <Card
