@@ -146,7 +146,6 @@ export default function TransportPlanPage() {
   useEffect(() => {
     if (!fromCity || !toCity) return;
     showToast(t("fillTransportFieldsHint"), { duration: 7000 });
-    setDep(""); setArr(""); setDepTime(""); setArrTime("");
     
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCity)}&destination=${encodeURIComponent(toCity)}`;
@@ -157,6 +156,9 @@ export default function TransportPlanPage() {
       setRoute({ gmapsUrl, r2rUrl });
     })();
   }, [fromCity, toCity, cities, segIdx, showToast, t]);
+  useEffect(() => {
+    setDep(""); setArr(""); setDepTime(""); setArrTime("");
+  }, []);
 
   useEffect(() => {
     if (dialogSegIdx == null) return;
