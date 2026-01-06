@@ -28,13 +28,15 @@ export async function POST(req: Request) {
 
     const access = await getAccessToken();
     if (!access) return new Response(JSON.stringify({ ok: false, error: "auth" }), { status: 500, headers: { "Content-Type": "application/json" } });
-    const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(pkg)}/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}`;
+    const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(pkg)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}`;
     const resp = await fetch(url, { headers: { Authorization: `Bearer ${access}` } });
     if (!resp.ok) return new Response(JSON.stringify({ ok: false, error: "verify" }), { status: 400, headers: { "Content-Type": "application/json" } });
     const js = await resp.json();
-    const purchaseState = Number(js?.purchaseState ?? 1); // 0 purchased, 1 canceled
-    const ok = purchaseState === 0;
-    return new Response(JSON.stringify({ ok, tripId, userId, orderId: js?.orderId || null, acknowledgementState: js?.acknowledgementState ?? null }), { status: ok ? 200 : 400, headers: { "Content-Type": "application/json" } });
+    const expiry = Number(js?.expiryTimeMillis ?? 0);
+    const canceled = Boolean(js?.cancelReason);
+    const acknowledged = Number(js?.acknowledgementState ?? 0) === 1;
+    const ok = expiry > Date.now() && !canceled;
+    return new Response(JSON.stringify({ ok, tripId, userId, orderId: js?.orderId || null, acknowledgementState: acknowledged ? 1 : 0, expiryTimeMillis: expiry }), { status: ok ? 200 : 400, headers: { "Content-Type": "application/json" } });
   } catch {
     return new Response(JSON.stringify({ ok: false }), { status: 500, headers: { "Content-Type": "application/json" } });
   }

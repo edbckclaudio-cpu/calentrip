@@ -8,8 +8,10 @@ import { useToast } from "@/components/ui/toast";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [trips, setTrips] = useState<TripItem[]>([]);
   const currentTrip = useMemo(() => {
@@ -51,7 +53,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-3">
-        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
+        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => router.push("/flights/search")}>
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
         <div>
@@ -63,9 +65,7 @@ export default function ProfilePage() {
         <Button
           type="button"
           className="h-12 w-64 bg-[var(--brand)] text-white font-semibold rounded-lg shadow-lg hover:brightness-95"
-          onClick={() => {
-            try { window.location.href = "/"; } catch {}
-          }}
+          onClick={() => router.push("/")}
         >
           Ir para Tela Inicial
         </Button>
@@ -74,7 +74,7 @@ export default function ProfilePage() {
       <div className="container-page grid gap-4 md:grid-cols-2">
         <Card
           className={status === "authenticated" ? "rounded-xl shadow-md" : "rounded-xl shadow-md cursor-pointer"}
-          onClick={status === "authenticated" ? undefined : () => { try { window.location.href = "/login?next=/subscription/checkout"; } catch {} }}
+          onClick={status === "authenticated" ? undefined : () => router.push("/login?next=/subscription/checkout")}
         >
           <CardHeader>
             <CardTitle>Conta</CardTitle>
@@ -90,8 +90,8 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>Minhas Viagens</Button>
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout"; } catch {} }}>Pagamento</Button>
+                  <Button type="button" variant="outline" onClick={() => router.push("/calendar/final")}>Minhas Viagens</Button>
+                  <Button type="button" variant="outline" onClick={() => router.push("/subscription/checkout")}>Pagamento</Button>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button type="button" variant="outline" onClick={() => signOut()}>Sair</Button>
@@ -102,7 +102,7 @@ export default function ProfilePage() {
                 <div className="rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black p-4 text-center">
                   <div className="text-base font-semibold">Faça login para desbloquear recursos premium</div>
                   <div className="mt-2">
-                    <Button type="button" className="h-10 rounded-lg" onClick={() => { try { window.location.href = "/login?next=/profile"; } catch {} }}>Entre ou cadastre-se</Button>
+                    <Button type="button" className="h-10 rounded-lg" onClick={() => router.push("/login?next=/profile")}>Entre ou cadastre-se</Button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-4 opacity-50">
@@ -142,7 +142,7 @@ export default function ProfilePage() {
                           const mod = await import("@/lib/billing");
                           const userId = session?.user?.email || session?.user?.name || undefined;
                           const r = await mod.completePurchaseForTrip("global", userId);
-                          if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); window.location.href = "/calendar/final"; }
+                          if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/calendar/final"); }
                           else {
                             const msg = r?.error === "billing"
                               ? "Disponível no app Android. Instale via Google Play."

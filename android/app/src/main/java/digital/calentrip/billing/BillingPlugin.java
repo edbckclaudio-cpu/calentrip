@@ -26,6 +26,7 @@ import java.util.List;
 public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
     private BillingClient billingClient;
     private ProductDetails cachedProduct;
+    private String cachedOfferToken = null;
     private String lastToken = null;
 
     @Override
@@ -56,7 +57,7 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
         List<QueryProductDetailsParams.Product> products = new ArrayList<>();
         products.add(QueryProductDetailsParams.Product.newBuilder()
                 .setProductId(productId)
-                .setProductType(BillingClient.ProductType.INAPP)
+                .setProductType(BillingClient.ProductType.SUBS)
                 .build());
         QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(products).build();
         billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
@@ -64,9 +65,27 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
             ret.put("code", billingResult.getResponseCode());
             if (productDetailsList != null && !productDetailsList.isEmpty()) {
                 cachedProduct = productDetailsList.get(0);
+                cachedOfferToken = null;
                 ret.put("found", true);
                 ret.put("title", cachedProduct.getTitle());
-                ret.put("price", cachedProduct.getOneTimePurchaseOfferDetails() != null ? cachedProduct.getOneTimePurchaseOfferDetails().getFormattedPrice() : null);
+                try {
+                    List<ProductDetails.SubscriptionOfferDetails> offers = cachedProduct.getSubscriptionOfferDetails();
+                    if (offers != null && !offers.isEmpty()) {
+                        ProductDetails.SubscriptionOfferDetails offer = offers.get(0);
+                        cachedOfferToken = offer.getOfferToken();
+                        String price = null;
+                        List<ProductDetails.PricingPhase> phases = offer.getPricingPhases().getPricingPhaseList();
+                        if (phases != null && !phases.isEmpty()) {
+                            // Use first phase formatted price (intro or base)
+                            price = phases.get(0).getFormattedPrice();
+                        }
+                        ret.put("price", price);
+                    } else {
+                        ret.put("price", null);
+                    }
+                } catch (Exception e) {
+                    ret.put("price", null);
+                }
             } else {
                 ret.put("found", false);
             }
@@ -82,7 +101,11 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
             return;
         }
         List<BillingFlowParams.ProductDetailsParams> pdp = new ArrayList<>();
-        pdp.add(BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(cachedProduct).build());
+        BillingFlowParams.ProductDetailsParams.Builder builder = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(cachedProduct);
+        if (cachedOfferToken != null) {
+            builder.setOfferToken(cachedOfferToken);
+        }
+        pdp.add(builder.build());
         BillingFlowParams flowParams = BillingFlowParams.newBuilder().setProductDetailsParamsList(pdp).build();
         BillingResult res = billingClient.launchBillingFlow(getActivity(), flowParams);
         JSObject ret = new JSObject();

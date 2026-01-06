@@ -26,8 +26,8 @@ export async function POST(req: Request) {
 
     const access = await getAccessToken();
     if (!access) return new Response(JSON.stringify({ ok: false, error: "auth" }), { status: 500, headers: { "Content-Type": "application/json" } });
-    const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(pkg)}/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}:acknowledge`;
-    const resp = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${access}` } });
+    const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(pkg)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}:acknowledge`;
+    const resp = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" }, body: JSON.stringify({ developerPayload: "calentrip" }) });
     const ok = resp.ok;
     return new Response(JSON.stringify({ ok }), { status: ok ? 200 : 400, headers: { "Content-Type": "application/json" } });
   } catch {

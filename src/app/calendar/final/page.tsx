@@ -2379,10 +2379,7 @@ export default function FinalCalendarPage() {
             </div>
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
-                <>
-                  <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
-                  <Button type="button" variant="secondary" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/calendar/final" })}>{t("signInDemo")}</Button>
-                </>
+                <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
               ) : (
                 <Button
                   type="button"
@@ -2480,7 +2477,6 @@ export default function FinalCalendarPage() {
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
                       <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>Google</button>
-                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile", redirect: true })}>Demo</button>
                     </div>
                   </div>
                 ) : null}

@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
+import { Capacitor } from "@capacitor/core";
 
 export default function SubscriptionCheckoutPage() {
   const { data: session } = useSession();
@@ -70,6 +71,16 @@ export default function SubscriptionCheckoutPage() {
               {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : null}
               {price ? `Fazer Pagamento (${price}/mês)` : "Fazer Pagamento"}
             </Button>
+            {Capacitor.getPlatform() !== "android" ? (
+              <div className="text-xs text-zinc-600">
+                Para concluir a compra, abra o app CalenTrip instalado no seu Android.
+                <div className="mt-2">
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "intent://subscription/checkout#Intent;scheme=https;package=digital.calentrip.android;end"; } catch {} }}>
+                    Abrir no app
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>

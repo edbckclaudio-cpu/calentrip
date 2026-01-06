@@ -992,10 +992,7 @@ export default function MonthCalendarPage() {
             </div>
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
-                <>
-                  <button type="button" className="btn" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>Entrar com Google</button>
-                  <button type="button" className="btn" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile", redirect: true })}>Entrar Demo</button>
-                </>
+                <button type="button" className="btn" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>Entrar com Google</button>
               ) : (
                 <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("subscribeMonthlyButton")}</button>
               )}
@@ -1034,7 +1031,6 @@ export default function MonthCalendarPage() {
                     <div className="text-sm font-semibold">Entrar</div>
                     <div className="mt-2 flex items-center gap-2">
                   <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>{t("signInWithGoogle")}</button>
-                  <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile", redirect: true })}>{t("signInDemo")}</button>
                     </div>
                   </div>
                 ) : null}

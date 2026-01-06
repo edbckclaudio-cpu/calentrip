@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const serverUrl = process.env.NEXT_PUBLIC_CAP_SERVER_URL;
+const serverUrl = process.env.NEXT_PUBLIC_CAP_SERVER_URL || 'https://calentrip.digital';
 
 const config: CapacitorConfig = {
   appId: 'digital.calentrip.android',
@@ -11,12 +11,11 @@ const config: CapacitorConfig = {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
     },
   },
-  server: serverUrl
-    ? {
-        url: serverUrl,
-        cleartext: !serverUrl.startsWith('https'),
-      }
-    : undefined,
+  server: {
+    url: serverUrl,
+    cleartext: !serverUrl.startsWith('https'),
+    allowNavigation: ['https://calentrip.digital', 'https://www.calentrip.digital'],
+  },
 };
 
 export default config;
