@@ -316,7 +316,7 @@ export default function TransportPlanPage() {
                     <div className="relative">
                       <Input
                         placeholder={t("transportOriginPlaceholder")}
-                        defaultValue={dep}
+                        value={dep}
                         type="text"
                         inputMode="text"
                         autoCapitalize="none"
@@ -332,7 +332,7 @@ export default function TransportPlanPage() {
                     <div className="relative">
                       <Input
                         placeholder={t("transportDestinationPlaceholder")}
-                        defaultValue={arr}
+                        value={arr}
                         type="text"
                         inputMode="text"
                         autoCapitalize="none"
@@ -348,26 +348,26 @@ export default function TransportPlanPage() {
                       <label className="mb-1 block text-sm">{t("departureTime")}</label>
                       <Input
                         placeholder={t("timePlaceholder")}
-                        defaultValue={depTime}
+                        value={depTime}
                         type="tel"
                         inputMode="numeric"
                         pattern="[0-9]*"
                         enterKeyHint="next"
                         ref={depTimeRef}
-                        onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setDepTime(v); try { if (depTimeRef.current) depTimeRef.current.value = v; } catch {} }}
+                        onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setDepTime(v); }}
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
                       <Input
                         placeholder={t("timePlaceholder")}
-                        defaultValue={arrTime}
+                        value={arrTime}
                         type="tel"
                         inputMode="numeric"
                         pattern="[0-9]*"
                         enterKeyHint="next"
                         ref={arrTimeRef}
-                        onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setArrTime(v); try { if (arrTimeRef.current) arrTimeRef.current.value = v; } catch {} }}
+                        onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setArrTime(v); }}
                       />
                     </div>
                   </div>
@@ -448,7 +448,7 @@ export default function TransportPlanPage() {
                 <div className="relative">
                   <Input
                     placeholder={t("transportOriginPlaceholder")}
-                    defaultValue={mDep}
+                    value={mDep}
                     type="text"
                     inputMode="text"
                     autoCapitalize="none"
@@ -464,7 +464,7 @@ export default function TransportPlanPage() {
                 <div className="relative">
                   <Input
                     placeholder={t("transportDestinationPlaceholder")}
-                    defaultValue={mArr}
+                    value={mArr}
                     type="text"
                     inputMode="text"
                     autoCapitalize="none"
@@ -480,26 +480,26 @@ export default function TransportPlanPage() {
                   <label className="mb-1 block text-sm">{t("departureTime")}</label>
                   <Input
                     placeholder={t("timePlaceholder")}
-                    defaultValue={mDepTime}
+                    value={mDepTime}
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     enterKeyHint="next"
                     ref={mDepTimeRef}
-                    onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setMDepTime(v); try { if (mDepTimeRef.current) mDepTimeRef.current.value = v; } catch {} }}
+                    onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setMDepTime(v); }}
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm">{t("arrivalTime")}</label>
                   <Input
                     placeholder={t("timePlaceholder")}
-                    defaultValue={mArrTime}
+                    value={mArrTime}
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     enterKeyHint="next"
                     ref={mArrTimeRef}
-                    onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setMArrTime(v); try { if (mArrTimeRef.current) mArrTimeRef.current.value = v; } catch {} }}
+                    onChange={(e) => { const v = formatTimeInput((e.target as HTMLInputElement).value); setMArrTime(v); }}
                   />
                 </div>
               </div>
