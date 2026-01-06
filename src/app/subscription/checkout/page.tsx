@@ -10,20 +10,6 @@ export default function SubscriptionCheckoutPage() {
   const { t } = useI18n();
   const [price, setPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  function openAppInstall() {
-    try {
-      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-      const isAndroid = /Android/.test(ua);
-      const urlAndroidMarket = "market://details?id=digital.calentrip.android";
-      const urlAndroidWeb = "https://play.google.com/store/apps/details?id=digital.calentrip.android";
-      if (isAndroid) {
-        try { window.location.href = urlAndroidMarket; } catch {}
-        setTimeout(() => { try { window.open(urlAndroidWeb, "_blank"); } catch {} }, 600);
-      } else {
-        try { window.open(urlAndroidWeb, "_blank"); } catch {}
-      }
-    } catch {}
-  }
   async function handlePurchase() {
     try {
       setLoading(true);
@@ -35,19 +21,6 @@ export default function SubscriptionCheckoutPage() {
       const userId = session?.user?.email || session?.user?.name || undefined;
       const r = await mod.completePurchaseForTrip("global", userId);
       if (r?.ok) { window.location.href = "/profile"; }
-      else {
-        const msg = r?.error === "billing"
-          ? "Disponível no app Android. Instale via Google Play."
-          : r?.error === "product" ? "Produto não encontrado no Google Play."
-          : r?.error === "purchase" ? "Compra cancelada ou falhou."
-          : r?.error === "token" ? "Token de compra não recebido."
-          : r?.error === "verify" ? "Falha ao verificar a compra."
-          : r?.error === "ack" ? "Falha ao confirmar a compra."
-          : r?.error === "store" ? "Falha ao salvar assinatura."
-          : "Falha na compra";
-        try { alert(msg); } catch {}
-        if (r?.error === "billing") openAppInstall();
-      }
     } catch {
       try { alert("Falha ao iniciar a compra."); } catch {}
     } finally {
@@ -59,7 +32,7 @@ export default function SubscriptionCheckoutPage() {
     (async () => {
       try {
         const mod = await import("@/lib/billing");
-        const info = await mod.ensureProduct(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "trip_premium");
+        const info = await mod.ensureProduct(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01");
         if (info?.price) setPrice(info.price);
       } catch {}
     })();
@@ -68,9 +41,9 @@ export default function SubscriptionCheckoutPage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-2">
-        <button type="button" className="rounded-md p-1 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
-          <span className="material-symbols-outlined text-[18px]">close</span>
-        </button>
+        <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={() => { try { window.location.href = session?.user ? "/profile" : "/"; } catch {} }}>
+          Voltar
+        </Button>
         <div>
           <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Assinatura</h1>
           <p className="text-sm text-zinc-600">Plano Premium mensal</p>
@@ -93,15 +66,10 @@ export default function SubscriptionCheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm text-zinc-600">Pagamento via Google Play Billing</div>
-            <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide" disabled={loading} onClick={handlePurchase}>
-              {price ? `Comprar (${price}/mês)` : "Comprar"}
+            <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide flex items-center justify-center gap-2" disabled={loading || !session?.user} onClick={handlePurchase}>
+              {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : null}
+              {price ? `Fazer Pagamento (${price}/mês)` : "Fazer Pagamento"}
             </Button>
-            <div className="text-xs text-zinc-500">Se estiver no navegador, abra o app Android instalado via Google Play para concluir.</div>
-            <div>
-              <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={openAppInstall}>
-                Abrir na Google Play
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>

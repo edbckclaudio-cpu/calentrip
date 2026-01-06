@@ -17,12 +17,12 @@ export async function isBillingReady() {
   try { const r = await Billing.isReady(); return !!r?.ready; } catch { return false; }
 }
 
-export async function ensureProduct(productId = "trip_premium") {
+export async function ensureProduct(productId = "premium_subscription_01") {
   if (Capacitor.getPlatform() !== "android") return null;
   try { const r = await Billing.queryProduct({ productId }); return r?.found ? r : null; } catch { return null; }
 }
 
-export async function purchaseTripPremium(productId = "trip_premium") {
+export async function purchaseTripPremium(productId = "premium_subscription_01") {
   if (Capacitor.getPlatform() !== "android") return { code: -1 };
   try { const r = await Billing.purchaseTripPremium({ productId }); return r; } catch { return { code: -1 }; }
 }
@@ -41,7 +41,7 @@ export async function awaitPurchaseToken(timeoutMs = 15000): Promise<string | nu
 }
 
 export async function completePurchaseForTrip(tripId: string, userId?: string) {
-  const productId = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "trip_premium";
+  const productId = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01";
   const ready = await isBillingReady();
   if (!ready) {
     const isDemo = (userId || "").toLowerCase().includes("demo");

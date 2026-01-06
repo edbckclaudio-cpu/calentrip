@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const token = body?.purchaseToken;
     const productId = body?.productId;
     const pkg = process.env.GOOGLE_PLAY_PACKAGE || "digital.calentrip.android";
-    const expectedProduct = process.env.GOOGLE_PLAY_PRODUCT_ID || "trip_premium";
+    const expectedProduct = process.env.GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01";
     if (!tripId || !token || !productId) return new Response(JSON.stringify({ ok: false, error: "missing" }), { status: 400, headers: { "Content-Type": "application/json" } });
     if (productId !== expectedProduct) return new Response(JSON.stringify({ ok: false, error: "product" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
