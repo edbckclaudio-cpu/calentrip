@@ -71,6 +71,10 @@ export default function TransportPlanPage() {
   const mCamInputRef = useRef<HTMLInputElement | null>(null);
   const mFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const mainHintShownIdxRef = useRef<number | null>(null);
+  const modalHintShownIdxRef = useRef<number | null>(null);
+  const initHintShownRef = useRef(false);
+
   async function resolveTripId(): Promise<string | null> {
     try {
       await initDatabaseDb();
@@ -134,7 +138,10 @@ export default function TransportPlanPage() {
       const js: { cities?: CitySummary[] } | null = raw ? JSON.parse(raw) : null;
       const list: CitySummary[] = js?.cities || [];
       setCities(list);
-      if (!list.length) showToast(t("backAndInformStaysMessage"), { duration: 7000 });
+      if (!list.length && !initHintShownRef.current) {
+        showToast(t("backAndInformStaysMessage"), { duration: 7000 });
+        initHintShownRef.current = true;
+      }
     } catch {}
   }, [showToast, t]);
 
@@ -145,8 +152,10 @@ export default function TransportPlanPage() {
 
   useEffect(() => {
     if (!fromCity || !toCity) return;
-    showToast(t("fillTransportFieldsHint"), { duration: 7000 });
-    
+    if (mainHintShownIdxRef.current !== segIdx) {
+      showToast(t("fillTransportFieldsHint"), { duration: 7000 });
+      mainHintShownIdxRef.current = segIdx;
+    }
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCity)}&destination=${encodeURIComponent(toCity)}`;
       const params = new URLSearchParams({ lang: "pt-BR", currency: "BRL" });
@@ -163,7 +172,10 @@ export default function TransportPlanPage() {
   useEffect(() => {
     if (dialogSegIdx == null) return;
     if (!fromCityModal || !toCityModal) return;
-    showToast(t("fillTransportFieldsHint"), { duration: 3000 });
+    if (modalHintShownIdxRef.current !== dialogSegIdx) {
+      showToast(t("fillTransportFieldsHint"), { duration: 3000 });
+      modalHintShownIdxRef.current = dialogSegIdx;
+    }
     setMDep(""); setMArr(""); setMDepTime(""); setMArrTime("");
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCityModal)}&destination=${encodeURIComponent(toCityModal)}`;
