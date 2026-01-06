@@ -10,6 +10,20 @@ export default function SubscriptionCheckoutPage() {
   const { t } = useI18n();
   const [price, setPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  function openAppInstall() {
+    try {
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+      const isAndroid = /Android/.test(ua);
+      const urlAndroidMarket = "market://details?id=digital.calentrip.android";
+      const urlAndroidWeb = "https://play.google.com/store/apps/details?id=digital.calentrip.android";
+      if (isAndroid) {
+        try { window.location.href = urlAndroidMarket; } catch {}
+        setTimeout(() => { try { window.open(urlAndroidWeb, "_blank"); } catch {} }, 600);
+      } else {
+        try { window.open(urlAndroidWeb, "_blank"); } catch {}
+      }
+    } catch {}
+  }
   async function handlePurchase() {
     try {
       setLoading(true);
@@ -21,6 +35,19 @@ export default function SubscriptionCheckoutPage() {
       const userId = session?.user?.email || session?.user?.name || undefined;
       const r = await mod.completePurchaseForTrip("global", userId);
       if (r?.ok) { window.location.href = "/profile"; }
+      else {
+        const msg = r?.error === "billing"
+          ? "Disponível no app Android. Instale via Google Play."
+          : r?.error === "product" ? "Produto não encontrado no Google Play."
+          : r?.error === "purchase" ? "Compra cancelada ou falhou."
+          : r?.error === "token" ? "Token de compra não recebido."
+          : r?.error === "verify" ? "Falha ao verificar a compra."
+          : r?.error === "ack" ? "Falha ao confirmar a compra."
+          : r?.error === "store" ? "Falha ao salvar assinatura."
+          : "Falha na compra";
+        try { alert(msg); } catch {}
+        if (r?.error === "billing") openAppInstall();
+      }
     } catch {
       try { alert("Falha ao iniciar a compra."); } catch {}
     } finally {
@@ -70,6 +97,11 @@ export default function SubscriptionCheckoutPage() {
               {price ? `Comprar (${price}/mês)` : "Comprar"}
             </Button>
             <div className="text-xs text-zinc-500">Se estiver no navegador, abra o app Android instalado via Google Play para concluir.</div>
+            <div>
+              <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={openAppInstall}>
+                Abrir na Google Play
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
