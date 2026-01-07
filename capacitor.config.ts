@@ -15,6 +15,8 @@ const config: CapacitorConfig = {
     url: 'https://calentrip.digital',
     cleartext: true,
     allowNavigation: ['calentrip.digital', 'www.calentrip.digital', 'https://calentrip.digital/api/auth/*'],
+    androidScheme: 'https',
+    iosScheme: 'https',
   },
 };
 
