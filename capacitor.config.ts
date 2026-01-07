@@ -12,8 +12,8 @@ const config: CapacitorConfig = {
     },
   },
   server: {
-    url: serverUrl,
-    cleartext: !serverUrl.startsWith('https'),
+    url: 'https://calentrip.digital',
+    cleartext: true,
     allowNavigation: ['calentrip.digital', 'www.calentrip.digital', 'https://calentrip.digital/api/auth/*'],
   },
 };
