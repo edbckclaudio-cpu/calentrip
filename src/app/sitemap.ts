@@ -2,7 +2,6 @@ import type { MetadataRoute } from "next";
 
 export const dynamic = "force-static";
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://calentrip.digital";
   const now = new Date();
   const links = [
     "/",
@@ -20,5 +19,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/login",
     "/subscription/checkout",
   ];
-  return links.map((p) => ({ url: `${base}${p}`, lastModified: now, changeFrequency: "daily", priority: p === "/" ? 1 : 0.7 }));
+  return links.map((p) => ({ url: p, lastModified: now, changeFrequency: "daily", priority: p === "/" ? 1 : 0.7 }));
 }

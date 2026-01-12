@@ -1,11 +1,16 @@
 "use client";
 import { ReactNode, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { TripProvider } from "@/lib/trip-context";
 import { I18nProvider } from "@/lib/i18n";
 import { SessionProvider } from "next-auth/react";
+import type { Session } from "next-auth";
 import { ToastProvider } from "@/components/ui/toast";
 
 export default function Providers({ children }: { children: ReactNode }) {
+  const isAndroid = (() => { try { return Capacitor.getPlatform() === "android"; } catch { return false; } })();
+  const basePath = isAndroid ? "" : "/api/auth";
+  const mounted = typeof window !== "undefined";
   useEffect(() => {
     function ensureVisible() {
       try {
@@ -35,29 +40,6 @@ export default function Providers({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     try {
-      const key = "calentrip:firstLoadReloaded";
-      const already = typeof window !== "undefined" ? localStorage.getItem(key) === "1" : false;
-      const check = async () => {
-        try {
-          const fontsObj = typeof document !== "undefined" ? (document as unknown as { fonts?: { ready: Promise<void>; check?: (font: string) => boolean } }).fonts : undefined;
-          const fontsReady = fontsObj ? await Promise.race([
-            fontsObj.ready.then(() => true),
-            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500)),
-          ]) : true;
-          const symbolsOk = fontsObj?.check ? fontsObj.check("12px 'Material Symbols Outlined'") : true;
-          if ((!fontsReady || !symbolsOk) && !already) {
-            try { localStorage.setItem(key, "1"); } catch {}
-            try { window.location.reload(); } catch {}
-          } else {
-            try { localStorage.removeItem(key); } catch {}
-          }
-        } catch {}
-      };
-      check();
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try {
       if (process.env.NEXT_PUBLIC_ENABLE_SW === "1") return;
       if (typeof window === "undefined") return;
       if (!("serviceWorker" in navigator)) return;
@@ -66,8 +48,10 @@ export default function Providers({ children }: { children: ReactNode }) {
       }).catch(() => {});
     } catch {}
   }, []);
+  if (!mounted) return null;
+  const initialSession: Session | undefined = isAndroid ? { expires: new Date(0).toISOString() } : undefined;
   return (
-    <SessionProvider basePath="/api/auth" refetchInterval={0} refetchOnWindowFocus={false}>
+    <SessionProvider basePath={basePath} refetchInterval={0} refetchOnWindowFocus={false} session={initialSession}>
       <I18nProvider>
         <TripProvider>
           <ToastProvider>{children}</ToastProvider>

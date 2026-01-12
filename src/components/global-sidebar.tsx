@@ -8,8 +8,10 @@ import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { getSavedTrips, getTripEvents, removeTrip, TripItem, addTrip, FlightNote } from "@/lib/trips-db";
 import { useTrip } from "@/lib/trip-context";
 import { findAirportByIata } from "@/lib/airports";
+import { useRouter } from "next/navigation";
 
 export default function GlobalSidebar() {
+  const router = useRouter();
   type SavedCalendar = { name: string; events: Array<{ date: string; time?: string; label: string; type?: string; meta?: unknown }>; savedAt?: string };
   const [sideOpen, setSideOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
@@ -33,7 +35,7 @@ export default function GlobalSidebar() {
             className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2 cursor-pointer"
             onClick={() => {
               try {
-                if (status !== "authenticated") window.location.href = "/profile";
+                if (status !== "authenticated") router.push("/profile");
               } catch {}
             }}
           >
@@ -50,7 +52,7 @@ export default function GlobalSidebar() {
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("viewProfile")}</button>
+                      <button type="button" className="underline text-xs" onClick={() => router.push("/profile")}>{t("viewProfile")}</button>
                       <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
                     </div>
                   </div>
@@ -64,7 +66,7 @@ export default function GlobalSidebar() {
                     <div className="text-sm font-semibold">{t("signInTitle")}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2">
-                      <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("openProfileButton")}</button>
+                      <button type="button" className="underline text-xs" onClick={() => router.push("/profile")}>{t("openProfileButton")}</button>
                     </div>
                   </div>
                 ) : null}
@@ -106,7 +108,7 @@ export default function GlobalSidebar() {
                 }
                 setTripSearch(null);
               } catch {}
-              try { window.location.href = "/flights/search"; } catch {}
+              router.push("/flights/search");
             }}
           >
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -116,26 +118,26 @@ export default function GlobalSidebar() {
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             try { if (typeof window !== "undefined") localStorage.setItem("calentrip:open_saved_drawer", "1"); } catch {}
-            try { window.location.href = "/calendar/final"; } catch {}
+            router.push("/calendar/final");
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">{t("savedSearchesTitle")}</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/calendar/final")}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">{t("calendarList")}</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/calendar/month")}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">{t("calendarMonth")}</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/profile")}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">account_circle</span>
             </span>
@@ -167,7 +169,7 @@ export default function GlobalSidebar() {
                             localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: c.name, events: c.events }));
                             localStorage.setItem("calentrip:auto_load_saved", "1");
                           }
-                          window.location.href = "/calendar/final";
+                          router.push("/calendar/final");
                         } catch {}
                       }}>{t("loadLabel")}</Button>
                       <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
@@ -211,7 +213,7 @@ export default function GlobalSidebar() {
                             localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events }));
                             localStorage.setItem("calentrip:auto_load_saved", "1");
                           }
-                          window.location.href = "/calendar/final";
+                          router.push("/calendar/final");
                         } catch {}
                       }}>{t("calendarList")}</Button>
                       <Button type="button" variant="outline" onClick={async () => {
@@ -221,7 +223,7 @@ export default function GlobalSidebar() {
                             localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ name: it.savedCalendarName || it.title, events }));
                             localStorage.setItem("calentrip:auto_load_saved", "1");
                           }
-                          window.location.href = "/calendar/month";
+                          router.push("/calendar/month");
                         } catch {}
                       }}>{t("calendarMonth")}</Button>
                       <Button type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={async () => {

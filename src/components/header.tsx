@@ -10,6 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import Image from "next/image";
 import { useToast } from "@/components/ui/toast";
 import { useTrip } from "@/lib/trip-context";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
   const { lang, setLang, t } = useI18n();
@@ -70,6 +71,7 @@ export default function Header() {
 }
 
 function TripsMenu({ t }: { t: (k: string) => string }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<string>("init");
   const session = useSession();
@@ -99,8 +101,8 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
                   <div className="text-xs text-zinc-600 dark:text-zinc-400">{trip.date} • {trip.passengers} pax</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
+                  <Button type="button" variant="outline" onClick={() => router.push("/calendar/final")}>{t("calendarList")}</Button>
+                  <Button type="button" variant="outline" onClick={() => router.push("/calendar/month")}>{t("calendarMonth")}</Button>
                   <Button type="button" variant="outline" onClick={() => { removeTrip(trip.id); refresh(); }}>{t("remove")}</Button>
                 </div>
               </li>
@@ -129,6 +131,7 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
 }
 
 function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const { lang } = useI18n();
   const { show } = useToast();
@@ -157,7 +160,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                   <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                   <div className="mt-2 flex items-center gap-2">
-                    <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("viewProfile")}</button>
+                    <button type="button" className="underline text-xs" onClick={() => router.push("/profile")}>{t("viewProfile")}</button>
                     <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
                   </div>
                 </div>
@@ -166,7 +169,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
               <div className="flex items-center justify-between gap-2">
                 <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs" onClick={() => onOpenChange(true)}>PF</button>
                 <div className="flex-1">
-                  <div className="text-sm font-semibold">Entrar ou Cadastre-se</div>
+                  <div className="text-sm font-semibold">{t("signInTitle")}</div>
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                   <div className="mt-2 flex items-center gap-2">
                     <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>{t("googleWord")}</button>
@@ -193,7 +196,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                 }
                 setTripSearch(null);
               } catch {}
-              try { window.location.href = "/flights/search"; } catch {}
+              router.push("/flights/search");
             }}
           >
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -204,7 +207,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
 
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             try { if (typeof window !== "undefined") localStorage.setItem("calentrip:open_saved_drawer", "1"); } catch {}
-            try { window.location.href = "/calendar/final"; } catch {}
+            router.push("/calendar/final");
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
@@ -212,32 +215,32 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             <span className="text-sm font-medium">{t("savedSearchesTitle")}</span>
           </button>
 
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/profile")}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">person</span>
             </span>
             <span className="text-sm font-medium">{t("profile")}</span>
           </button>
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/privacy"; } catch {} }}>
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/privacy")}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">policy</span>
               </span>
               <span className="text-sm font-medium">{t("privacyTitle")}</span>
             </button>
-            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/legal/terms"; } catch {} }}>
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/legal/terms")}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">gavel</span>
               </span>
               <span className="text-sm font-medium">{t("termsTitle")}</span>
             </button>
-            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/support"; } catch {} }}>
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/support")}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">support_agent</span>
               </span>
               <span className="text-sm font-medium">{t("supportTitle")}</span>
             </button>
-            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/account/delete"; } catch {} }}>
+            <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/account/delete")}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
                 <span className="material-symbols-outlined text-[22px] text-[#007AFF]">person_remove</span>
               </span>
@@ -312,8 +315,8 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{it.date} • {it.passengers} pax</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>{t("calendarList")}</Button>
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/calendar/month"; } catch {} }}>{t("calendarMonth")}</Button>
+                    <Button type="button" variant="outline" onClick={() => router.push("/calendar/final")}>{t("calendarList")}</Button>
+                    <Button type="button" variant="outline" onClick={() => router.push("/calendar/month")}>{t("calendarMonth")}</Button>
                     <Button
                       type="button"
                       variant="outline"

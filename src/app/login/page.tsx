@@ -3,8 +3,10 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const { t } = useI18n();
   const { status } = useSession();
   const [loadingProvider, setLoadingProvider] = useState<"google" | null>(null);
@@ -28,14 +30,14 @@ export default function LoginPage() {
   useEffect(() => {
     if (status === "authenticated" && !redirected.current) {
       redirected.current = true;
-      try { window.location.href = callbackUrl; } catch {}
+      try { router.push(callbackUrl || "/profile"); } catch {}
     }
-  }, [status, callbackUrl]);
+  }, [status, callbackUrl, router]);
 
   return (
     <div className="container-page py-6 space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" className="rounded-md p-1 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
+        <button type="button" className="rounded-md p-1 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700" onClick={() => router.push("/flights/search")}>
           <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
         <h1 className="text-2xl font-semibold text-[var(--brand)]">{t("loginUnlockTitle")}</h1>

@@ -57,82 +57,148 @@ let _conn: Conn | null = null;
 let _ready = false;
 let _useFallback = false;
 
+const _timeoutMs = 3000;
+function _withTimeout<T>(p: Promise<T>, ms = _timeoutMs): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
+function makeMockPlugin(): CapacitorSQLiteAdapter {
+  try { console.warn("⚠️ MODO RECAPE: Rodando sem SQLite nativo"); } catch {}
+  return {
+    async createConnection() { return undefined; },
+    async open() {
+      return {
+        execute: async () => {},
+        run: async () => {},
+        query: async () => undefined,
+        close: async () => {},
+      };
+    },
+  };
+}
+
 async function getConnection(): Promise<Conn | null> {
   if (_conn) return _conn;
   try {
+    try {
+      if (typeof window !== "undefined" && (window as unknown as { db_disabled?: boolean }).db_disabled) {
+        _useFallback = true;
+        _CapacitorSQLite = makeMockPlugin();
+      }
+    } catch {}
     if (!_CapacitorSQLite) {
       try {
         const mod = await import("@capacitor-community/sqlite");
         const candidate = (mod as unknown as { CapacitorSQLite?: CapacitorSQLiteAdapter }).CapacitorSQLite ?? (mod as unknown as CapacitorSQLiteAdapter);
         _CapacitorSQLite = candidate;
-      } catch { _useFallback = true; return null; }
+      } catch {
+        _useFallback = true;
+        try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).offline = true; } catch {}
+        try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).db_fallback = true; } catch {}
+        _CapacitorSQLite = makeMockPlugin();
+      }
     }
     const anySql = _CapacitorSQLite as CapacitorSQLiteAdapter;
     const adapter: Conn = {
       open: async (db, encrypted = false, mode = "no-encryption", version = 1) => {
-        const handle = await anySql.open({ database: db, version, encrypted, mode });
-        return handle as unknown as {
-          execute: (sql: string) => Promise<void>;
-          run: (sql: string, params?: unknown[]) => Promise<void>;
-          query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
-          close: () => Promise<void>;
-        };
+        try {
+          const handle = await _withTimeout(anySql.open({ database: db, version, encrypted, mode }));
+          return handle as unknown as {
+            execute: (sql: string) => Promise<void>;
+            run: (sql: string, params?: unknown[]) => Promise<void>;
+            query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
+            close: () => Promise<void>;
+          };
+        } catch {
+          try { console.warn("⚠️ MODO RECAPE: Rodando sem SQLite nativo"); } catch {}
+          _useFallback = true;
+          try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).offline = true; } catch {}
+          try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).db_fallback = true; } catch {}
+          return {
+            execute: async () => {},
+            run: async () => {},
+            query: async () => undefined,
+            close: async () => {},
+          };
+        }
       },
     };
     _conn = adapter;
     return _conn;
   } catch {
     _useFallback = true;
-    return null;
+    try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).offline = true; } catch {}
+    try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).db_fallback = true; } catch {}
+    _CapacitorSQLite = makeMockPlugin();
+    const adapter: Conn = {
+      open: async () => ({
+        execute: async () => {},
+        run: async () => {},
+        query: async () => undefined,
+        close: async () => {},
+      }),
+    };
+    _conn = adapter;
+    return _conn;
   }
 }
 
 export async function initDatabase() {
   if (_ready) return;
-  const conn = await getConnection();
-  if (!conn) { _ready = true; return; }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS trips (
-      id TEXT PRIMARY KEY NOT NULL,
-      title TEXT NOT NULL,
-      date TEXT NOT NULL,
-      passengers INTEGER,
-      flightNotes TEXT,
-      reachedFinalCalendar INTEGER DEFAULT 0,
-      savedCalendarName TEXT,
-      savedAt INTEGER
-    );
-  `);
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS events (
-      event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trip_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      label TEXT,
-      date TEXT NOT NULL,
-      time TEXT,
-      address TEXT,
-      type TEXT,
-      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-    );
-  `);
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS attachments (
-      att_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trip_id TEXT NOT NULL,
-      leg TEXT NOT NULL,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL,
-      size INTEGER NOT NULL,
-      file_id TEXT NOT NULL,
-      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-    );
-  `);
-  try { await db.execute(`ALTER TABLE attachments ADD COLUMN category TEXT`); } catch {}
-  try { await db.execute(`ALTER TABLE attachments ADD COLUMN ref TEXT`); } catch {}
-  await db.close();
-  _ready = true;
+  try {
+    try {
+      if (typeof window !== "undefined" && (window as unknown as { db_disabled?: boolean }).db_disabled) { _ready = true; return; }
+    } catch {}
+    const conn = await getConnection();
+    if (!conn) { _ready = true; return; }
+    const db = await conn.open(_dbName, false, "no-encryption", 1);
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS trips (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        date TEXT NOT NULL,
+        passengers INTEGER,
+        flightNotes TEXT,
+        reachedFinalCalendar INTEGER DEFAULT 0,
+        savedCalendarName TEXT,
+        savedAt INTEGER
+      );
+    `);
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS events (
+        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        label TEXT,
+        date TEXT NOT NULL,
+        time TEXT,
+        address TEXT,
+        type TEXT,
+        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      );
+    `);
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS attachments (
+        att_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id TEXT NOT NULL,
+        leg TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        file_id TEXT NOT NULL,
+        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      );
+    `);
+    try { await db.execute(`ALTER TABLE attachments ADD COLUMN category TEXT`); } catch {}
+    try { await db.execute(`ALTER TABLE attachments ADD COLUMN ref TEXT`); } catch {}
+    await db.close();
+    _ready = true;
+  } catch {
+    _ready = true;
+  }
 }
 
 export async function migrateFromLocalStorage() {

@@ -1,0 +1,10 @@
+const fs = require("fs");
+const path = require("path");
+const filePath = path.resolve(process.cwd(), "android", "app", "src", "main", "assets", "public", "index.html");
+const content = fs.readFileSync(filePath, "utf8");
+let updated = content;
+updated = updated.replace(/(src|href)="\/(?![a-zA-Z]+:)/g, '$1="');
+updated = updated.replace(/"\/_next\//g, '"_next/');
+updated = updated.replace(/"\/(icon|favicon|manifest)/g, '"$1');
+if (updated !== content) fs.writeFileSync(filePath, updated, "utf8");
+process.exit(0);

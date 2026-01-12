@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
+import { useRouter } from "next/navigation";
 
 export default function SubscriptionCheckoutPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const { t } = useI18n();
   const [price, setPrice] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function SubscriptionCheckoutPage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-2">
-        <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={() => { try { window.location.href = session?.user ? "/profile" : "/"; } catch {} }}>
+        <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={() => { try { router.push(session?.user ? "/profile" : "/"); } catch {} }}>
           Voltar
         </Button>
         <div>

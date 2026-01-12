@@ -126,7 +126,7 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <div className="text-zinc-600">{t("subMonthlyText")}</div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout"; } catch {} }}>
+                    <Button type="button" variant="outline" onClick={() => router.push("/subscription/checkout")}>
                       Assinar agora
                     </Button>
                     <span className="text-xs text-zinc-500">Revisar benefícios e concluir compra</span>

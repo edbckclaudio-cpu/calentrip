@@ -1,23 +1,28 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const serverUrl = process.env.NEXT_PUBLIC_CAP_SERVER_URL || 'https://calentrip.digital';
-
-const config: CapacitorConfig = {
+const config = {
   appId: 'digital.calentrip.android',
   appName: 'CalenTrip',
   webDir: 'out',
+  loggingBehavior: 'debug',
   plugins: {
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
+      androidIsEncryption: false,
+      androidSecret: 'secret',
+      androidBiometric: {
+        biometryAuth: false,
+        biometryTitle: 'Biometric login',
+        biometrySubTitle: 'Log in with biometrics',
+      },
     },
+    CapacitorHttp: { enabled: false },
+    CapacitorCookies: { enabled: false },
   },
   server: {
-    url: 'https://calentrip.digital',
+    androidScheme: 'http',
     cleartext: true,
-    allowNavigation: ['calentrip.digital', 'www.calentrip.digital', 'https://calentrip.digital/api/auth/*'],
-    androidScheme: 'https',
-    iosScheme: 'https',
   },
-};
+} satisfies CapacitorConfig;
 
 export default config;
