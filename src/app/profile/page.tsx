@@ -50,6 +50,26 @@ export default function ProfilePage() {
     })();
   }, []);
 
+  async function handleGoogleLogin() {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+          await GoogleAuth.initialize({
+            scopes: ["profile", "email"],
+            webClientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "",
+          });
+          const res = await GoogleAuth.signIn();
+          if (res?.email) {
+            await signIn("google", { callbackUrl: "/profile", redirect: true });
+            return;
+          }
+        } catch {}
+      }
+      await signIn("google", { callbackUrl: "/profile", redirect: true });
+    } catch {}
+  }
+
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-3">
@@ -85,7 +105,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button type="button" variant="outline" onClick={() => router.push("/calendar/final")}>Minhas Viagens</Button>
                   <Button type="button" variant="outline" onClick={() => router.push("/subscription/checkout")}>Pagamento</Button>
                 </div>
                 <div className="flex gap-2 mt-2">
@@ -99,10 +118,10 @@ export default function ProfilePage() {
                   <Button
                     type="button"
                     className="h-10 rounded-lg bg-white text-black border border-zinc-300 hover:bg-zinc-50 flex items-center justify-center gap-2"
-                    onClick={() => signIn("google")}
+                    onClick={handleGoogleLogin}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
-                      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 31.9 29.3 35 24 35c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 11.8 1 2 10.8 2 23s9.8 22 22 22c12.1 0 21-9.8 21-21 0-1.7-.2-3.3-.4-4.5z"/>
+                      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 31.9 29.3 35 24 35c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 16.3 1 9.6 5.3 6.3 11.7z"/>
                       <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.3 16.3 18.8 13 24 13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 16.3 1 9.6 5.3 6.3 11.7z"/>
                       <path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.9 36.6 27.1 37.7 24 37.7c-5.3 0-9.8-3.3-11.4-7.9l-6.4 5C9.6 42.7 16.3 47 24 47z"/>
                       <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.7 3.9-5.7 6.7-11.3 6.7-5.3 0-9.8-3.3-11.4-7.9l-6.4 5C9.6 42.7 16.3 47 24 47c12.1 0 21-9.8 21-21 0-1.7-.2-3.3-.4-4.5z"/>

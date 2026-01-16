@@ -6,24 +6,39 @@ import { useSession } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 export default function SubscriptionCheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { t } = useI18n();
+  const { show } = useToast();
   const [price, setPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   async function handlePurchase() {
     try {
       setLoading(true);
-      const mod = await import("@/lib/billing");
-      if (!mod || typeof mod.completePurchaseForTrip !== "function") {
-        try { alert("Compra indisponível no momento."); } catch {}
+      if (Capacitor.getPlatform() !== "android") {
+        try { alert("Disponível no app Android. Instale via Google Play."); } catch {}
         return;
       }
-      const userId = session?.user?.email || session?.user?.name || undefined;
-      const r = await mod.completePurchaseForTrip("global", userId);
-      if (r?.ok) { window.location.href = "/profile"; }
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      await Purchases.configure({ apiKey: process.env.NEXT_PUBLIC_REVENUECAT_API_KEY || "" });
+      const offerings = await Purchases.getOfferings();
+      const pkg = offerings.current?.availablePackages?.[0];
+      if (!pkg) {
+        try { alert("Produto não encontrado no Google Play."); } catch {}
+        return;
+      }
+      const result = await Purchases.purchasePackage(pkg);
+      const active = (result?.customerInfo?.entitlements?.active ?? {}) as Record<string, unknown>;
+      const hasPremium = !!(active["premium"] || active["premium_subscription"] || active[process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01"]);
+      if (hasPremium) {
+        show(t("purchaseSuccess"), { variant: "success" });
+        router.push("/profile");
+      } else {
+        try { alert("Compra cancelada ou falhou."); } catch {}
+      }
     } catch {
       try { alert("Falha ao iniciar a compra."); } catch {}
     } finally {
@@ -70,7 +85,7 @@ export default function SubscriptionCheckoutPage() {
           <CardContent className="space-y-3">
             <div className="text-sm text-zinc-600">Pagamento via Google Play Billing</div>
             <div className="text-xs text-zinc-500">
-              Sua assinatura será cobrada na sua conta da Google Play e renovada automaticamente. Você pode cancelar a qualquer momento nas configurações da Play Store.
+              A assinatura é processada pela Google Play Store. O cancelamento pode ser feito a qualquer momento nas configurações da sua conta Google.
             </div>
             <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide flex items-center justify-center gap-2" disabled={loading || !session?.user} onClick={handlePurchase}>
               {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : null}
