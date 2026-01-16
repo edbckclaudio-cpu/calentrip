@@ -20,6 +20,7 @@ const config = {
     CapacitorCookies: { enabled: false },
   },
   server: {
+    hostname: 'localhost',
     androidScheme: 'http',
     cleartext: true,
   },

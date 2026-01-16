@@ -8,3 +8,6 @@ tsconfig.tsbuildinfo
 android/keystore/*.keystore
 android/keystore/*.pem
 android/keystore/*.jks
+
+# Local Netlify folder
+.netlify

@@ -1,6 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 
+function readScheme() {
+  try {
+    const p = path.join(__dirname, 'android', 'app', 'src', 'main', 'assets', 'capacitor.config.json');
+    if (!fs.existsSync(p)) return 'http';
+    const json = JSON.parse(fs.readFileSync(p, 'utf8'));
+    return (json && json.server && json.server.androidScheme) || 'http';
+  } catch { return 'http'; }
+}
+const scheme = readScheme();
+if (String(scheme).toLowerCase() !== 'file') {
+  console.log('ℹ️ Esquema Android não é file. Nenhuma alteração aplicada.');
+  process.exit(0);
+}
+
 const dirs = [
   './android/app/src/main/assets/public',
   './calentrip/android/app/src/main/assets/public'
