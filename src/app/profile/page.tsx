@@ -61,21 +61,9 @@ export default function ProfilePage() {
           <p className="text-sm text-zinc-600">{t("profileSubtitleMonthly")}</p>
         </div>
       </div>
-      <div className="container-page flex justify-center">
-        <Button
-          type="button"
-          className="h-12 w-64 bg-[var(--brand)] text-white font-semibold rounded-lg shadow-lg hover:brightness-95"
-          onClick={() => router.push("/")}
-        >
-          Ir para Tela Inicial
-        </Button>
-      </div>
 
       <div className="container-page grid gap-4 md:grid-cols-2">
-        <Card
-          className={status === "authenticated" ? "rounded-xl shadow-md" : "rounded-xl shadow-md cursor-pointer"}
-          onClick={status === "authenticated" ? undefined : () => router.push("/login?next=/subscription/checkout")}
-        >
+        <Card className="rounded-xl shadow-md">
           <CardHeader>
             <CardTitle>Conta</CardTitle>
           </CardHeader>
@@ -83,7 +71,14 @@ export default function ProfilePage() {
             {status === "authenticated" ? (
               <>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
+                  {session?.user?.image ? (
+                    // foto Google
+                    <img src={session.user.image} alt="Foto" className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm">
+                      {(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
                   <div>
                     <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600">{session?.user?.email || ""}</div>
@@ -99,15 +94,22 @@ export default function ProfilePage() {
               </>
             ) : (
               <>
-                <div className="rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black p-4 text-center">
-                  <div className="text-base font-semibold">Faça login para desbloquear recursos premium</div>
-                  <div className="mt-2">
-                    <Button type="button" className="h-10 rounded-lg" onClick={() => router.push("/login?next=/profile")}>Entre ou cadastre-se</Button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-4 opacity-50">
-                  <Button type="button" variant="outline" disabled>Minhas Viagens</Button>
-                  <Button type="button" variant="outline" disabled>Pagamento</Button>
+                <div className="rounded-lg p-4 text-center border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-base font-semibold mb-3">Entre com sua conta Google</div>
+                  <Button
+                    type="button"
+                    className="h-10 rounded-lg bg-white text-black border border-zinc-300 hover:bg-zinc-50 flex items-center justify-center gap-2"
+                    onClick={() => signIn("google")}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
+                      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 31.9 29.3 35 24 35c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 11.8 1 2 10.8 2 23s9.8 22 22 22c12.1 0 21-9.8 21-21 0-1.7-.2-3.3-.4-4.5z"/>
+                      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.3 16.3 18.8 13 24 13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 16.3 1 9.6 5.3 6.3 11.7z"/>
+                      <path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.9 36.6 27.1 37.7 24 37.7c-5.3 0-9.8-3.3-11.4-7.9l-6.4 5C9.6 42.7 16.3 47 24 47z"/>
+                      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.7 3.9-5.7 6.7-11.3 6.7-5.3 0-9.8-3.3-11.4-7.9l-6.4 5C9.6 42.7 16.3 47 24 47c12.1 0 21-9.8 21-21 0-1.7-.2-3.3-.4-4.5z"/>
+                    </svg>
+                    Entrar com Google
+                  </Button>
+                  <div className="mt-3 text-xs text-zinc-500">Ao entrar, usaremos seu nome, e-mail e foto da sua conta Google.</div>
                 </div>
               </>
             )}
@@ -184,6 +186,9 @@ export default function ProfilePage() {
             <div>{t("planPaidBullet")}</div>
             <div>{t("validityBullet")}</div>
             <div>{t("billingBullet")}</div>
+            <div className="text-xs text-zinc-500">
+              Assinaturas são geridas e cobradas pela Google Play Store. A renovação é automática, e você pode cancelar a qualquer momento nas configurações da Play Store.
+            </div>
             <div>{t("legalBullet")}</div>
           </CardContent>
         </Card>

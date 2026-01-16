@@ -69,6 +69,9 @@ export default function SubscriptionCheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm text-zinc-600">Pagamento via Google Play Billing</div>
+            <div className="text-xs text-zinc-500">
+              Sua assinatura será cobrada na sua conta da Google Play e renovada automaticamente. Você pode cancelar a qualquer momento nas configurações da Play Store.
+            </div>
             <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide flex items-center justify-center gap-2" disabled={loading || !session?.user} onClick={handlePurchase}>
               {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : null}
               {price ? `Fazer Pagamento (${price}/mês)` : "Fazer Pagamento"}
