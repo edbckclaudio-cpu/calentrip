@@ -23,7 +23,6 @@ export default function SubscriptionCheckoutPage() {
         return;
       }
       const { Purchases } = await import("@revenuecat/purchases-capacitor");
-      await Purchases.configure({ apiKey: process.env.NEXT_PUBLIC_REVENUECAT_API_KEY || "" });
       const offerings = await Purchases.getOfferings();
       const pkg = offerings.current?.availablePackages?.[0];
       let result: { customerInfo?: { entitlements?: { active?: Record<string, unknown> } } } | null = null;
