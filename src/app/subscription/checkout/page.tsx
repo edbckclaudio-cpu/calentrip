@@ -4,8 +4,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
+import { Capacitor } from "@capacitor/core";
+import { useRouter } from "next/navigation";
 
 export default function SubscriptionCheckoutPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const { t } = useI18n();
   const [price, setPrice] = useState<string | null>(null);
@@ -13,14 +16,24 @@ export default function SubscriptionCheckoutPage() {
   async function handlePurchase() {
     try {
       setLoading(true);
-      const mod = await import("@/lib/billing");
-      if (!mod || typeof mod.completePurchaseForTrip !== "function") {
-        try { alert("Compra indisponível no momento."); } catch {}
+      if (Capacitor.getPlatform() !== "android") {
+        try { alert("Disponível no app Android. Instale via Google Play."); } catch {}
         return;
       }
-      const userId = session?.user?.email || session?.user?.name || undefined;
-      const r = await mod.completePurchaseForTrip("global", userId);
-      if (r?.ok) { window.location.href = "/profile"; }
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      const offerings = await Purchases.getOfferings();
+      const pkg = offerings.current?.availablePackages?.[0];
+      let result: { customerInfo?: { entitlements?: { active?: Record<string, unknown> } } } | null = null;
+      if (pkg) {
+        result = await Purchases.purchasePackage({ aPackage: pkg });
+      } else {
+        try { alert("Produto não encontrado no Google Play."); } catch {}
+        return;
+      }
+      const active = (result?.customerInfo?.entitlements?.active ?? {}) as Record<string, unknown>;
+      const hasPremium = !!(active["premium"] || active["premium_subscription"] || active[process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01"]);
+      if (hasPremium) { router.push("/profile"); }
+      else { try { alert("Compra cancelada ou falhou."); } catch {} }
     } catch {
       try { alert("Falha ao iniciar a compra."); } catch {}
     } finally {
@@ -41,7 +54,7 @@ export default function SubscriptionCheckoutPage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-2">
-        <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={() => { try { window.location.href = session?.user ? "/profile" : "/"; } catch {} }}>
+        <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={() => router.push(session?.user ? "/profile" : "/")}>
           Voltar
         </Button>
         <div>
@@ -66,10 +79,12 @@ export default function SubscriptionCheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm text-zinc-600">Pagamento via Google Play Billing</div>
+            <div className="text-xs text-zinc-500">Compras: processadas pelo Google Play, renovação automática. Cancele a qualquer momento nas configurações da Play Store.</div>
             <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide flex items-center justify-center gap-2" disabled={loading || !session?.user} onClick={handlePurchase}>
               {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : null}
-              {price ? `Fazer Pagamento (${price}/mês)` : "Fazer Pagamento"}
+              {price ? `Finalizar Assinatura (${price}/mês)` : "Finalizar Assinatura"}
             </Button>
+            
           </CardContent>
         </Card>
       </div>

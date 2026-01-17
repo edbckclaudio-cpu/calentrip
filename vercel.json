@@ -1,8 +1,9 @@
 {
   "version": 2,
-  "framework": "nextjs",
+  "framework": null,
   "buildCommand": "npm run build",
-  "outputDirectory": ".next",
+  "installCommand": "npm install --legacy-peer-deps",
+  "outputDirectory": "out",
   "env": {
     "NEXT_PUBLIC_ENABLE_DEMO_AUTH": "1"
   }

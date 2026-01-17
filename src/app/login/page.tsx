@@ -7,8 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 export default function LoginPage() {
   const { t } = useI18n();
   const { status } = useSession();
-  const [loadingProvider, setLoadingProvider] = useState<"google" | "demo" | "email" | null>(null);
-  const [email, setEmail] = useState("");
+  const [loadingProvider, setLoadingProvider] = useState<"google" | null>(null);
   const redirected = useRef(false);
   const nextParam = useMemo(() => {
     try {
@@ -58,39 +57,6 @@ export default function LoginPage() {
         >
           {t("signInWithGoogle")}
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => { setLoadingProvider("demo"); signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl, redirect: true }); }}
-          disabled={loadingProvider !== null}
-        >
-          {t("signInDemo")}
-        </Button>
-      </div>
-      <div className="mt-4 space-y-2">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Seu e-mail"
-          className="w-full rounded-md border border-zinc-200 dark:border-zinc-800 px-3 h-10 bg-white dark:bg-black"
-        />
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              if (!email || !email.includes("@")) return;
-              setLoadingProvider("email");
-              const pwd = "demo1234";
-              signIn("credentials", { email, password: pwd, callbackUrl, redirect: true });
-            }}
-            disabled={loadingProvider !== null}
-          >
-            Próximo
-          </Button>
-          <span className="text-xs text-zinc-500">Se não existir, criaremos sua conta automaticamente.</span>
-        </div>
       </div>
     </div>
   );

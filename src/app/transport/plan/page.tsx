@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { initDatabase as initDatabaseDb, migrateFromLocalStorage as migrateFromLocalStorageDb, getSavedTrips as getSavedTripsDb, saveRefAttachments } from "@/lib/trips-db";
 import { saveFromDataUrl } from "@/lib/attachments-store";
+import { Capacitor } from "@capacitor/core";
 
 type TransportMode = "air" | "train" | "bus" | "car";
 type TransportRoute = { gmapsUrl?: string; r2rUrl?: string } | null;
@@ -145,7 +146,6 @@ export default function TransportPlanPage() {
 
   useEffect(() => {
     if (!fromCity || !toCity) return;
-    showToast(t("fillTransportFieldsHint"), { duration: 7000 });
     
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCity)}&destination=${encodeURIComponent(toCity)}`;
@@ -155,7 +155,8 @@ export default function TransportPlanPage() {
       const r2rUrl = params.toString() ? `${baseR2R}?${params.toString()}` : baseR2R;
       setRoute({ gmapsUrl, r2rUrl });
     })();
-  }, [fromCity, toCity, cities, segIdx, showToast, t]);
+  }, [fromCity, toCity, cities, segIdx]);
+  useEffect(() => { showToast(t("fillTransportFieldsHint"), { duration: 7000 }); }, []);
   useEffect(() => {
     setDep(""); setArr(""); setDepTime(""); setArrTime("");
   }, []);
@@ -163,7 +164,6 @@ export default function TransportPlanPage() {
   useEffect(() => {
     if (dialogSegIdx == null) return;
     if (!fromCityModal || !toCityModal) return;
-    showToast(t("fillTransportFieldsHint"), { duration: 3000 });
     setMDep(""); setMArr(""); setMDepTime(""); setMArrTime("");
     (async () => {
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromCityModal)}&destination=${encodeURIComponent(toCityModal)}`;
@@ -171,9 +171,26 @@ export default function TransportPlanPage() {
       try { const dt = cities[dialogSegIdx!]?.checkout || ""; if (dt) params.set("date", dt); } catch {}
       const baseR2R = `https://www.rome2rio.com/s/${encodeURIComponent(fromCityModal)}/${encodeURIComponent(toCityModal)}`;
       const r2rUrl = params.toString() ? `${baseR2R}?${params.toString()}` : baseR2R;
-      setMRoute({ gmapsUrl, r2rUrl });
+      setMRoute((prev) => {
+        const newGmapsUrl = gmapsUrl;
+        const newR2rUrl = r2rUrl;
+        if (prev?.gmapsUrl === newGmapsUrl && prev?.r2rUrl === newR2rUrl) return prev || null;
+        return { gmapsUrl: newGmapsUrl, r2rUrl: newR2rUrl };
+      });
     })();
-  }, [dialogSegIdx, fromCityModal, toCityModal, cities, showToast, t]);
+  }, [dialogSegIdx, fromCityModal, toCityModal, cities]);
+  useEffect(() => { if (dialogSegIdx != null) showToast(t("fillTransportFieldsHint"), { duration: 3000 }); }, [dialogSegIdx]);
+
+  async function openExternal(url: string | undefined, type: "maps" | "uber") {
+    if (!url) return;
+    try {
+      const mod = await import("@capacitor/browser");
+      const Browser = mod.Browser;
+      await Browser.open({ url });
+    } catch {
+      try { window.open(url, "_blank", "noopener,noreferrer"); } catch {}
+    }
+  }
 
   function formatTimeInput(v: string) {
     const d = (v || "").replace(/[^0-9]/g, "").slice(0, 4);
@@ -201,16 +218,6 @@ export default function TransportPlanPage() {
         showToast(t("transportSavedGoSummary"), { duration: 3000 });
         try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
         router.push("/accommodation/search");
-        try {
-          setTimeout(() => {
-            try {
-              if (typeof window !== "undefined") {
-                const same = (window.location.pathname || "").includes("/accommodation/search");
-                if (!same) window.location.href = "/accommodation/search";
-              }
-            } catch {}
-          }, 600);
-        } catch {}
       }
     } catch { showToast(t("saveErrorMsg"), { variant: "error" }); }
   }
@@ -236,16 +243,6 @@ export default function TransportPlanPage() {
         try { if (typeof window !== "undefined") localStorage.setItem("calentrip:show_summary", "1"); } catch {}
         setNextOpen(false);
         router.push("/accommodation/search");
-        try {
-          setTimeout(() => {
-            try {
-              if (typeof window !== "undefined") {
-                const same = (window.location.pathname || "").includes("/accommodation/search");
-                if (!same) window.location.href = "/accommodation/search";
-              }
-            } catch {}
-          }, 600);
-        } catch {}
       }
     } catch { showToast(t("saveErrorMsg"), { variant: "error" }); }
   }
@@ -300,7 +297,11 @@ export default function TransportPlanPage() {
                   </a>
                 </li>
                 <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">{t("rentalcarsLabel")}</a></li>
-                <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={route?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("googleMapsLabel")}</a></li>
+                <li>
+                  <button type="button" className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" onClick={() => openExternal(route?.gmapsUrl, "maps")}>
+                    {t("googleMapsLabel")}
+                  </button>
+                </li>
               </ul>
               <div>
                 <label className="mb-1 block text-sm">{t("transportModeLabel")}</label>
@@ -432,7 +433,11 @@ export default function TransportPlanPage() {
               </a>
             </li>
             <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={`https://www.rentalcars.com/`} target="_blank" rel="noopener noreferrer">{t("rentalcarsLabel")}</a></li>
-            <li><a className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" href={mRoute?.gmapsUrl} target="_blank" rel="noopener noreferrer">{t("googleMapsLabel")}</a></li>
+            <li>
+              <button type="button" className="text-[#febb02] underline decoration-2 underline-offset-2 font-semibold hover:text-amber-700" onClick={() => openExternal(mRoute?.gmapsUrl, "maps")}>
+                {t("googleMapsLabel")}
+              </button>
+            </li>
           </ul>
           <div>
             <label className="mb-1 block text-sm">{t("transportModeLabel")}</label>
