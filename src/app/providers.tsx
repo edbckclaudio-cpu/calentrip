@@ -53,7 +53,8 @@ export default function Providers({ children }: { children: ReactNode }) {
       try {
         if (Capacitor.getPlatform() !== "android") return;
         const { Purchases } = await import("@revenuecat/purchases-capacitor");
-        await Purchases.configure({ apiKey: "appc6b54893a0" });
+        const apiKey = (process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_API_KEY || "appc6b54893a0").trim();
+        await Purchases.configure({ apiKey });
       } catch {}
     })();
   }, []);
