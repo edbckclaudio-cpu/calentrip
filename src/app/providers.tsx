@@ -6,7 +6,6 @@ import { I18nProvider } from "@/lib/i18n";
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
 import { ToastProvider } from "@/components/ui/toast";
-import { Capacitor } from "@capacitor/core";
 
 export default function Providers({ children }: { children: ReactNode }) {
   const isAndroid = (() => { try { return Capacitor.getPlatform() === "android"; } catch { return false; } })();

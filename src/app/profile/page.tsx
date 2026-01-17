@@ -46,7 +46,9 @@ export default function ProfilePage() {
       try {
         if (Capacitor.isNativePlatform()) {
           const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-          const st = await GoogleAuth.getCurrentState();
+          type AuthState = { authenticated?: boolean; isAuthenticated?: boolean; signedIn?: boolean };
+          const api = GoogleAuth as unknown as { getCurrentState?: () => Promise<AuthState> };
+          const st = api.getCurrentState ? await api.getCurrentState() : undefined;
           const ok = !!(st && (st.authenticated || st.isAuthenticated || st.signedIn));
           setGoogleLogged(ok);
         } else {
@@ -66,7 +68,7 @@ export default function ProfilePage() {
           const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
           await GoogleAuth.initialize({
             scopes: ["profile", "email"],
-            webClientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "",
+            clientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "",
           });
           const res = await GoogleAuth.signIn();
           if (res?.email) {

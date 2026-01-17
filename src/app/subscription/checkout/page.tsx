@@ -27,8 +27,12 @@ export default function SubscriptionCheckoutPage() {
       const offerings = await Purchases.getOfferings();
       const pkg = offerings.current?.availablePackages?.[0];
       let result: { customerInfo?: { entitlements?: { active?: Record<string, unknown> } } } | null = null;
-      if (pkg) result = await Purchases.purchasePackage(pkg);
-      else result = await Purchases.purchaseProduct("premium_monthly");
+      if (pkg) {
+        result = await Purchases.purchasePackage({ aPackage: pkg });
+      } else {
+        try { alert("Produto não encontrado no Google Play."); } catch {}
+        return;
+      }
       const active = (result?.customerInfo?.entitlements?.active ?? {}) as Record<string, unknown>;
       const hasPremium = !!(active["premium"] || active["premium_subscription"] || active[process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01"]);
       if (hasPremium) {
