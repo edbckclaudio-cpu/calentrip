@@ -26,11 +26,9 @@ export default function SubscriptionCheckoutPage() {
       await Purchases.configure({ apiKey: process.env.NEXT_PUBLIC_REVENUECAT_API_KEY || "" });
       const offerings = await Purchases.getOfferings();
       const pkg = offerings.current?.availablePackages?.[0];
-      if (!pkg) {
-        try { alert("Produto não encontrado no Google Play."); } catch {}
-        return;
-      }
-      const result = await Purchases.purchasePackage(pkg);
+      let result: { customerInfo?: { entitlements?: { active?: Record<string, unknown> } } } | null = null;
+      if (pkg) result = await Purchases.purchasePackage(pkg);
+      else result = await Purchases.purchaseProduct("premium_monthly");
       const active = (result?.customerInfo?.entitlements?.active ?? {}) as Record<string, unknown>;
       const hasPremium = !!(active["premium"] || active["premium_subscription"] || active[process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01"]);
       if (hasPremium) {
@@ -85,7 +83,7 @@ export default function SubscriptionCheckoutPage() {
           <CardContent className="space-y-3">
             <div className="text-sm text-zinc-600">Pagamento via Google Play Billing</div>
             <div className="text-xs text-zinc-500">
-              A assinatura é processada pela Google Play Store. O cancelamento pode ser feito a qualquer momento nas configurações da sua conta Google.
+              Compras: processadas pelo Google Play, renovação automática. Cancele a qualquer momento nas configurações da Play Store.
             </div>
             <Button type="button" className="h-11 rounded-lg font-semibold tracking-wide flex items-center justify-center gap-2" disabled={loading || !session?.user} onClick={handlePurchase}>
               {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : null}

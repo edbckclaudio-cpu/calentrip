@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 export default function ProfilePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [googleLogged, setGoogleLogged] = useState(false);
   const [trips, setTrips] = useState<TripItem[]>([]);
   const currentTrip = useMemo(() => {
     const all = trips;
@@ -43,12 +44,20 @@ export default function ProfilePage() {
   useEffect(() => {
     (async () => {
       try {
+        if (Capacitor.isNativePlatform()) {
+          const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+          const st = await GoogleAuth.getCurrentState();
+          const ok = !!(st && (st.authenticated || st.isAuthenticated || st.signedIn));
+          setGoogleLogged(ok);
+        } else {
+          setGoogleLogged(status === "authenticated");
+        }
         const mod = await import("@/lib/billing");
         const info = await mod.ensureProduct(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "trip_premium");
         if (info?.price) setPriceLabel(info.price);
       } catch {}
     })();
-  }, []);
+  }, [status]);
 
   async function handleGoogleLogin() {
     try {
@@ -88,7 +97,7 @@ export default function ProfilePage() {
             <CardTitle>Conta</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {status === "authenticated" ? (
+            {(Capacitor.isNativePlatform() ? googleLogged : status === "authenticated") ? (
               <>
                 <div className="flex items-center gap-3">
                   {session?.user?.image ? (
@@ -108,7 +117,16 @@ export default function ProfilePage() {
                   <Button type="button" variant="outline" onClick={() => router.push("/subscription/checkout")}>Pagamento</Button>
                 </div>
                 <div className="flex gap-2 mt-2">
-                  <Button type="button" variant="outline" onClick={() => signOut()}>Sair</Button>
+                  <Button type="button" variant="outline" onClick={async () => {
+                    try {
+                      if (Capacitor.isNativePlatform()) {
+                        const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+                        await GoogleAuth.signOut();
+                      }
+                    } catch {}
+                    try { await signOut(); } catch {}
+                    setGoogleLogged(false);
+                  }}>Sair</Button>
                 </div>
               </>
             ) : (

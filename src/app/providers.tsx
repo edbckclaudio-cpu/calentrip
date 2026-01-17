@@ -6,6 +6,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
 import { ToastProvider } from "@/components/ui/toast";
+import { Capacitor } from "@capacitor/core";
 
 export default function Providers({ children }: { children: ReactNode }) {
   const isAndroid = (() => { try { return Capacitor.getPlatform() === "android"; } catch { return false; } })();
@@ -47,6 +48,15 @@ export default function Providers({ children }: { children: ReactNode }) {
         for (const r of regs) { try { r.unregister(); } catch {} }
       }).catch(() => {});
     } catch {}
+  }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        if (Capacitor.getPlatform() !== "android") return;
+        const { Purchases } = await import("@revenuecat/purchases-capacitor");
+        await Purchases.configure({ apiKey: "test_vgtrmWQZlLaflrZMSSXEXBQl n fF" });
+      } catch {}
+    })();
   }, []);
   if (!mounted) return null;
   const initialSession: Session | undefined = isAndroid ? { expires: new Date(0).toISOString() } : undefined;
