@@ -8,3 +8,5 @@ out/
 tsconfig.tsbuildinfo
 android/keystore/*.keystore
 android/keystore/*.pem
+android/keystore/*.jks
+.netlify/
