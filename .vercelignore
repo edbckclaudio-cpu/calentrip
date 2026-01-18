@@ -1,0 +1,5 @@
+calentrip/
+android/
+**/*.map
+**/*.md
+**/tests/**
