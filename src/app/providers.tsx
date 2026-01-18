@@ -4,13 +4,9 @@ import { Capacitor } from "@capacitor/core";
 import { TripProvider } from "@/lib/trip-context";
 import { I18nProvider } from "@/lib/i18n";
 import { SessionProvider } from "next-auth/react";
-import type { Session } from "next-auth";
 import { ToastProvider } from "@/components/ui/toast";
 
 export default function Providers({ children }: { children: ReactNode }) {
-  const isAndroid = (() => { try { return Capacitor.getPlatform() === "android"; } catch { return false; } })();
-  const basePath = isAndroid ? "" : "/api/auth";
-  const mounted = typeof window !== "undefined";
   useEffect(() => {
     function ensureVisible() {
       try {
@@ -57,10 +53,8 @@ export default function Providers({ children }: { children: ReactNode }) {
       } catch {}
     })();
   }, []);
-  if (!mounted) return null;
-  const initialSession: Session | undefined = isAndroid ? { expires: new Date(0).toISOString() } : undefined;
   return (
-    <SessionProvider basePath={basePath} refetchInterval={0} refetchOnWindowFocus={false} session={initialSession}>
+    <SessionProvider basePath="/api/auth" refetchInterval={0} refetchOnWindowFocus={false}>
       <I18nProvider>
         <TripProvider>
           <ToastProvider>{children}</ToastProvider>

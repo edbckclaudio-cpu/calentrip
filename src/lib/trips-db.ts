@@ -56,7 +56,6 @@ const _dbName = "calentrip_db";
 let _conn: Conn | null = null;
 let _ready = false;
 let _useFallback = false;
-
 const _timeoutMs = 3000;
 function _withTimeout<T>(p: Promise<T>, ms = _timeoutMs): Promise<T> {
   return Promise.race([
@@ -112,7 +111,7 @@ async function getConnection(): Promise<Conn | null> {
             query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
             close: () => Promise<void>;
           };
-        } catch {
+        } catch (e) {
           try { console.warn("⚠️ MODO RECAPE: Rodando sem SQLite nativo"); } catch {}
           _useFallback = true;
           try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).offline = true; } catch {}
@@ -156,47 +155,48 @@ export async function initDatabase() {
     if (!conn) { _ready = true; return; }
     const db = await conn.open(_dbName, false, "no-encryption", 1);
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS trips (
-        id TEXT PRIMARY KEY NOT NULL,
-        title TEXT NOT NULL,
-        date TEXT NOT NULL,
-        passengers INTEGER,
-        flightNotes TEXT,
-        reachedFinalCalendar INTEGER DEFAULT 0,
-        savedCalendarName TEXT,
-        savedAt INTEGER
-      );
-    `);
+    CREATE TABLE IF NOT EXISTS trips (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      passengers INTEGER,
+      flightNotes TEXT,
+      reachedFinalCalendar INTEGER DEFAULT 0,
+      savedCalendarName TEXT,
+      savedAt INTEGER
+    );
+  `);
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS events (
-        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        label TEXT,
-        date TEXT NOT NULL,
-        time TEXT,
-        address TEXT,
-        type TEXT,
-        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-      );
-    `);
+    CREATE TABLE IF NOT EXISTS events (
+      event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      label TEXT,
+      date TEXT NOT NULL,
+      time TEXT,
+      address TEXT,
+      type TEXT,
+      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    );
+  `);
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS attachments (
-        att_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id TEXT NOT NULL,
-        leg TEXT NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        size INTEGER NOT NULL,
-        file_id TEXT NOT NULL,
-        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-      );
-    `);
+    CREATE TABLE IF NOT EXISTS attachments (
+      att_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id TEXT NOT NULL,
+      leg TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      file_id TEXT NOT NULL,
+      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    );
+  `);
     try { await db.execute(`ALTER TABLE attachments ADD COLUMN category TEXT`); } catch {}
     try { await db.execute(`ALTER TABLE attachments ADD COLUMN ref TEXT`); } catch {}
     await db.close();
     _ready = true;
-  } catch {
+  } catch (e) {
+    try { console.error("SQLite init failed", e); } catch {}
     _ready = true;
   }
 }

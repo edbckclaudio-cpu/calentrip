@@ -18,32 +18,11 @@ android {
 
     signingConfigs {
         release {
-            def envStore = System.getenv("UPLOAD_STORE_FILE")
-            if (envStore) {
-                storeFile file(envStore)
+            if (System.getenv("UPLOAD_STORE_FILE")) {
+                storeFile file(System.getenv("UPLOAD_STORE_FILE"))
                 storePassword System.getenv("UPLOAD_STORE_PASSWORD") ?: ""
                 keyAlias System.getenv("UPLOAD_KEY_ALIAS") ?: ""
                 keyPassword System.getenv("UPLOAD_KEY_PASSWORD") ?: ""
-            } else {
-                try {
-                    def propsFile = rootProject.file("local.properties")
-                    if (propsFile.exists()) {
-                        def Properties p = new Properties()
-                        p.load(new FileInputStream(propsFile))
-                        def lpStore = p.getProperty("UPLOAD_STORE_FILE")
-                        def lpStorePassword = p.getProperty("UPLOAD_STORE_PASSWORD")
-                        def lpKeyAlias = p.getProperty("UPLOAD_KEY_ALIAS")
-                        def lpKeyPassword = p.getProperty("UPLOAD_KEY_PASSWORD")
-                        if (lpStore) {
-                            storeFile file(lpStore)
-                            storePassword lpStorePassword ?: ""
-                            keyAlias lpKeyAlias ?: ""
-                            keyPassword lpKeyPassword ?: ""
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.info("local.properties not loaded for release signing")
-                }
             }
         }
     }
@@ -51,13 +30,8 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (signingConfigs.release.storeFile != null) {
+            if (System.getenv("UPLOAD_STORE_FILE")) {
                 signingConfig signingConfigs.release
-            } else if (System.getenv("UPLOAD_STORE_FILE")) {
-                signingConfig signingConfigs.release
-            }
-            ndk {
-                debugSymbolLevel 'SYMBOL_TABLE'
             }
         }
     }

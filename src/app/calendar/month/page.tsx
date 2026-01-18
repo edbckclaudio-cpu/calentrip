@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { TripItem, FlightNote, getSavedTrips, getTripEvents, updateTrip, migrateFromLocalStorage } from "@/lib/trips-db";
 import { alarmForEvent } from "@/lib/ics";
 import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
+import { Capacitor } from "@capacitor/core";
 
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
@@ -78,6 +79,30 @@ export default function MonthCalendarPage() {
       return false;
     }
   }, []);
+
+  function openExternal(url: string | undefined, type: "maps" | "uber") {
+    if (!url) return;
+    try {
+      const isAndroid = Capacitor.getPlatform() === "android";
+      if (isAndroid) {
+        if (type === "maps") {
+          const u = new URL(url);
+          const intentUrl = `intent://maps.google.com/maps?${u.searchParams.toString()}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+          window.location.href = intentUrl;
+          return;
+        }
+        if (type === "uber") {
+          const u = new URL(url);
+          const intentUrl = `intent://m.uber.com/ul/?${u.searchParams.toString()}#Intent;scheme=https;package=com.ubercab;end`;
+          window.location.href = intentUrl;
+          return;
+        }
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      try { window.open(url, "_blank", "noopener,noreferrer"); } catch {}
+    }
+  }
 
   function buildRome2RioUrl(args: { originName: string; destName: string; originLat?: number; originLon?: number; destLat?: number; destLon?: number; date?: string; time?: string; passengers?: number; lang?: string; currency?: string }) {
     const p = new URLSearchParams();
@@ -1387,7 +1412,7 @@ export default function MonthCalendarPage() {
                       {!transportInfo?.distanceKm && locConsent !== "granted" ? <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div> : null}
                       <div>Tempo estimado (com trânsito): {transportInfo?.durationWithTrafficMin ? `${transportInfo.durationWithTrafficMin} min` : transportInfo?.durationMin ? `${transportInfo.durationMin} min` : "—"}</div>
                       <div className="mt-2">
-                        <a className="underline" href={transportInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Veja no Google Maps</a>
+                        <button type="button" className="underline" onClick={() => openExternal(transportInfo?.gmapsUrl, "maps")}>Veja no Google Maps</button>
                       </div>
                       <div>
                         <a className="underline flex items-center gap-1" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">
@@ -1396,7 +1421,7 @@ export default function MonthCalendarPage() {
                         </a>
                       </div>
                       <div>
-                        <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Uber</a>
+                        <button type="button" className="underline" onClick={() => openExternal(transportInfo?.uberUrl, "uber")}>Uber</button>
                       </div>
                       <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
                       <div>Chamar Uber às: {transportInfo?.callTime || "—"}</div>
@@ -1474,10 +1499,10 @@ export default function MonthCalendarPage() {
                       <div>Ônibus: {stayInfo?.busMin ? `${stayInfo.busMin} min` : "—"}</div>
                       <div>Trem/Metro: {stayInfo?.trainMin ? `${stayInfo.trainMin} min` : "—"}</div>
                       <div>
-                        <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                        <button type="button" className="underline" onClick={() => openExternal(stayInfo?.gmapsUrl, "maps")}>Abrir rota no Google Maps</button>
                       </div>
                       <div>
-                        <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                        <button type="button" className="underline" onClick={() => openExternal(stayInfo?.uberUrl, "uber")}>Chamar Uber</button>
                       </div>
                       <div className="mt-3 flex justify-end">
                         <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setStayDrawerOpen(false); setStayInfo(null); }}>{t("close")}</Button>
@@ -1498,10 +1523,10 @@ export default function MonthCalendarPage() {
                   <div>Distância (a partir da sua localização): {arrivalInfo?.distanceKm ? `${arrivalInfo.distanceKm} km` : "—"}</div>
                   {!arrivalInfo?.distanceKm && locConsent !== "granted" ? <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div> : null}
                   <div>
-                    <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                    <button type="button" className="underline" onClick={() => openExternal(arrivalInfo?.gmapsUrl, "maps")}>Abrir rota no Google Maps</button>
                   </div>
                   <div>
-                    <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                    <button type="button" className="underline" onClick={() => openExternal(arrivalInfo?.uberUrl, "uber")}>Chamar Uber</button>
                   </div>
                   <div className="mt-3 flex justify-end">
                     <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setArrivalDrawerOpen(false); setArrivalInfo(null); }}>{t("close")}</Button>
@@ -1524,10 +1549,10 @@ export default function MonthCalendarPage() {
                       <div>Distância (a partir da sua localização): {goInfo?.distanceKm ? `${goInfo.distanceKm} km` : "—"}</div>
                       {!goInfo?.distanceKm && locConsent !== "granted" ? <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div> : null}
                       <div>
-                        <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                        <button type="button" className="underline" onClick={() => openExternal(goInfo?.gmapsUrl, "maps")}>Abrir rota no Google Maps</button>
                       </div>
                       <div>
-                        <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                        <button type="button" className="underline" onClick={() => openExternal(goInfo?.uberUrl, "uber")}>Chamar Uber</button>
                       </div>
                       <div className="mt-3 flex justify-end">
                         <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => { setGoDrawerOpen(false); setGoInfo(null); }}>{t("close")}</Button>

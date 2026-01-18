@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
   typedRoutes: false,
   trailingSlash: true,
+  output: "export",
   images: {
     unoptimized: true,
     formats: ["image/avif", "image/webp"],

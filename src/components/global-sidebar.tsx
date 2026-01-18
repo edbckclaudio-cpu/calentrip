@@ -52,7 +52,7 @@ export default function GlobalSidebar() {
                     <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="underline text-xs" onClick={() => router.push("/profile")}>{t("viewProfile")}</button>
+                      <button type="button" className="underline text-xs" onClick={() => { router.push("/profile"); }}>{t("viewProfile")}</button>
                       <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
                     </div>
                   </div>
@@ -66,7 +66,7 @@ export default function GlobalSidebar() {
                     <div className="text-sm font-semibold">{t("signInTitle")}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2">
-                      <button type="button" className="underline text-xs" onClick={() => router.push("/profile")}>{t("openProfileButton")}</button>
+                      <button type="button" className="underline text-xs" onClick={() => { router.push("/profile"); }}>{t("openProfileButton")}</button>
                     </div>
                   </div>
                 ) : null}
@@ -125,19 +125,19 @@ export default function GlobalSidebar() {
             </span>
             {sideOpen ? <span className="text-sm font-medium">{t("savedSearchesTitle")}</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/calendar/final")}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { router.push("/calendar/final"); }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">{t("calendarList")}</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/calendar/month")}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { router.push("/calendar/month"); }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </span>
             {sideOpen ? <span className="text-sm font-medium">{t("calendarMonth")}</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => router.push("/profile")}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { router.push("/profile"); }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">account_circle</span>
             </span>

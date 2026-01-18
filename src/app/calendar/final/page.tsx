@@ -118,6 +118,30 @@ export default function FinalCalendarPage() {
 
   
 
+  function openExternal(url: string | undefined, type: "maps" | "uber") {
+    if (!url) return;
+    try {
+      const isAndroid = Capacitor.getPlatform() === "android";
+      if (isAndroid) {
+        if (type === "maps") {
+          const u = new URL(url);
+          const intentUrl = `intent://maps.google.com/maps?${u.searchParams.toString()}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+          window.location.href = intentUrl;
+          return;
+        }
+        if (type === "uber") {
+          const u = new URL(url);
+          const intentUrl = `intent://m.uber.com/ul/?${u.searchParams.toString()}#Intent;scheme=https;package=com.ubercab;end`;
+          window.location.href = intentUrl;
+          return;
+        }
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      try { window.open(url, "_blank", "noopener,noreferrer"); } catch {}
+    }
+  }
+
   function readTripSearch(): TripSearchPersist | null {
     try {
       const raw = typeof window !== "undefined" ? (sessionStorage.getItem("calentrip:tripSearch") || localStorage.getItem("calentrip:tripSearch")) : null;
@@ -3492,7 +3516,7 @@ export default function FinalCalendarPage() {
               ) : null}
                   <div>Tempo estimado (com trânsito): {transportInfo?.durationWithTrafficMin ? `${transportInfo.durationWithTrafficMin} min` : transportInfo?.durationMin ? `${transportInfo.durationMin} min` : "—"}</div>
                   <div className="mt-2">
-                    <a className="underline" href={transportInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Veja no Google Maps</a>
+                    <button type="button" className="underline" onClick={() => openExternal(transportInfo?.gmapsUrl, "maps")}>Veja no Google Maps</button>
                   </div>
                   <div>
                 <a className="underline flex items-center gap-1" href={transportInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">
@@ -3501,7 +3525,7 @@ export default function FinalCalendarPage() {
                 </a>
                   </div>
                   <div>
-                    <a className="underline" href={transportInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Uber</a>
+                    <button type="button" className="underline" onClick={() => openExternal(transportInfo?.uberUrl, "uber")}>Uber</button>
                   </div>
                   <div className="mt-2">Chegar no aeroporto: 3h antes do voo.</div>
                   {outboundFiles.length ? (
@@ -3681,10 +3705,10 @@ export default function FinalCalendarPage() {
             <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
           ) : null}
           <div>
-            <a className="underline" href={arrivalInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+            <button type="button" className="underline" onClick={() => openExternal(arrivalInfo?.gmapsUrl, "maps")}>Abrir rota no Google Maps</button>
           </div>
           <div>
-            <a className="underline" href={arrivalInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+            <button type="button" className="underline" onClick={() => openExternal(arrivalInfo?.uberUrl, "uber")}>Chamar Uber</button>
           </div>
           {(() => {
             const files = summaryCities.find((c) => {
@@ -3733,10 +3757,10 @@ export default function FinalCalendarPage() {
                 <div className="text-xs text-zinc-500">Ative a localização para calcular a distância.</div>
               ) : null}
               <div>
-                <a className="underline" href={goInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                <button type="button" className="underline" onClick={() => openExternal(goInfo?.gmapsUrl, "maps")}>Abrir rota no Google Maps</button>
               </div>
               <div>
-                <a className="underline" href={goInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                <button type="button" className="underline" onClick={() => openExternal(goInfo?.uberUrl, "uber")}>Chamar Uber</button>
               </div>
               {goRecord?.files && goRecord.files.length ? (
                 <div>
@@ -3848,7 +3872,7 @@ export default function FinalCalendarPage() {
                     <iframe title="map" src={stayInfo.mapUrl} className="mt-2 h-40 w-full rounded-md border" />
                   ) : null}
                   <div className="mt-2">
-                    <a className="underline" href={stayInfo?.gmapsUrl} target="_blank" rel="noopener noreferrer">Abrir rota no Google Maps</a>
+                    <button type="button" className="underline" onClick={() => openExternal(stayInfo?.gmapsUrl, "maps")}>Abrir rota no Google Maps</button>
                   </div>
                   <div>
                     <a className="underline flex items-center gap-1" href={stayInfo?.r2rUrl} target="_blank" rel="noopener noreferrer">
@@ -3857,7 +3881,7 @@ export default function FinalCalendarPage() {
                     </a>
                   </div>
                   <div>
-                    <a className="underline" href={stayInfo?.uberUrl} target="_blank" rel="noopener noreferrer">Chamar Uber</a>
+                    <button type="button" className="underline" onClick={() => openExternal(stayInfo?.uberUrl, "uber")}>Chamar Uber</button>
                   </div>
                   {(() => {
                     const ev = editIdx !== null ? events[editIdx] : null;

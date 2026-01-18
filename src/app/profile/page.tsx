@@ -8,10 +8,8 @@ import { useToast } from "@/components/ui/toast";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
-import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { data: session, status } = useSession();
   const [googleLogged, setGoogleLogged] = useState(false);
   const [trips, setTrips] = useState<TripItem[]>([]);
@@ -80,14 +78,14 @@ export default function ProfilePage() {
           }
         } catch {}
       }
-      await signIn("google", { callbackUrl: "/profile", redirect: true });
+      try { window.location.href = "/login?next=/profile"; } catch {}
     } catch {}
   }
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-3">
-        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => router.push("/flights/search")}>
+        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
         <div>
@@ -95,9 +93,23 @@ export default function ProfilePage() {
           <p className="text-sm text-zinc-600">{t("profileSubtitleMonthly")}</p>
         </div>
       </div>
+      <div className="container-page flex justify-center">
+        <Button
+          type="button"
+          className="h-12 w-64 bg-[var(--brand)] text-white font-semibold rounded-lg shadow-lg hover:brightness-95"
+          onClick={() => {
+            try { window.location.href = "/"; } catch {}
+          }}
+        >
+          Ir para Tela Inicial
+        </Button>
+      </div>
 
       <div className="container-page grid gap-4 md:grid-cols-2">
-        <Card className="rounded-xl shadow-md">
+        <Card
+          className={(Capacitor.isNativePlatform() ? googleLogged : status === "authenticated") ? "rounded-xl shadow-md" : "rounded-xl shadow-md cursor-pointer"}
+          onClick={(Capacitor.isNativePlatform() ? googleLogged : status === "authenticated") ? undefined : () => { try { handleGoogleLogin(); } catch {} }}
+        >
           <CardHeader>
             <CardTitle>Conta</CardTitle>
           </CardHeader>
@@ -105,21 +117,14 @@ export default function ProfilePage() {
             {(Capacitor.isNativePlatform() ? googleLogged : status === "authenticated") ? (
               <>
                 <div className="flex items-center gap-3">
-                  {session?.user?.image ? (
-                    // foto Google
-                    <img src={session.user.image} alt="Foto" className="h-10 w-10 rounded-full object-cover" />
-                  ) : (
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm">
-                      {(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}
-                    </span>
-                  )}
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
                   <div>
                     <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
                     <div className="text-xs text-zinc-600">{session?.user?.email || ""}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button type="button" variant="outline" onClick={() => router.push("/subscription/checkout")}>Pagamento</Button>
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout"; } catch {} }}>Pagamento</Button>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button type="button" variant="outline" onClick={async () => {
@@ -127,10 +132,11 @@ export default function ProfilePage() {
                       if (Capacitor.isNativePlatform()) {
                         const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
                         await GoogleAuth.signOut();
+                        setGoogleLogged(false);
+                      } else {
+                        await signOut();
                       }
                     } catch {}
-                    try { await signOut(); } catch {}
-                    setGoogleLogged(false);
                   }}>Sair</Button>
                 </div>
               </>
@@ -138,11 +144,7 @@ export default function ProfilePage() {
               <>
                 <div className="rounded-lg p-4 text-center border border-zinc-200 dark:border-zinc-800">
                   <div className="text-base font-semibold mb-3">Entre com sua conta Google</div>
-                  <Button
-                    type="button"
-                    className="h-10 rounded-lg bg-white text-black border border-zinc-300 hover:bg-zinc-50 flex items-center justify-center gap-2"
-                    onClick={handleGoogleLogin}
-                  >
+                  <Button type="button" className="h-10 rounded-lg bg-white text-black border border-zinc-300 hover:bg-zinc-50 flex items-center justify-center gap-2" onClick={handleGoogleLogin}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
                       <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 31.9 29.3 35 24 35c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 16.3 1 9.6 5.3 6.3 11.7z"/>
                       <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.3 16.3 18.8 13 24 13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 16.3 1 9.6 5.3 6.3 11.7z"/>
@@ -170,7 +172,7 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <div className="text-zinc-600">{t("subMonthlyText")}</div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => router.push("/subscription/checkout")}>
+                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout"; } catch {} }}>
                       Assinar agora
                     </Button>
                     <span className="text-xs text-zinc-500">Revisar benefícios e concluir compra</span>
@@ -186,7 +188,7 @@ export default function ProfilePage() {
                           const mod = await import("@/lib/billing");
                           const userId = session?.user?.email || session?.user?.name || undefined;
                           const r = await mod.completePurchaseForTrip("global", userId);
-                          if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/calendar/final"); }
+                          if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); window.location.href = "/calendar/final"; }
                           else {
                             const msg = r?.error === "billing"
                               ? "Disponível no app Android. Instale via Google Play."
@@ -228,9 +230,6 @@ export default function ProfilePage() {
             <div>{t("planPaidBullet")}</div>
             <div>{t("validityBullet")}</div>
             <div>{t("billingBullet")}</div>
-            <div className="text-xs text-zinc-500">
-              Assinaturas são geridas e cobradas pela Google Play Store. A renovação é automática, e você pode cancelar a qualquer momento nas configurações da Play Store.
-            </div>
             <div>{t("legalBullet")}</div>
           </CardContent>
         </Card>
