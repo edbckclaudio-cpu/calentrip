@@ -61,7 +61,8 @@ export default function ProfilePage() {
 
   async function handleGoogleLogin() {
     try {
-      if (Capacitor.isNativePlatform()) {
+      const isNative = Capacitor.isNativePlatform();
+      if (isNative) {
         try {
           const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
           await (GoogleAuth as unknown as { initialize: (args?: any) => Promise<any> }).initialize({
@@ -78,7 +79,9 @@ export default function ProfilePage() {
           }
         } catch {}
       }
-      try { window.location.href = "/login?next=/profile"; } catch {}
+      if (!isNative) {
+        try { window.location.href = "/login?next=/profile"; } catch {}
+      }
     } catch {}
   }
 
