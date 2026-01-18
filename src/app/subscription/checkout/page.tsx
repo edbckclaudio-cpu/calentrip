@@ -6,11 +6,13 @@ import { useSession } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 export default function SubscriptionCheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { t } = useI18n();
+  const { show } = useToast();
   const [price, setPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   async function handlePurchase() {
