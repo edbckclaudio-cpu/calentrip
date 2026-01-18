@@ -22,23 +22,21 @@ export default function SubscriptionCheckoutPage() {
         try { alert("Disponível no app Android. Instale via Google Play."); } catch {}
         return;
       }
-      const { Purchases } = await import("@revenuecat/purchases-capacitor");
-      const offerings = await Purchases.getOfferings();
-      const pkg = offerings.current?.availablePackages?.[0];
-      let result: { customerInfo?: { entitlements?: { active?: Record<string, unknown> } } } | null = null;
-      if (pkg) {
-        result = await Purchases.purchasePackage({ aPackage: pkg });
-      } else {
-        try { alert("Produto não encontrado no Google Play."); } catch {}
-        return;
-      }
-      const active = (result?.customerInfo?.entitlements?.active ?? {}) as Record<string, unknown>;
-      const hasPremium = !!(active["premium"] || active["premium_subscription"] || active[process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01"]);
-      if (hasPremium) {
-        show(t("purchaseSuccess"), { variant: "success" });
-        router.push("/profile");
-      } else {
-        try { alert("Compra cancelada ou falhou."); } catch {}
+      const mod = await import("@/lib/billing");
+      const userId = session?.user?.email || session?.user?.name || undefined;
+      const r = await mod.completePurchaseForTrip("global", userId);
+      if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/profile"); }
+      else {
+        const msg = r?.error === "billing"
+          ? "Disponível no app Android. Instale via Google Play."
+          : r?.error === "product" ? "Produto não encontrado no Google Play."
+          : r?.error === "purchase" ? "Compra cancelada ou falhou."
+          : r?.error === "token" ? "Token de compra não recebido."
+          : r?.error === "verify" ? "Falha ao verificar a compra."
+          : r?.error === "ack" ? "Falha ao confirmar a compra."
+          : r?.error === "store" ? "Falha ao salvar assinatura."
+          : "Falha na compra";
+        show(msg, { variant: "error" });
       }
     } catch {
       try { alert("Falha ao iniciar a compra."); } catch {}

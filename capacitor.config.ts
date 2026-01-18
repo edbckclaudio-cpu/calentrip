@@ -13,8 +13,10 @@ const config: CapacitorConfig = {
   plugins: {
     GoogleAuth: {
       scopes: ['profile', 'email'],
-      // Este é o ID do cliente Web que você gerou no Google Cloud Console
+      // Este ID deve ser o "Web Client ID" criado no Google Cloud Console
       serverClientId: '301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com',
+      // Adicionamos como redundância para o plugin nativo
+      androidClientId: '301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com',
       forceCodeForRefreshToken: true,
     },
     CapacitorSQLite: {

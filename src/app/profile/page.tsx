@@ -66,11 +66,14 @@ export default function ProfilePage() {
       if (Capacitor.isNativePlatform()) {
         try {
           const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-          await GoogleAuth.initialize({
+          await (GoogleAuth as unknown as { initialize: (args?: any) => Promise<any> }).initialize({
             scopes: ["profile", "email"],
-            clientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "",
+            serverClientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
+            clientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
           });
-          const res = await GoogleAuth.signIn();
+          const res = await (GoogleAuth as unknown as { signIn: (args?: any) => Promise<any> }).signIn({
+            clientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
+          });
           if (res?.email) {
             await signIn("google", { callbackUrl: "/profile", redirect: true });
             return;
