@@ -59,30 +59,42 @@ export default function ProfilePage() {
     })();
   }, [status]);
 
+  type GoogleAuthInitArgs = { scopes?: string[]; serverClientId?: string; clientId?: string };
+  type GoogleAuthSignInArgs = { clientId?: string };
+  type GoogleAuthSignInResult = { email?: string; name?: string; imageUrl?: string };
+  type GoogleAuthPlugin = {
+    initialize: (args?: GoogleAuthInitArgs) => Promise<void>;
+    signIn: (args?: GoogleAuthSignInArgs) => Promise<GoogleAuthSignInResult>;
+  };
+
   async function handleGoogleLogin() {
     try {
       const isNative = Capacitor.isNativePlatform();
       if (isNative) {
         try {
           const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-          await (GoogleAuth as unknown as { initialize: (args?: any) => Promise<any> }).initialize({
+          await (GoogleAuth as unknown as GoogleAuthPlugin).initialize({
             scopes: ["profile", "email"],
             serverClientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
             clientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
           });
-          const res = await (GoogleAuth as unknown as { signIn: (args?: any) => Promise<any> }).signIn({
+          const res = await (GoogleAuth as unknown as GoogleAuthPlugin).signIn({
             clientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
           });
           if (res?.email) {
             await signIn("google", { callbackUrl: "/profile", redirect: true });
             return;
           }
-        } catch {}
+        } catch (error) {
+          try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {}
+        }
       }
       if (!isNative) {
-        try { window.location.href = "/login?next=/profile"; } catch {}
+        try { window.location.href = "/login?next=/profile"; } catch (error) { try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {} }
       }
-    } catch {}
+    } catch (error) {
+      try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {}
+    }
   }
 
   return (
