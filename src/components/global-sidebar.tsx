@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useNativeAuth } from "@/lib/native-auth";
+import { Capacitor } from "@capacitor/core";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -18,8 +20,14 @@ export default function GlobalSidebar() {
   const [savedTrips, setSavedTrips] = useState<TripItem[]>([]);
   const [savedCalendars, setSavedCalendars] = useState<SavedCalendar[]>([]);
   const { data: session, status } = useSession();
+  const { logout, status: nativeStatus, user: nativeUser } = useNativeAuth();
   const { lang, t } = useI18n();
   const { tripSearch, setTripSearch } = useTrip();
+  const isAndroid = typeof window !== "undefined" && Capacitor.getPlatform() === "android";
+  const isAuthenticated = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
+  const userName = isAndroid ? (nativeUser?.name || nativeUser?.email || "PF") : (session?.user?.name || session?.user?.email || "PF");
+  const userEmail = isAndroid ? (nativeUser?.email || "") : (session?.user?.email || "");
+  const userImage = isAndroid ? (nativeUser?.imageUrl || "") : (session?.user?.image || "");
 
 
   return (
@@ -35,25 +43,25 @@ export default function GlobalSidebar() {
             className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2 cursor-pointer"
             onClick={() => {
               try {
-                if (status !== "authenticated") router.push("/profile");
+                if (!isAuthenticated) router.push("/profile");
               } catch {}
             }}
           >
-            {status === "authenticated" ? (
+            {isAuthenticated ? (
               <div className="flex items-center gap-2">
-                {session?.user?.image ? (
-                  <Image src={session.user.image} alt="avatar" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                {userImage ? (
+                  <Image src={userImage} alt="avatar" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
                 ) : (
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">{userName.slice(0, 2).toUpperCase()}</span>
                 )}
                 {sideOpen ? (
                   <div className="flex-1">
-                    <div className="text-sm font-semibold">{session?.user?.name || t("userWord")}</div>
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
+                    <div className="text-sm font-semibold">{userName || t("userWord")}</div>
+                    <div className="text-xs text-zinc-600 dark:text-zinc-400">{userEmail}</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
                       <button type="button" className="underline text-xs" onClick={() => { router.push("/profile"); }}>{t("viewProfile")}</button>
-                      <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
+                      <button type="button" className="text-xs" onClick={() => logout()}>{t("signOut")}</button>
                     </div>
                   </div>
                 ) : null}

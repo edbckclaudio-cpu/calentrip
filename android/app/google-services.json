@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "301052542782",
+    "project_id": "calentrip",
+    "storage_bucket": "calentrip.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301052542782:android:778ee140fab79880ae766f",
+        "android_client_info": {
+          "package_name": "digital.calentrip.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "301052542782-32u23eimslvmuvdf3l81md3jobajsgjc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "digital.calentrip.android",
+            "certificate_hash": "b6d0bf48bc3412c395dfe865f4515ea5f95e31b0"
+          }
+        },
+        {
+          "client_id": "301052542782-f47iutvq5kujs7eqcn20kask8hkghtpi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "digital.calentrip.android",
+            "certificate_hash": "5d517367f5fba15c7d17c877dc226cb6c6c63d46"
+          }
+        },
+        {
+          "client_id": "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBK-NyVxQjbD2a3YE6UeZbZTekTmD13TTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

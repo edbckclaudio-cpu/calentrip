@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useNativeAuth } from "@/lib/native-auth";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { isTripPremium } from "@/lib/premium";
@@ -56,6 +57,7 @@ function buildRome2RioUrl(args: { originName: string; destName: string; originLa
 }
 
 export default function FinalCalendarPage() {
+  const { status: nativeStatus, loginWithGoogle, logout, user: nativeUser } = useNativeAuth();
   
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loadedFromSaved, setLoadedFromSaved] = useState(false);
@@ -2403,14 +2405,24 @@ export default function FinalCalendarPage() {
             </div>
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
-                <Button type="button" onClick={() => signIn("google")}>{t("signInWithGoogle")}</Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      if (Capacitor.getPlatform() === "android") { loginWithGoogle(); }
+                      else { window.location.href = "/profile"; }
+                    } catch {}
+                  }}
+                >
+                  {t("signInWithGoogle")}
+                </Button>
               ) : (
                 <Button
                   type="button"
                   onClick={async () => {
                     try {
                       if (!gating?.tripId) return;
-                      const userId = session?.user?.email || session?.user?.name || undefined;
+                      const userId = (Capacitor.getPlatform() === "android") ? (nativeUser?.email || nativeUser?.name || undefined) : (session?.user?.email || session?.user?.name || undefined);
                       const mod = await import("@/lib/billing");
                       const r = await mod.completePurchaseForTrip(gating.tripId, userId);
                       if (r?.ok) {
@@ -2487,7 +2499,7 @@ export default function FinalCalendarPage() {
                     ) : null}
                     <div className="mt-2 flex items-center gap-2">
                       <button type="button" className="underline text-xs" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("viewProfile")}</button>
-                      <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
+                      <button type="button" className="text-xs" onClick={() => logout()}>{t("signOut")}</button>
                     </div>
                   </div>
                 ) : null}
@@ -2500,7 +2512,18 @@ export default function FinalCalendarPage() {
                     <div className="text-sm font-semibold">Entrar</div>
                     <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>Google</button>
+                      <button
+                        type="button"
+                        className="text-xs"
+                        onClick={() => {
+                          try {
+                            if (Capacitor.getPlatform() === "android") { window.location.href = "/profile"; }
+                            else { window.location.href = "/profile"; }
+                          } catch {}
+                        }}
+                      >
+                        Google
+                      </button>
                     </div>
                   </div>
                 ) : null}

@@ -1,5 +1,5 @@
 "use client";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { getTrips, TripItem } from "@/lib/trips-store";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,11 @@ import { useToast } from "@/components/ui/toast";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
+import { useNativeAuth } from "@/lib/native-auth";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
+  const { user: nativeUser, status: nativeStatus, loginWithGoogle, logout } = useNativeAuth();
   const [googleLogged, setGoogleLogged] = useState(false);
   const [trips, setTrips] = useState<TripItem[]>([]);
   const currentTrip = useMemo(() => {
@@ -44,12 +46,7 @@ export default function ProfilePage() {
     (async () => {
       try {
         if (Capacitor.isNativePlatform()) {
-          const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-          type AuthState = { authenticated?: boolean; isAuthenticated?: boolean; signedIn?: boolean };
-          const api = GoogleAuth as unknown as { getCurrentState?: () => Promise<AuthState> };
-          const st = api.getCurrentState ? await api.getCurrentState() : undefined;
-          const ok = !!(st && (st.authenticated || st.isAuthenticated || st.signedIn));
-          setGoogleLogged(ok);
+          setGoogleLogged(nativeStatus === "authenticated");
         } else {
           setGoogleLogged(status === "authenticated");
         }
@@ -58,15 +55,7 @@ export default function ProfilePage() {
         if (info?.price) setPriceLabel(info.price);
       } catch {}
     })();
-  }, [status]);
-
-  type GoogleAuthInitArgs = { scopes?: string[]; serverClientId?: string; clientId?: string };
-  type GoogleAuthSignInArgs = { clientId?: string };
-  type GoogleAuthSignInResult = { email?: string; name?: string; imageUrl?: string };
-  type GoogleAuthPlugin = {
-    initialize: (args?: GoogleAuthInitArgs) => Promise<void>;
-    signIn: (args?: GoogleAuthSignInArgs) => Promise<GoogleAuthSignInResult>;
-  };
+  }, [status, nativeStatus]);
 
   async function handleGoogleLogin() {
     try {
@@ -74,20 +63,7 @@ export default function ProfilePage() {
       setIsSigning(true);
       const isNative = Capacitor.isNativePlatform();
       if (isNative) {
-        try {
-          const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-          await (GoogleAuth as unknown as GoogleAuthPlugin).initialize({
-            scopes: ["profile", "email"],
-            serverClientId: "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com",
-          });
-          const res = await (GoogleAuth as unknown as GoogleAuthPlugin).signIn();
-          if (res?.email) {
-            await signIn("google", { callbackUrl: "/profile", redirect: true });
-            return;
-          }
-        } catch (error) {
-          try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {}
-        }
+        try { await loginWithGoogle(); setGoogleLogged(true); } catch (error) { try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {} }
       }
       if (!isNative) {
         try { window.location.href = "/login?next=/profile"; } catch (error) { try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {} }
@@ -124,8 +100,7 @@ export default function ProfilePage() {
 
       <div className="container-page grid gap-4 md:grid-cols-2">
         <Card
-          className={(Capacitor.isNativePlatform() ? googleLogged : status === "authenticated") ? "rounded-xl shadow-md" : "rounded-xl shadow-md cursor-pointer"}
-          onClick={(Capacitor.isNativePlatform() ? googleLogged : status === "authenticated") ? undefined : () => { try { handleGoogleLogin(); } catch {} }}
+          className="rounded-xl shadow-md"
         >
           <CardHeader>
             <CardTitle>Conta</CardTitle>
@@ -134,10 +109,10 @@ export default function ProfilePage() {
             {(Capacitor.isNativePlatform() ? googleLogged : status === "authenticated") ? (
               <>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm">{(Capacitor.isNativePlatform() ? (nativeUser?.name || nativeUser?.email || "PF") : (session?.user?.name || session?.user?.email || "PF")).slice(0, 2).toUpperCase()}</span>
                   <div>
-                    <div className="text-sm font-semibold">{session?.user?.name || "Usuário"}</div>
-                    <div className="text-xs text-zinc-600">{session?.user?.email || ""}</div>
+                    <div className="text-sm font-semibold">{Capacitor.isNativePlatform() ? (nativeUser?.name || "Usuário") : (session?.user?.name || "Usuário")}</div>
+                    <div className="text-xs text-zinc-600">{Capacitor.isNativePlatform() ? (nativeUser?.email || "") : (session?.user?.email || "")}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3">
@@ -147,8 +122,7 @@ export default function ProfilePage() {
                   <Button type="button" variant="outline" onClick={async () => {
                     try {
                       if (Capacitor.isNativePlatform()) {
-                        const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-                        await GoogleAuth.signOut();
+                        await logout();
                         setGoogleLogged(false);
                       } else {
                         await signOut();
@@ -161,7 +135,12 @@ export default function ProfilePage() {
               <>
                 <div className="rounded-lg p-4 text-center border border-zinc-200 dark:border-zinc-800">
                   <div className="text-base font-semibold mb-3">Entre com sua conta Google</div>
-                  <Button type="button" className="h-10 rounded-lg bg-white text-black border border-zinc-300 hover:bg-zinc-50 flex items-center justify-center gap-2" onClick={handleGoogleLogin}>
+                  <Button
+                    type="button"
+                    className="h-10 rounded-lg bg-white text-black border border-zinc-300 hover:bg-zinc-50 flex items-center justify-center gap-2"
+                    disabled={isSigning}
+                    onClick={(e) => { try { e.stopPropagation(); handleGoogleLogin(); } catch {} }}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
                       <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 31.9 29.3 35 24 35c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 16.3 1 9.6 5.3 6.3 11.7z"/>
                       <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.3 16.3 18.8 13 24 13c3.3 0 6.3 1.2 8.6 3.4l5.7-5.7C33.7 3.2 29.1 1 24 1 16.3 1 9.6 5.3 6.3 11.7z"/>

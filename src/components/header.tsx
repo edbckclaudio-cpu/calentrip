@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { getTrips, removeTrip } from "@/lib/trips-store";
 import { Button } from "@/components/ui/button";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useNativeAuth } from "@/lib/native-auth";
+import { Capacitor } from "@capacitor/core";
 import { useI18n } from "@/lib/i18n";
 import Image from "next/image";
 import { useToast } from "@/components/ui/toast";
@@ -74,7 +75,7 @@ export default function Header() {
 function TripsMenu({ t }: { t: (k: string) => string }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<string>("init");
-  const session = useSession();
+  const { user, status, loginWithGoogle, logout } = useNativeAuth();
   const { show } = useToast();
   const router = useRouter();
 
@@ -91,8 +92,8 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
         {t("yourTrips")}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogHeader>{session.status === "authenticated" ? t("savedTrips") : t("signInToViewTrips")}</DialogHeader>
-        {session.status === "authenticated" ? (
+        <DialogHeader>{status === "authenticated" ? t("savedTrips") : t("signInToViewTrips")}</DialogHeader>
+        {status === "authenticated" ? (
           <ul className="space-y-2">
             {list.length === 0 && <li className="text-sm text-zinc-600 dark:text-zinc-300">{t("noTrips")}</li>}
             {list.map((trip) => (
@@ -111,17 +112,22 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
           </ul>
         ) : (
           <div className="flex flex-col gap-3">
-            <Button type="button" onClick={() => { show(t("googleLoginOpeningMsg")); signIn("google", { callbackUrl: "/profile", redirect: true }); }}>{t("signInGoogle")}</Button>
-            {process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "1" ? (
-              <Button type="button" onClick={() => { show(t("demoLoginStartingMsg")); signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile", redirect: true }); }}>
-                {t("signInCredentials")}
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              onClick={() => {
+                try {
+                  if (Capacitor.getPlatform() === "android") { loginWithGoogle(); }
+                  else { show(t("googleLoginOpeningMsg")); window.location.href = "/profile"; }
+                } catch {}
+              }}
+            >
+              {t("signInGoogle")}
+            </Button>
           </div>
         )}
         <DialogFooter>
-          {session.status === "authenticated" ? (
-            <Button type="button" variant="outline" onClick={() => signOut()}>{t("signOut")}</Button>
+          {status === "authenticated" ? (
+            <Button type="button" variant="outline" onClick={() => logout()}>{t("signOut")}</Button>
           ) : (
             <Button type="button" onClick={() => setOpen(false)}>{t("close")}</Button>
           )}
@@ -132,7 +138,7 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
 }
 
 function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { data: session, status } = useSession();
+  const { user, status, loginWithGoogle, logout } = useNativeAuth();
   const { lang } = useI18n();
   const { show } = useToast();
   const [savedOpen, setSavedOpen] = useState(false);
@@ -151,18 +157,18 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
           <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2">
             {status === "authenticated" ? (
               <div className="flex items-center gap-2">
-                {session?.user?.image ? (
-                  <Image src={session.user.image} alt="avatar" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                {user?.imageUrl ? (
+                  <Image src={user.imageUrl} alt="avatar" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
                 ) : (
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">{(session?.user?.name || session?.user?.email || "PF").slice(0, 2).toUpperCase()}</span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs">{(user?.name || user?.email || "PF").slice(0, 2).toUpperCase()}</span>
                 )}
                 <div className="flex-1">
-                  <div className="text-sm font-semibold">{session?.user?.name || t("userWord")}</div>
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400">{session?.user?.email || ""}</div>
+                  <div className="text-sm font-semibold">{user?.name || t("userWord")}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400">{user?.email || ""}</div>
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                   <div className="mt-2 flex items-center gap-2">
                     <button type="button" className="underline text-xs" onClick={() => { router.push("/profile"); }}>{t("viewProfile")}</button>
-                    <button type="button" className="text-xs" onClick={() => signOut()}>{t("signOut")}</button>
+                    <button type="button" className="text-xs" onClick={() => logout()}>{t("signOut")}</button>
                   </div>
                 </div>
               </div>
@@ -173,10 +179,18 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                   <div className="text-sm font-semibold">Entrar ou Cadastre-se</div>
                   <div className="mt-1 text-[10px] text-zinc-500">Idioma: {lang.toUpperCase()}</div>
                   <div className="mt-2 flex items-center gap-2">
-                    <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>{t("googleWord")}</button>
-                    {process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "1" ? (
-                      <button type="button" className="text-xs" onClick={() => signIn("credentials", { email: "demo@calentrip.com", password: "demo", callbackUrl: "/profile", redirect: true })}>{t("demoWord")}</button>
-                    ) : null}
+                    <button
+                      type="button"
+                      className="text-xs"
+                      onClick={() => {
+                        try {
+                          if (Capacitor.getPlatform() === "android") { loginWithGoogle(); }
+                          else { window.location.href = "/profile"; }
+                        } catch {}
+                      }}
+                    >
+                      {t("googleWord")}
+                    </button>
                   </div>
                 </div>
               </div>

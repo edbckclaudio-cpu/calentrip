@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
+import { useNativeAuth } from "@/lib/native-auth";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
 import { useRouter } from "next/navigation";
@@ -11,6 +12,7 @@ import { useToast } from "@/components/ui/toast";
 export default function SubscriptionCheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const { user: nativeUser } = useNativeAuth();
   const { t } = useI18n();
   const { show } = useToast();
   const [price, setPrice] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export default function SubscriptionCheckoutPage() {
         return;
       }
       const mod = await import("@/lib/billing");
-      const userId = session?.user?.email || session?.user?.name || undefined;
+      const userId = nativeUser?.email || nativeUser?.name || undefined;
       const r = await mod.completePurchaseForTrip("global", userId);
       if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/profile"); }
       else {

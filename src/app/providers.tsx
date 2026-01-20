@@ -1,12 +1,18 @@
 "use client";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { TripProvider } from "@/lib/trip-context";
 import { I18nProvider } from "@/lib/i18n";
-import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "@/components/ui/toast";
+import { NativeAuthProvider } from "@/lib/native-auth";
+import { SessionProvider } from "next-auth/react";
 
 export default function Providers({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 0);
+    return () => { try { window.clearTimeout(id); } catch {} };
+  }, []);
   useEffect(() => {
     function ensureVisible() {
       try {
@@ -45,21 +51,24 @@ export default function Providers({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
   useEffect(() => {
-    (async () => {
-      try {
-        if (Capacitor.getPlatform() !== "android") return;
-        const { Purchases } = await import("@revenuecat/purchases-capacitor");
-        await Purchases.configure({ apiKey: "goog_PbcDTYZKuoIjsfDSNyFYqfSxGIg" });
-      } catch {}
-    })();
   }, []);
-  return (
-    <SessionProvider basePath="/api/auth" refetchInterval={0} refetchOnWindowFocus={false}>
+  if (!mounted) return null;
+  const isAndroid = typeof window !== "undefined" && Capacitor.getPlatform() === "android";
+  const content = (
+    <NativeAuthProvider>
       <I18nProvider>
         <TripProvider>
           <ToastProvider>{children}</ToastProvider>
         </TripProvider>
       </I18nProvider>
-    </SessionProvider>
+    </NativeAuthProvider>
   );
+  if (isAndroid) {
+    return (
+      <SessionProvider session={null} refetchOnWindowFocus={false} refetchWhenOffline={false} refetchInterval={0}>
+        {content}
+      </SessionProvider>
+    );
+  }
+  return <SessionProvider>{content}</SessionProvider>;
 }

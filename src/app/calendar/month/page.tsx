@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useNativeAuth } from "@/lib/native-auth";
 import { isTripPremium } from "@/lib/premium";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
@@ -24,6 +25,7 @@ export default function MonthCalendarPage() {
   const [sideOpen, setSideOpen] = useState(false);
   const [dayOpen, setDayOpen] = useState<string | null>(null);
   const { data: session, status } = useSession();
+  const { loginWithGoogle } = useNativeAuth();
   const { lang, t } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium" } | null>(null);
   const { show } = useToast();
@@ -1017,7 +1019,7 @@ export default function MonthCalendarPage() {
             </div>
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
-                <button type="button" className="btn" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>Entrar com Google</button>
+                <button type="button" className="btn" onClick={() => { try { if (Capacitor.getPlatform() === "android") { loginWithGoogle(); } else { window.location.href = "/profile"; } } catch {} }}>Entrar com Google</button>
               ) : (
                 <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("subscribeMonthlyButton")}</button>
               )}
@@ -1055,7 +1057,7 @@ export default function MonthCalendarPage() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold">Entrar</div>
                     <div className="mt-2 flex items-center gap-2">
-                  <button type="button" className="text-xs" onClick={() => signIn("google", { callbackUrl: "/profile", redirect: true })}>{t("signInWithGoogle")}</button>
+                  <button type="button" className="text-xs" onClick={() => { try { if (Capacitor.getPlatform() === "android") { loginWithGoogle(); } else { window.location.href = "/profile"; } } catch {} }}>{t("signInWithGoogle")}</button>
                     </div>
                   </div>
                 ) : null}
