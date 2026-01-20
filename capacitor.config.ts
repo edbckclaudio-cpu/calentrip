@@ -13,8 +13,7 @@ const config: CapacitorConfig = {
   plugins: {
     GoogleAuth: {
       scopes: ['profile', 'email'],
-      // Atualizado para coincidir com o Web Client ID do strings.xml
-      serverClientId: '301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com',
+      serverClientId: '301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com',
       forceCodeForRefreshToken: true,
     },
     CapacitorSQLite: {

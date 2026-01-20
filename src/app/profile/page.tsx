@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const { t } = useI18n();
   const [priceLabel, setPriceLabel] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [isSigning, setIsSigning] = useState(false);
 
   useEffect(() => {
     setTrips(getTrips());
@@ -69,18 +70,17 @@ export default function ProfilePage() {
 
   async function handleGoogleLogin() {
     try {
+      if (isSigning) return;
+      setIsSigning(true);
       const isNative = Capacitor.isNativePlatform();
       if (isNative) {
         try {
           const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
           await (GoogleAuth as unknown as GoogleAuthPlugin).initialize({
             scopes: ["profile", "email"],
-            serverClientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
-            clientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
+            serverClientId: "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com",
           });
-          const res = await (GoogleAuth as unknown as GoogleAuthPlugin).signIn({
-            clientId: "301052542782-lcsm1cetgo8e6kvaobrc6mbuuti2rgsc.apps.googleusercontent.com",
-          });
+          const res = await (GoogleAuth as unknown as GoogleAuthPlugin).signIn();
           if (res?.email) {
             await signIn("google", { callbackUrl: "/profile", redirect: true });
             return;
@@ -94,6 +94,8 @@ export default function ProfilePage() {
       }
     } catch (error) {
       try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {}
+    } finally {
+      setIsSigning(false);
     }
   }
 
