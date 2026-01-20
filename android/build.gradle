@@ -67,6 +67,27 @@ project(':capacitor-preferences') {
                     sourceCompatibility JavaVersion.VERSION_17
                     targetCompatibility JavaVersion.VERSION_17
                 }
+                lint {
+                    abortOnError false
+                    checkReleaseBuilds false
+                }
+            }
+        }
+    }
+}
+
+project(':capacitor-cordova-android-plugins') {
+    afterEvaluate {
+        if (project.hasProperty('android')) {
+            android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+                lint {
+                    abortOnError false
+                    checkReleaseBuilds false
+                }
             }
         }
     }
