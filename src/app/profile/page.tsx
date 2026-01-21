@@ -116,7 +116,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout"; } catch {} }}>Pagamento</Button>
+                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout/"; } catch {} }}>Pagamento</Button>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button type="button" variant="outline" onClick={async () => {
