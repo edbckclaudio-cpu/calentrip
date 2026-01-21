@@ -17,6 +17,14 @@ export default function SubscriptionCheckoutPage() {
   const { show } = useToast();
   const [price, setPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isAndroid = typeof window !== "undefined" && Capacitor.isNativePlatform();
+  let graceUntil = 0;
+  try { graceUntil = typeof window !== "undefined" ? Number(localStorage.getItem("calentrip:auth_grace_until") || "0") : 0; } catch {}
+  const now = typeof window !== "undefined" ? Date.now() : 0;
+  const graceActive = isAndroid && graceUntil > now;
+  const isLoadingGate = status === "loading" || authenticating || graceActive;
+
   async function handlePurchase() {
     try {
       setLoading(true);
@@ -56,6 +64,20 @@ export default function SubscriptionCheckoutPage() {
       } catch {}
     })();
   }, []);
+
+  if (isLoadingGate) {
+    return (
+      <div className="min-h-screen px-4 py-6 space-y-6">
+        <div className="container-page flex items-center gap-2">
+          <div className="h-10 w-10 rounded-full border-2 border-zinc-300 border-t-[var(--brand)] animate-spin" aria-label="Carregando" />
+          <div>
+            <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Carregando</h1>
+            <p className="text-sm text-zinc-600">Preparando checkout e sessão…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
