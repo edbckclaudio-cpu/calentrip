@@ -2,12 +2,13 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 
 type NativeUser = { email?: string; name?: string; imageUrl?: string; idToken?: string; accessToken?: string } | null;
-type Ctx = { user: NativeUser; setUser: (u: NativeUser) => void; status: "authenticated" | "unauthenticated"; loginWithGoogle: () => Promise<void>; logout: () => Promise<void> };
+type Ctx = { user: NativeUser; setUser: (u: NativeUser) => void; status: "authenticated" | "unauthenticated"; authenticating: boolean; loginWithGoogle: () => Promise<void>; logout: () => Promise<void> };
 
-const NativeAuthContext = createContext<Ctx>({ user: null, setUser: () => {}, status: "unauthenticated", loginWithGoogle: async () => {}, logout: async () => {} });
+const NativeAuthContext = createContext<Ctx>({ user: null, setUser: () => {}, status: "unauthenticated", authenticating: false, loginWithGoogle: async () => {}, logout: async () => {} });
 
 export function NativeAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<NativeUser>(null);
+  const [authenticating, setAuthenticating] = useState(false);
   const status: "authenticated" | "unauthenticated" = user ? "authenticated" : "unauthenticated";
   useEffect(() => {
     try {
@@ -17,10 +18,15 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
       const email = typeof window !== "undefined" ? localStorage.getItem("calentrip:user:email") : null;
       const imageUrl = typeof window !== "undefined" ? localStorage.getItem("calentrip:user:imageUrl") : null;
       if (idToken || accessToken || name || email) setUser({ idToken: idToken || undefined, accessToken: accessToken || undefined, name: name || undefined, email: email || undefined, imageUrl: imageUrl || undefined });
+      if (typeof window !== "undefined") {
+        try { localStorage.setItem("calentrip:auth_grace_until", String(Date.now() + 3000)); } catch {}
+      }
     } catch {}
   }, []);
   async function loginWithGoogle() {
     if (!Capacitor.isNativePlatform()) return;
+    setAuthenticating(true);
+    try { localStorage.setItem("calentrip:auth_grace_until", String(Date.now() + 5000)); } catch {}
     const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
     type GoogleAuthPlugin = {
       initialize: (opts?: { scopes?: string[]; serverClientId?: string; clientId?: string }) => Promise<void>;
@@ -44,6 +50,7 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem("calentrip:user:imageUrl", u?.imageUrl || "");
     } catch {}
     setUser(u);
+    setAuthenticating(false);
     try {
       const route = localStorage.getItem("calentrip:targetRoute") || "/subscription/checkout/";
       localStorage.removeItem("calentrip:targetRoute");
@@ -70,7 +77,7 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
       localStorage.removeItem("calentrip:user:imageUrl");
     } catch {}
   }
-  return <NativeAuthContext.Provider value={{ user, setUser, status, loginWithGoogle, logout }}>{children}</NativeAuthContext.Provider>;
+  return <NativeAuthContext.Provider value={{ user, setUser, status, authenticating, loginWithGoogle, logout }}>{children}</NativeAuthContext.Provider>;
 }
 
 export function useNativeAuth() {

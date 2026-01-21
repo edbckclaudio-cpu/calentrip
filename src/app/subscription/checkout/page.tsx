@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 export default function SubscriptionCheckoutPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { user: nativeUser, status: nativeStatus } = useNativeAuth();
+  const { user: nativeUser, status: nativeStatus, authenticating } = useNativeAuth();
   const { t } = useI18n();
   const { show } = useToast();
   const [price, setPrice] = useState<string | null>(null);
@@ -67,10 +67,14 @@ export default function SubscriptionCheckoutPage() {
           onClick={async () => {
             const isAndroid = Capacitor.isNativePlatform();
             if (isAndroid) {
+              if (authenticating) return;
               const hasUser = !!nativeUser;
               if (hasUser) { router.push("/profile"); return; }
-              if (status === "loading") {
-                await new Promise((r) => setTimeout(r, 3000));
+              let graceUntil = 0;
+              try { graceUntil = Number(localStorage.getItem("calentrip:auth_grace_until") || "0"); } catch {}
+              const now = Date.now();
+              if (graceUntil > now) {
+                await new Promise((r) => setTimeout(r, Math.min(3000, graceUntil - now)));
               } else {
                 await new Promise((r) => setTimeout(r, 3000));
               }
