@@ -9,6 +9,12 @@ export default function Home() {
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
+        const target = localStorage.getItem("calentrip:targetRoute");
+        if (target) {
+          localStorage.removeItem("calentrip:targetRoute");
+          window.location.href = target;
+          return;
+        }
         localStorage.removeItem("calentrip_trip_summary");
         localStorage.removeItem("calentrip:entertainment:records");
         localStorage.removeItem("calentrip:saved_calendar");

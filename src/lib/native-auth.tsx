@@ -30,6 +30,7 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
     const api = GoogleAuth as unknown as GoogleAuthPlugin;
     await api.initialize({ scopes: ["openid", "profile", "email"], serverClientId: "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com" });
     type GoogleAuthSignInResult = { email?: string; name?: string; imageUrl?: string; idToken?: string; accessToken?: string; authentication?: { idToken?: string; accessToken?: string } };
+    try { localStorage.setItem("calentrip:targetRoute", "/subscription/checkout/"); } catch {}
     const res: GoogleAuthSignInResult = await api.signIn();
     const auth = res.authentication || {};
     const idToken = res.idToken || auth.idToken;
@@ -43,13 +44,22 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem("calentrip:user:email", u?.email || "");
       localStorage.setItem("calentrip:user:imageUrl", u?.imageUrl || "");
     } catch {}
-    try { window.location.href = "/subscription/checkout/"; } catch {}
+    try {
+      const route = localStorage.getItem("calentrip:targetRoute") || "/subscription/checkout/";
+      localStorage.removeItem("calentrip:targetRoute");
+      window.location.href = route;
+    } catch {}
   }
   async function logout() {
     try {
-      const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-      const api = GoogleAuth as unknown as { signOut: () => Promise<void> };
-      await api.signOut();
+      if (Capacitor.isNativePlatform()) {
+        const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+        type GoogleAuthPlugin = { initialize: (opts?: { scopes?: string[]; serverClientId?: string; clientId?: string }) => Promise<void>; signOut: () => Promise<void> };
+        const api = GoogleAuth as unknown as GoogleAuthPlugin;
+        try { await api.initialize({ scopes: ["openid", "profile", "email"], serverClientId: "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com" }); } catch {}
+        const hasToken = typeof window !== "undefined" && (!!localStorage.getItem("calentrip:idToken") || !!localStorage.getItem("calentrip:accessToken"));
+        if (hasToken) { await api.signOut(); }
+      }
     } catch {}
     setUser(null);
     try {
