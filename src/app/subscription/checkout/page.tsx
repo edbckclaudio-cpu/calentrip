@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 export default function SubscriptionCheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { user: nativeUser } = useNativeAuth();
+  const { user: nativeUser, status: nativeStatus } = useNativeAuth();
   const { t } = useI18n();
   const { show } = useToast();
   const [price, setPrice] = useState<string | null>(null);
@@ -60,11 +60,31 @@ export default function SubscriptionCheckoutPage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-2">
-        <Button type="button" variant="outline" className="h-10 rounded-lg" onClick={() => {
-          const isAndroid = Capacitor.getPlatform() === "android";
-          const hasUser = isAndroid ? !!nativeUser : !!session?.user;
-          router.push(hasUser ? "/profile" : "/");
-        }}>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 rounded-lg"
+          onClick={async () => {
+            const isAndroid = Capacitor.isNativePlatform();
+            if (isAndroid) {
+              const hasUser = !!nativeUser;
+              if (hasUser) { router.push("/profile"); return; }
+              await new Promise((r) => setTimeout(r, 5000));
+              if (!nativeUser) {
+                try { console.log("CALENTRIP_DEBUG: Expulsando para a Home porque user é:", nativeUser, "e status é:", nativeStatus); } catch {}
+                router.push("/");
+              } else {
+                router.push("/profile");
+              }
+              return;
+            }
+            const hasUserWeb = !!session?.user;
+            if (!hasUserWeb) {
+              try { console.log("CALENTRIP_DEBUG: Expulsando para a Home porque user é:", session?.user, "e status é:", "web"); } catch {}
+            }
+            router.push(hasUserWeb ? "/profile" : "/");
+          }}
+        >
           Voltar
         </Button>
         <div>
