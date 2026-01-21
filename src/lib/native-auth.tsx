@@ -36,7 +36,6 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
     const idToken = res.idToken || auth.idToken;
     const accessToken = res.accessToken || auth.accessToken;
     const u: NativeUser = { email: res.email, name: res.name, imageUrl: res.imageUrl, idToken, accessToken };
-    setUser(u);
     try {
       localStorage.setItem("calentrip:idToken", idToken || "");
       localStorage.setItem("calentrip:accessToken", accessToken || "");
@@ -44,6 +43,7 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem("calentrip:user:email", u?.email || "");
       localStorage.setItem("calentrip:user:imageUrl", u?.imageUrl || "");
     } catch {}
+    setUser(u);
     try {
       const route = localStorage.getItem("calentrip:targetRoute") || "/subscription/checkout/";
       localStorage.removeItem("calentrip:targetRoute");

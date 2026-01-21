@@ -91,7 +91,7 @@ export default function ProfilePage() {
           type="button"
           className="h-12 w-64 bg-[var(--brand)] text-white font-semibold rounded-lg shadow-lg hover:brightness-95"
           onClick={() => {
-            try { window.location.href = "/"; } catch {}
+            try { console.log("CALENTRIP_DEBUG: Expulsando para a Home porque user é:", (Capacitor.isNativePlatform() ? nativeUser : session?.user), "e status é:", (Capacitor.isNativePlatform() ? nativeStatus : status)); window.location.href = "/"; } catch {}
           }}
         >
           Ir para Tela Inicial
