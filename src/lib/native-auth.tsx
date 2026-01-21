@@ -43,6 +43,7 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem("calentrip:user:email", u?.email || "");
       localStorage.setItem("calentrip:user:imageUrl", u?.imageUrl || "");
     } catch {}
+    try { window.location.href = "/subscription/checkout/"; } catch {}
   }
   async function logout() {
     try {
