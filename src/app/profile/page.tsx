@@ -190,10 +190,8 @@ export default function ProfilePage() {
                               ? "Disponível no app Android. Instale via Google Play."
                               : r?.error === "product" ? "Produto não encontrado no Google Play."
                               : r?.error === "purchase" ? "Compra cancelada ou falhou."
-                              : r?.error === "token" ? "Token de compra não recebido."
-                              : r?.error === "verify" ? "Falha ao verificar a compra."
-                              : r?.error === "ack" ? "Falha ao confirmar a compra."
                               : r?.error === "store" ? "Falha ao salvar assinatura."
+                              : r?.error === "network" ? "Falha de rede ao salvar assinatura."
                               : t("purchaseFail");
                             show(msg, { variant: "error" });
                           }
