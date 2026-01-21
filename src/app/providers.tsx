@@ -6,8 +6,10 @@ import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/ui/toast";
 import { NativeAuthProvider } from "@/lib/native-auth";
 import { SessionProvider } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Providers({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 0);
@@ -52,6 +54,15 @@ export default function Providers({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
   }, []);
+  useEffect(() => {
+    try {
+      const savedRoute = typeof window !== "undefined" ? localStorage.getItem("calentrip_backup_route") : null;
+      if (savedRoute) {
+        try { localStorage.removeItem("calentrip_backup_route"); } catch {}
+        router.replace(savedRoute);
+      }
+    } catch {}
+  }, [router]);
   if (!mounted) return null;
   const isAndroid = typeof window !== "undefined" && Capacitor.getPlatform() === "android";
   const content = (

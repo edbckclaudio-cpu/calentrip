@@ -36,7 +36,10 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
     const api = GoogleAuth as unknown as GoogleAuthPlugin;
     await api.initialize({ scopes: ["openid", "profile", "email"], serverClientId: "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com" });
     type GoogleAuthSignInResult = { email?: string; name?: string; imageUrl?: string; idToken?: string; accessToken?: string; authentication?: { idToken?: string; accessToken?: string } };
-    try { localStorage.setItem("calentrip:targetRoute", "/subscription/checkout/"); } catch {}
+    try {
+      localStorage.setItem("calentrip:targetRoute", "/subscription/checkout/");
+      localStorage.setItem("calentrip_backup_route", "/subscription/checkout/");
+    } catch {}
     const res: GoogleAuthSignInResult = await api.signIn();
     const auth = res.authentication || {};
     const idToken = res.idToken || auth.idToken;
