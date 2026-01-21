@@ -58,9 +58,9 @@ export function NativeAuthProvider({ children }: { children: React.ReactNode }) 
         const api = GoogleAuth as unknown as GoogleAuthPlugin;
         try { await api.initialize({ scopes: ["openid", "profile", "email"], serverClientId: "301052542782-d5qvmq3f1476ljo3aiu60cgl4il2dgmb.apps.googleusercontent.com" }); } catch {}
         const hasToken = typeof window !== "undefined" && (!!localStorage.getItem("calentrip:idToken") || !!localStorage.getItem("calentrip:accessToken"));
-        if (hasToken) { await api.signOut().catch(() => console.warn("Google SignOut ignorado")); }
+        if (hasToken) { await api.signOut().catch(() => {}); }
       }
-    } catch { console.warn("SignOut ignorado para evitar crash"); }
+    } catch { console.warn("GoogleAuth.signOut crash evitado."); }
     setUser(null);
     try {
       localStorage.removeItem("calentrip:idToken");
