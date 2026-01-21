@@ -240,11 +240,16 @@ export default function ProfilePage() {
             <div>{t("deleteDataDesc")}</div>
             <Button type="button" variant="outline" onClick={async () => {
               try {
-                const r = await fetch("/api/account/delete", { method: "POST" });
-                const js = await r.json();
-                if (js?.ok) show(t("deleteSuccess"), { variant: "success" });
-                else show(t("deleteFail"), { variant: "error" });
-              } catch { show(t("deleteError"), { variant: "error" }); }
+                if (Capacitor.isNativePlatform()) {
+                  await logout();
+                  setGoogleLogged(false);
+                  show(t("deleteSuccess"), { variant: "success" });
+                } else {
+                  await signOut();
+                }
+              } catch {
+                show(t("deleteError"), { variant: "error" });
+              }
             }}>{t("deleteDataButton")}</Button>
           </CardContent>
         </Card>
