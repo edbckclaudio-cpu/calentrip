@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/toast";
 
 export default function SubscriptionCheckoutPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { user: nativeUser, status: nativeStatus } = useNativeAuth();
   const { t } = useI18n();
   const { show } = useToast();
@@ -69,9 +69,13 @@ export default function SubscriptionCheckoutPage() {
             if (isAndroid) {
               const hasUser = !!nativeUser;
               if (hasUser) { router.push("/profile"); return; }
-              await new Promise((r) => setTimeout(r, 5000));
+              if (status === "loading") {
+                await new Promise((r) => setTimeout(r, 3000));
+              } else {
+                await new Promise((r) => setTimeout(r, 3000));
+              }
               if (!nativeUser) {
-                try { console.log("CALENTRIP_DEBUG: Expulsando para a Home porque user é:", nativeUser, "e status é:", nativeStatus); } catch {}
+                try { console.log("REDIRECIONAMENTO: Expulsando para Home. Motivo: User Null"); } catch {}
                 router.push("/");
               } else {
                 router.push("/profile");
@@ -80,7 +84,7 @@ export default function SubscriptionCheckoutPage() {
             }
             const hasUserWeb = !!session?.user;
             if (!hasUserWeb) {
-              try { console.log("CALENTRIP_DEBUG: Expulsando para a Home porque user é:", session?.user, "e status é:", "web"); } catch {}
+              try { console.log("REDIRECIONAMENTO: Expulsando para Home. Motivo: User Null"); } catch {}
             }
             router.push(hasUserWeb ? "/profile" : "/");
           }}
