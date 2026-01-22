@@ -96,9 +96,15 @@ export default function SubscriptionCheckoutPage() {
   useEffect(() => {
     const verifyBillingConnectivity = async () => {
       try {
+        const mod = await import("@/lib/billing");
         const { Purchases } = await import("@revenuecat/purchases-capacitor");
         try { await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" }); } catch {}
         console.log("🔍 DIAGNÓSTICO: Iniciando teste de conexão com Google Play...");
+        const ready = await mod.isBillingReady();
+        if (!ready) {
+          console.warn("⚠️ DIAGNÓSTICO: Billing não pronto. Verifique API key e produto.");
+          return;
+        }
         const offerings = await Purchases.getOfferings();
         const o = offerings as unknown as {
           current?: { availablePackages?: Array<{ product?: { identifier?: string; priceString?: string }; packageType?: string }> };
@@ -224,6 +230,10 @@ export default function SubscriptionCheckoutPage() {
                   className="h-9 rounded-lg text-xs"
                   onClick={async () => {
                     try {
+                      if (!Capacitor.isNativePlatform()) {
+                        console.warn("🔬 DIAGNÓSTICO: disponível apenas no app Android.");
+                        return;
+                      }
                       const mod = await import("@/lib/billing");
                       const pid = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01";
                       const env = mod.getBillingEnvStatus();

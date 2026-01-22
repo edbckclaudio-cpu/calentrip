@@ -125,6 +125,9 @@ export async function completePurchaseForTrip(tripId: string, userId?: string) {
 
 export async function getBillingDiagnostics(productId = (process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01")) {
   const cfg = configured;
+  if (Capacitor.getPlatform() !== "android") {
+    return { configured: false, products: [], lastError: { message: "Plataforma não-Android; diagnóstico só no app nativo.", code: -100 } };
+  }
   const ok = await ensureConfigured();
   let products: Array<{ identifier?: string; price?: string; title?: string }> = [];
   try {
