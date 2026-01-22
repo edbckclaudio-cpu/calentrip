@@ -3,6 +3,7 @@ import { Purchases } from "@revenuecat/purchases-capacitor";
 import { setGlobalPremium } from "./premium";
 
 type ProductInfo = { title?: string; price?: string };
+try { console.log("PLATFORM:", Capacitor.getPlatform()); } catch {}
 let configured = false;
 let lastError: { message?: string; code?: unknown; underlyingErrorMessage?: string } | null = null;
 function setLastError(e: unknown) {
