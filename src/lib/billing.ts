@@ -13,7 +13,14 @@ function setLastError(e: unknown) {
 async function ensureConfigured(appUserID?: string) {
   if (Capacitor.getPlatform() !== "android") return false;
   const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY || "";
-  if (!apiKey) { try { console.error("RevenueCat API key ausente"); } catch {} return false; }
+  let key = apiKey;
+  try {
+    if (!key && typeof window !== "undefined") {
+      const k = localStorage.getItem("calentrip:rc_api_key");
+      if (k) key = k;
+    }
+  } catch {}
+  if (!key) { try { console.error("RevenueCat API key ausente"); } catch {} return false; }
   if (configured) return true;
   try {
     try { await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" }); } catch {}
@@ -24,7 +31,7 @@ async function ensureConfigured(appUserID?: string) {
         uid = email || undefined;
       }
     } catch {}
-    await Purchases.configure({ apiKey, appUserID: uid });
+    await Purchases.configure({ apiKey: key, appUserID: uid });
     configured = true;
     return true;
   } catch (e) {
