@@ -17,6 +17,8 @@ export default function SubscriptionCheckoutPage() {
   const { show } = useToast();
   const [price, setPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [diagTaps, setDiagTaps] = useState(0);
+  const [showDiag, setShowDiag] = useState(false);
 
   const [isLoadingGate, setIsLoadingGate] = useState(true);
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function SubscriptionCheckoutPage() {
     const verifyBillingConnectivity = async () => {
       try {
         const { Purchases } = await import("@revenuecat/purchases-capacitor");
+        try { await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" }); } catch {}
         console.log("🔍 DIAGNÓSTICO: Iniciando teste de conexão com Google Play...");
         const offerings = await Purchases.getOfferings();
         const o = offerings as unknown as {
@@ -110,6 +113,16 @@ export default function SubscriptionCheckoutPage() {
           })));
         } else {
           console.warn("⚠️ ATENÇÃO: Conexão ok, mas nenhuma oferta (Offering) foi encontrada. Verifique se você criou uma 'Offering' e um 'Package' no dashboard do RevenueCat.");
+        }
+        const pid = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01";
+        console.log("🔎 DIAGNÓSTICO: Consultando produto direto via getProducts:", pid);
+        const gp = await (Purchases as unknown as { getProducts: (opts: { productIdentifiers: string[] }) => Promise<{ products?: Array<{ identifier?: string; priceString?: string }> }> }).getProducts({ productIdentifiers: [pid] });
+        const list = gp?.products || [];
+        if (list.length > 0) {
+          console.log("✅ PRODUTO ENCONTRADO via getProducts");
+          console.table(list.map((p) => ({ Identifier: p.identifier, Price: p.priceString })));
+        } else {
+          console.warn("⚠️ PRODUTO NÃO ENCONTRADO via getProducts");
         }
       } catch (e: unknown) {
         console.error("❌ ERRO DE CONEXÃO:");
@@ -166,6 +179,18 @@ export default function SubscriptionCheckoutPage() {
         </Button>
         <div>
           <h1 className="mb-1 text-2xl font-semibold text-[var(--brand)]">Assinatura</h1>
+          <button
+            type="button"
+            aria-label="Assinatura"
+            className="absolute opacity-0 w-28 h-8"
+            onClick={() => {
+              const n = diagTaps + 1;
+              setDiagTaps(n);
+              if (n >= 5) { setShowDiag(true); setDiagTaps(0); }
+              const id = window.setTimeout(() => setDiagTaps(0), 4000);
+              try { window.clearTimeout(id); } catch {}
+            }}
+          />
           <p className="text-sm text-zinc-600">Plano Premium mensal</p>
         </div>
       </div>
@@ -191,7 +216,34 @@ export default function SubscriptionCheckoutPage() {
               {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : null}
               {price ? `Finalizar Assinatura (${price}/mês)` : "Finalizar Assinatura"}
             </Button>
-            
+            {showDiag ? (
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-lg text-xs"
+                  onClick={async () => {
+                    try {
+                      const mod = await import("@/lib/billing");
+                      const pid = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01";
+                      const diag = await mod.getBillingDiagnostics(pid);
+                      console.log("🔬 DIAGNÓSTICO: configured =", diag.configured);
+                      console.log("🔬 DIAGNÓSTICO: products length =", diag.products.length);
+                      console.table((diag.products || []).map((p) => ({ Identifier: p.identifier, Title: p.title, Price: p.price })));
+                      if (diag.lastError) {
+                        console.error("🔬 DIAGNÓSTICO: lastError.message =", diag.lastError.message);
+                        console.error("🔬 DIAGNÓSTICO: lastError.code =", diag.lastError.code);
+                        if (diag.lastError.underlyingErrorMessage) console.error("🔬 DIAGNÓSTICO: lastError.underlyingErrorMessage =", diag.lastError.underlyingErrorMessage);
+                      }
+                    } catch (e) {
+                      console.error("Falha ao executar diagnóstico:", e);
+                    }
+                  }}
+                >
+                  Diagnóstico Billing
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>

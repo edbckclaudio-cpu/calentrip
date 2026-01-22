@@ -4,6 +4,11 @@ import { setGlobalPremium } from "./premium";
 
 type ProductInfo = { title?: string; price?: string };
 let configured = false;
+let lastError: { message?: string; code?: unknown; underlyingErrorMessage?: string } | null = null;
+function setLastError(e: unknown) {
+  const err = e as { message?: string; code?: unknown; underlyingErrorMessage?: string };
+  lastError = { message: err?.message, code: err?.code, underlyingErrorMessage: err?.underlyingErrorMessage };
+}
 
 async function ensureConfigured(appUserID?: string) {
   if (Capacitor.getPlatform() !== "android") return false;
@@ -11,11 +16,20 @@ async function ensureConfigured(appUserID?: string) {
   if (!apiKey) { try { console.error("RevenueCat API key ausente"); } catch {} return false; }
   if (configured) return true;
   try {
-    await Purchases.configure({ apiKey, appUserID });
+    try { await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" }); } catch {}
+    let uid = appUserID;
+    try {
+      if (!uid && typeof window !== "undefined") {
+        const email = localStorage.getItem("calentrip:user:email");
+        uid = email || undefined;
+      }
+    } catch {}
+    await Purchases.configure({ apiKey, appUserID: uid });
     configured = true;
     return true;
   } catch (e) {
     try { console.error("Purchases.configure error", e); } catch {}
+    setLastError(e);
     return false;
   }
 }
@@ -31,6 +45,7 @@ export async function isBillingReady() {
     return !!p;
   } catch (e) {
     try { console.error("Purchases.getProducts error", e); } catch {}
+    setLastError(e);
     return false;
   }
 }
@@ -46,6 +61,7 @@ export async function ensureProduct(productId = "premium_subscription_01") {
     return { found: true, title: p.title, price: p.price } as { found: boolean; title?: string; price?: string };
   } catch (e) {
     try { console.error("Purchases.getProducts error", e); } catch {}
+    setLastError(e);
     return null;
   }
 }
@@ -67,6 +83,7 @@ export async function purchaseTripPremium(productId = "premium_subscription_01")
     return pr?.customerInfo ? { code: 0 } : { code: -1 };
   } catch (e) {
     try { console.error("Purchases.purchaseStoreProduct error", e); } catch {}
+    setLastError(e);
     return { code: -1 };
   }
 }
@@ -97,4 +114,17 @@ export async function completePurchaseForTrip(tripId: string, userId?: string) {
   } catch {
     return { ok: false, error: "network" } as const;
   }
+}
+
+export async function getBillingDiagnostics(productId = (process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01")) {
+  const cfg = configured;
+  const ok = await ensureConfigured();
+  let products: Array<{ identifier?: string; price?: string; title?: string }> = [];
+  try {
+    const r = await (Purchases as unknown as { getProducts: (opts: { productIdentifiers: string[] }) => Promise<{ products?: Array<{ identifier?: string; price?: string; title?: string }> }> }).getProducts({ productIdentifiers: [productId] });
+    products = r?.products || [];
+  } catch (e) {
+    setLastError(e);
+  }
+  return { configured: cfg || ok, products, lastError };
 }
