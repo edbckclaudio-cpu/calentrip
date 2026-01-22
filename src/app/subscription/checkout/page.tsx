@@ -91,6 +91,38 @@ export default function SubscriptionCheckoutPage() {
       } catch {}
     })();
   }, []);
+  useEffect(() => {
+    const verifyBillingConnectivity = async () => {
+      try {
+        const { Purchases } = await import("@revenuecat/purchases-capacitor");
+        console.log("🔍 DIAGNÓSTICO: Iniciando teste de conexão com Google Play...");
+        const offerings = await Purchases.getOfferings();
+        const o = offerings as unknown as {
+          current?: { availablePackages?: Array<{ product?: { identifier?: string; priceString?: string }; packageType?: string }> };
+        };
+        const pkgs = o.current?.availablePackages || [];
+        if (pkgs.length > 0) {
+          console.log("✅ SUCESSO: Service Account e Produtos sincronizados!");
+          console.table(pkgs.map((p) => ({
+            Identifier: p.product?.identifier,
+            Price: p.product?.priceString,
+            Package: p.packageType,
+          })));
+        } else {
+          console.warn("⚠️ ATENÇÃO: Conexão ok, mas nenhuma oferta (Offering) foi encontrada. Verifique se você criou uma 'Offering' e um 'Package' no dashboard do RevenueCat.");
+        }
+      } catch (e: unknown) {
+        console.error("❌ ERRO DE CONEXÃO:");
+        const err = e as { message?: string; code?: string | number; underlyingErrorMessage?: string };
+        console.error("Mensagem:", err?.message);
+        console.error("Código:", err?.code);
+        if (err?.underlyingErrorMessage) console.error("Detalhe Nativo:", err?.underlyingErrorMessage);
+      }
+    };
+    if (initialized && !authenticating && Capacitor.isNativePlatform()) {
+      verifyBillingConnectivity();
+    }
+  }, [initialized, authenticating]);
 
   if (!initialized || isLoadingGate) return <Loading />;
 
