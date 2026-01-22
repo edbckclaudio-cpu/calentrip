@@ -2430,15 +2430,16 @@ export default function FinalCalendarPage() {
                         setGating(null);
                         show(t("purchaseSuccess"), { variant: "success" });
                       } else {
-                        const msg = r?.error === "billing"
+                        const err = (r as { error?: string })?.error;
+                        const msg = err === "billing"
                           ? "Disponível no app Android. Instale via Google Play."
-                          : r?.error === "product" ? "Produto não encontrado no Google Play."
-                          : r?.error === "purchase" ? "Compra cancelada ou falhou."
-                          : r?.error === "store" ? "Falha ao salvar assinatura."
-                          : r?.error === "network" ? "Falha de rede ao salvar assinatura."
+                          : err === "product" ? "Produto não encontrado no Google Play."
+                          : err === "purchase" ? "Compra cancelada ou falhou."
+                          : err === "store" ? "Falha ao salvar assinatura."
+                          : err === "network" ? "Falha de rede ao salvar assinatura."
                           : "Falha na compra";
                         show(msg, { variant: "error" });
-                        if (r?.error === "billing") { try { window.location.href = "/profile"; } catch {} }
+                        if (err === "billing") { try { window.location.href = "/profile"; } catch {} }
                       }
                     } catch {
                       show(t("purchaseError"), { variant: "error" });

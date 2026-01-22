@@ -557,6 +557,14 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     if (hintId != null) {
       try { dismiss(hintId); } catch {}
     }
+    try {
+      if (typeof window !== "undefined" && tripSearch) {
+        const s = JSON.stringify(tripSearch);
+        localStorage.setItem("calentrip:tripSearch", s);
+        try { sessionStorage.setItem("calentrip:tripSearch", s); } catch {}
+      }
+    } catch {}
+    try { if (typeof window !== "undefined") localStorage.setItem("calentrip_backup_route", "/accommodation/search"); } catch {}
     show(t("notesSavedRedirecting"), { variant: "success" });
     try { onProceed?.(); } catch {}
     try { router.push("/accommodation/search"); } catch {}
