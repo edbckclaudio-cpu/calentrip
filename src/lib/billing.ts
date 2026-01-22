@@ -112,16 +112,15 @@ export async function completePurchaseForTrip(tripId: string, userId?: string) {
   if (!product) return { ok: false, error: "product" } as const;
   const res = await purchaseTripPremium(productId);
   if (typeof res?.code === "number" && res.code !== 0) return { ok: false, error: "purchase" } as const;
-  try {
-    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
-    const store = await fetch("/api/entitlements/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tripId: "global", userId, expiresAt: expiry, orderId: null, source: "revenuecat" }) });
-    const stJs = await store.json();
-    if (!stJs?.ok) return { ok: false, error: "store" } as const;
-    setGlobalPremium(expiry);
-    return { ok: true } as const;
-  } catch {
-    return { ok: false, error: "network" } as const;
+  const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  setGlobalPremium(expiry);
+  if (Capacitor.getPlatform() !== "android") {
+    try {
+      const store = await fetch("/api/entitlements/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tripId: "global", userId, expiresAt: expiry, orderId: null, source: "revenuecat" }) });
+      await store.json();
+    } catch {}
   }
+  return { ok: true } as const;
 }
 
 export async function getBillingDiagnostics(productId = (process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01")) {
