@@ -135,3 +135,18 @@ export async function getBillingDiagnostics(productId = (process.env.NEXT_PUBLIC
   }
   return { configured: cfg || ok, products, lastError };
 }
+
+export function getBillingEnvStatus() {
+  const envKey = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY || "";
+  const productId = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || undefined;
+  let lsKey: string | undefined;
+  try {
+    if (typeof window !== "undefined") {
+      lsKey = localStorage.getItem("calentrip:rc_api_key") || undefined;
+    }
+  } catch {}
+  const source = envKey ? "env" : (lsKey ? "localStorage" : "none");
+  const key = envKey || lsKey || "";
+  const maskedKey = key ? `${key.slice(0, 6)}…${key.slice(-4)}` : undefined;
+  return { source, keyPresent: !!key, maskedKey, productId };
+}

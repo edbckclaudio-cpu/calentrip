@@ -226,6 +226,11 @@ export default function SubscriptionCheckoutPage() {
                     try {
                       const mod = await import("@/lib/billing");
                       const pid = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01";
+                      const env = mod.getBillingEnvStatus();
+                      console.log("🔬 DIAGNÓSTICO: env.source =", env.source);
+                      console.log("🔬 DIAGNÓSTICO: env.keyPresent =", env.keyPresent);
+                      if (env.maskedKey) console.log("🔬 DIAGNÓSTICO: env.maskedKey =", env.maskedKey);
+                      if (env.productId) console.log("🔬 DIAGNÓSTICO: env.productId =", env.productId);
                       const diag = await mod.getBillingDiagnostics(pid);
                       console.log("🔬 DIAGNÓSTICO: configured =", diag.configured);
                       console.log("🔬 DIAGNÓSTICO: products length =", diag.products.length);
