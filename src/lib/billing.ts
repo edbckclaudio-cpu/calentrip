@@ -1,6 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { setGlobalPremium } from "./premium";
+import { Preferences } from "@capacitor/preferences";
 
 type ProductInfo = { title?: string; price?: string };
 try { console.log("PLATFORM:", Capacitor.getPlatform()); } catch {}
@@ -20,6 +21,12 @@ async function ensureConfigured(appUserID?: string) {
       const k = localStorage.getItem("calentrip:rc_api_key");
       if (k) key = k;
     }
+    if (!key) {
+      try {
+        const kv = await Preferences.get({ key: "rc_api_key" });
+        if (kv?.value) key = kv.value;
+      } catch {}
+    }
   } catch {}
   if (!key) { try { console.error("RevenueCat API key ausente"); } catch {} return false; }
   if (configured) return true;
@@ -33,6 +40,9 @@ async function ensureConfigured(appUserID?: string) {
       }
     } catch {}
     await Purchases.configure({ apiKey: key, appUserID: uid });
+    try {
+      await Preferences.set({ key: "rc_api_key", value: key });
+    } catch {}
     configured = true;
     return true;
   } catch (e) {
@@ -152,4 +162,18 @@ export function getBillingEnvStatus() {
   const key = envKey || lsKey || "";
   const maskedKey = key ? `${key.slice(0, 6)}…${key.slice(-4)}` : undefined;
   return { source, keyPresent: !!key, maskedKey, productId };
+}
+
+export async function setRevenueCatApiKey(k: string) {
+  if (!k) return false;
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("calentrip:rc_api_key", k);
+    }
+  } catch {}
+  try {
+    await Preferences.set({ key: "rc_api_key", value: k });
+  } catch {}
+  configured = false;
+  return true;
 }

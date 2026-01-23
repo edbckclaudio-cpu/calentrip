@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
+import { Input } from "@/components/ui/input";
 
 export default function SubscriptionCheckoutPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function SubscriptionCheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [diagTaps, setDiagTaps] = useState(0);
   const [showDiag, setShowDiag] = useState(false);
+  const [rcKey, setRcKey] = useState("");
 
   const [isLoadingGate, setIsLoadingGate] = useState(true);
   useEffect(() => {
@@ -258,6 +260,39 @@ export default function SubscriptionCheckoutPage() {
                 >
                   Diagnóstico Billing
                 </Button>
+                <div className="mt-2 grid grid-cols-1 gap-2">
+                  <Input
+                    placeholder="RevenueCat API Key"
+                    value={rcKey}
+                    onChange={(e) => setRcKey(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 rounded-lg text-xs"
+                    onClick={async () => {
+                      try {
+                        if (!Capacitor.isNativePlatform()) return;
+                        const mod = await import("@/lib/billing");
+                        const ok = await mod.setRevenueCatApiKey(rcKey.trim());
+                        if (ok) {
+                          show("API Key salva. Reiniciando diagnóstico…", { variant: "success" });
+                          const { Purchases } = await import("@revenuecat/purchases-capacitor");
+                          try { await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" }); } catch {}
+                          const ready = await mod.isBillingReady();
+                          console.log("🔬 DIAGNÓSTICO: ready after set =", ready);
+                        } else {
+                          show("Falha ao salvar API Key", { variant: "error" });
+                        }
+                      } catch {
+                        show("Erro ao salvar API Key", { variant: "error" });
+                      }
+                    }}
+                  >
+                    Salvar API Key
+                  </Button>
+                </div>
               </div>
             ) : null}
           </CardContent>
