@@ -65,7 +65,7 @@ export default function AccommodationSearchPage() {
     try { return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"; } catch { return false; }
   }, []);
   const ceRef = useRef<HTMLDivElement | null>(null);
-  const saveDebounceRef = useRef<number | null>(null);
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
