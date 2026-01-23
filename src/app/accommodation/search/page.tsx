@@ -903,9 +903,14 @@ export default function AccommodationSearchPage() {
                 <div className="mt-3">
                   <label className="mb-1 block text-sm">{t("stayAddressLabel")}</label>
                   <Input
+                    type="text"
+                    inputMode="text"
+                    enterKeyHint="done"
+                    style={{ touchAction: "manipulation" }}
                     placeholder={t("stayAddressPlaceholder")}
                     value={cities[cityDetailIdx!]?.address || ""}
                     className={guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse" : undefined}
+                    onFocus={() => { try { console.log("[ACCOM_FLOW] focus address input"); } catch {} }}
                     onChange={(e) => {
                       const v = e.target.value;
                       setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
