@@ -8,6 +8,7 @@ import { CalendarInput } from "@/components/ui/calendar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
+import { Capacitor } from "@capacitor/core";
  
 import { useToast } from "@/components/ui/toast";
 import { getSavedTrips, getRefAttachments, getTripEvents, saveCalendarEvents } from "@/lib/trips-db";
@@ -59,6 +60,10 @@ export default function AccommodationSearchPage() {
   const [showTransportDocsIdx, setShowTransportDocsIdx] = useState<number | null>(null);
   const [transportDocsList, setTransportDocsList] = useState<Record<number, Array<{ name: string; size: number }>>>({});
   
+  
+  const isAndroidNative = useMemo(() => {
+    try { return Capacitor.isNativePlatform && Capacitor.getPlatform() === "android"; } catch { return false; }
+  }, []);
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
@@ -902,26 +907,48 @@ export default function AccommodationSearchPage() {
                 </ul>
                 <div className="mt-3">
                   <label className="mb-1 block text-sm">{t("stayAddressLabel")}</label>
-                  <input
-                    type="text"
-                    inputMode="text"
-                    enterKeyHint="done"
-                    name="stay-address"
-                    autoComplete="street-address"
-                    spellCheck={false}
-                    style={{ touchAction: "manipulation" }}
-                    placeholder={t("stayAddressPlaceholder")}
-                    defaultValue={cities[cityDetailIdx!]?.address || ""}
-                    autoFocus
-                    key={`addr-${cityDetailIdx}`}
-                    className={(guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse " : "") + "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"}
-                    onFocus={() => { try { console.log("[ACCOM_FLOW] focus address input"); } catch {} }}
-                    onInput={(e) => {
-                      const v = (e.target as HTMLInputElement).value;
-                      setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
-                      if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
-                    }}
-                  />
+                  {isAndroidNative ? (
+                    <div
+                      role="textbox"
+                      aria-multiline="false"
+                      contentEditable
+                      suppressContentEditableWarning
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      key={`addr-ce-${cityDetailIdx}`}
+                      className={(guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse " : "") + "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"}
+                      style={{ touchAction: "manipulation", transform: "translateZ(0)", willChange: "transform" }}
+                      onInput={(e) => {
+                        const v = (e.currentTarget.textContent || "").trim();
+                        setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
+                        if (guideIdx === cityDetailIdx && v) setGuideStep("check");
+                      }}
+                    >
+                      {cities[cityDetailIdx!]?.address || ""}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      inputMode="text"
+                      enterKeyHint="done"
+                      name="stay-address"
+                      autoComplete="street-address"
+                      spellCheck={false}
+                      style={{ touchAction: "manipulation", transform: "translateZ(0)", willChange: "transform" }}
+                      placeholder={t("stayAddressPlaceholder")}
+                      defaultValue={cities[cityDetailIdx!]?.address || ""}
+                      autoFocus
+                      key={`addr-${cityDetailIdx}`}
+                      className={(guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse " : "") + "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"}
+                      onFocus={() => { try { console.log("[ACCOM_FLOW] focus address input"); } catch {} }}
+                      onInput={(e) => {
+                        const v = (e.target as HTMLInputElement).value;
+                        setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
+                        if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
+                      }}
+                    />
+                  )}
                   <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-300 dark:bg-amber-900/20 dark:text-amber-200">
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-amber-100">
