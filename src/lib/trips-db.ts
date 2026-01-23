@@ -57,11 +57,52 @@ let _conn: Conn | null = null;
 let _ready = false;
 let _useFallback = false;
 const _timeoutMs = 3000;
+let _connCreated = false;
+let _dbQueue: Promise<unknown> = Promise.resolve();
+
 function _withTimeout<T>(p: Promise<T>, ms = _timeoutMs): Promise<T> {
   return Promise.race([
     p,
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
   ]);
+}
+
+async function ensureNativeConnection() {
+  try {
+    if (_connCreated) return;
+    if (!_CapacitorSQLite) {
+      try {
+        const mod = await import("@capacitor-community/sqlite");
+        const candidate = (mod as unknown as { CapacitorSQLite?: CapacitorSQLiteAdapter }).CapacitorSQLite ?? (mod as unknown as CapacitorSQLiteAdapter);
+        _CapacitorSQLite = candidate;
+      } catch {}
+    }
+    const anySql = _CapacitorSQLite as CapacitorSQLiteAdapter | null;
+    if (anySql && typeof anySql.createConnection === "function") {
+      try {
+        await _withTimeout(anySql.createConnection!({ database: _dbName, version: 1, encrypted: false, mode: "no-encryption" }));
+        _connCreated = true;
+      } catch {
+        _connCreated = false;
+      }
+    }
+  } catch {
+    _connCreated = false;
+  }
+}
+
+async function runDb<T>(fn: (db: { execute: (sql: string) => Promise<void>; run: (sql: string, params?: unknown[]) => Promise<void>; query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>; close: () => Promise<void> }) => Promise<T>): Promise<T> {
+  const task = _dbQueue.then(async () => {
+    const conn = await getConnection();
+    const db = await conn!.open(_dbName, false, "no-encryption", 1);
+    try {
+      return await fn(db);
+    } finally {
+      try { await db.close(); } catch {}
+    }
+  });
+  _dbQueue = task.then(() => undefined, () => undefined);
+  return await task as T;
 }
 
 function makeMockPlugin(): CapacitorSQLiteAdapter {
@@ -104,6 +145,7 @@ async function getConnection(): Promise<Conn | null> {
     const adapter: Conn = {
       open: async (db, encrypted = false, mode = "no-encryption", version = 1) => {
         try {
+          await ensureNativeConnection();
           const handle = await _withTimeout(anySql.open({ database: db, version, encrypted, mode }));
           return handle as unknown as {
             execute: (sql: string) => Promise<void>;
@@ -153,8 +195,8 @@ export async function initDatabase() {
     } catch {}
     const conn = await getConnection();
     if (!conn) { _ready = true; return; }
-    const db = await conn.open(_dbName, false, "no-encryption", 1);
-    await db.execute(`
+    await runDb(async (db) => {
+      await db.execute(`
     CREATE TABLE IF NOT EXISTS trips (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
@@ -166,7 +208,7 @@ export async function initDatabase() {
       savedAt INTEGER
     );
   `);
-    await db.execute(`
+      await db.execute(`
     CREATE TABLE IF NOT EXISTS events (
       event_id INTEGER PRIMARY KEY AUTOINCREMENT,
       trip_id TEXT NOT NULL,
@@ -179,7 +221,7 @@ export async function initDatabase() {
       FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
     );
   `);
-    await db.execute(`
+      await db.execute(`
     CREATE TABLE IF NOT EXISTS attachments (
       att_id INTEGER PRIMARY KEY AUTOINCREMENT,
       trip_id TEXT NOT NULL,
@@ -191,9 +233,10 @@ export async function initDatabase() {
       FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
     );
   `);
-    try { await db.execute(`ALTER TABLE attachments ADD COLUMN category TEXT`); } catch {}
-    try { await db.execute(`ALTER TABLE attachments ADD COLUMN ref TEXT`); } catch {}
-    await db.close();
+      try { await db.execute(`ALTER TABLE attachments ADD COLUMN category TEXT`); } catch {}
+      try { await db.execute(`ALTER TABLE attachments ADD COLUMN ref TEXT`); } catch {}
+      return;
+    });
     _ready = true;
   } catch (e) {
     try { console.error("SQLite init failed", e); } catch {}
@@ -225,37 +268,38 @@ export async function migrateFromLocalStorage() {
       if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
       return;
     }
-    const db = await conn.open(_dbName, false, "no-encryption", 1);
-    for (const t of arr) {
-      const flightNotes = JSON.stringify(t.flightNotes || []);
-      const reached = t.reachedFinalCalendar ? 1 : 0;
-      const savedAt = t.savedAt ?? Date.now();
-      await db.run(
-        "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [t.id, t.title, t.date, t.passengers, flightNotes, reached, t.savedCalendarName || null, savedAt]
-      );
-      const evs = (t as unknown as { savedEvents?: EventItem[] }).savedEvents || [];
-      if (Array.isArray(evs) && evs.length) {
-        await db.run("DELETE FROM events WHERE trip_id = ?", [t.id]);
-        for (const e of evs) {
-          await db.run(
-            "INSERT INTO events (trip_id, name, label, date, time, address, type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [t.id, e.name || e.label || "Evento", e.label || null, e.date, e.time || null, e.address || null, e.type || null]
-          );
+    await runDb(async (db) => {
+      for (const t of arr) {
+        const flightNotes = JSON.stringify(t.flightNotes || []);
+        const reached = t.reachedFinalCalendar ? 1 : 0;
+        const savedAt = t.savedAt ?? Date.now();
+        await db.run(
+          "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [t.id, t.title, t.date, t.passengers, flightNotes, reached, t.savedCalendarName || null, savedAt]
+        );
+        const evs = (t as unknown as { savedEvents?: EventItem[] }).savedEvents || [];
+        if (Array.isArray(evs) && evs.length) {
+          await db.run("DELETE FROM events WHERE trip_id = ?", [t.id]);
+          for (const e of evs) {
+            await db.run(
+              "INSERT INTO events (trip_id, name, label, date, time, address, type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+              [t.id, e.name || e.label || "Evento", e.label || null, e.date, e.time || null, e.address || null, e.type || null]
+            );
+          }
+        }
+        const atts = (t as unknown as { attachments?: Array<{ leg: "outbound" | "inbound"; name: string; type: string; size: number; id?: string }> }).attachments || [];
+        if (Array.isArray(atts) && atts.length) {
+          await db.run("DELETE FROM attachments WHERE trip_id = ?", [t.id]);
+          for (const a of atts) {
+            await db.run(
+              "INSERT INTO attachments (trip_id, leg, name, type, size, file_id) VALUES (?, ?, ?, ?, ?, ?)",
+              [t.id, a.leg, a.name, a.type, a.size, a.id || ""]
+            );
+          }
         }
       }
-      const atts = (t as unknown as { attachments?: Array<{ leg: "outbound" | "inbound"; name: string; type: string; size: number; id?: string }> }).attachments || [];
-      if (Array.isArray(atts) && atts.length) {
-        await db.run("DELETE FROM attachments WHERE trip_id = ?", [t.id]);
-        for (const a of atts) {
-          await db.run(
-            "INSERT INTO attachments (trip_id, leg, name, type, size, file_id) VALUES (?, ?, ?, ?, ?, ?)",
-            [t.id, a.leg, a.name, a.type, a.size, a.id || ""]
-          );
-        }
-      }
-    }
-    await db.close();
+      return;
+    });
     if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
   } catch {
     try { if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" }); } catch {}
@@ -274,12 +318,12 @@ export async function addTrip(trip: TripItem) {
     return;
   }
   try {
-    const db = await conn.open(_dbName, false, "no-encryption", 1);
-    await db.run(
-      "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [trip.id, trip.title, trip.date, trip.passengers, JSON.stringify(trip.flightNotes || []), trip.reachedFinalCalendar ? 1 : 0, trip.savedCalendarName || null, Date.now()]
-    );
-    await db.close();
+    await runDb(async (db) => {
+      await db.run(
+        "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [trip.id, trip.title, trip.date, trip.passengers, JSON.stringify(trip.flightNotes || []), trip.reachedFinalCalendar ? 1 : 0, trip.savedCalendarName || null, Date.now()]
+      );
+    });
   } catch {
     _useFallback = true;
     try {
@@ -316,10 +360,9 @@ export async function updateTrip(id: string, data: Partial<TripItem>) {
   if (data.savedAt !== undefined) { fields.push("savedAt = ?"); values.push(data.savedAt); }
   if (!fields.length) return;
   const sql = `UPDATE trips SET ${fields.join(", ")} WHERE id = ?`;
-  const conn2 = await getConnection();
-  const db = await conn2!.open(_dbName, false, "no-encryption", 1);
-  await db.run(sql, [...values, id]);
-  await db.close();
+  await runDb(async (db) => {
+    await db.run(sql, [...values, id]);
+  });
 }
 
 export async function saveCalendarEvents(tripId: string, events: EventItem[]) {
@@ -337,15 +380,15 @@ export async function saveCalendarEvents(tripId: string, events: EventItem[]) {
     } catch {}
     return;
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  await db.run("DELETE FROM events WHERE trip_id = ?", [tripId]);
-  for (const e of events) {
-    await db.run(
-      "INSERT INTO events (trip_id, name, label, date, time, address, type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [tripId, e.name || e.label || "Evento", e.label || null, e.date, e.time || null, e.address || null, e.type || null]
-    );
-  }
-  await db.close();
+  await runDb(async (db) => {
+    await db.run("DELETE FROM events WHERE trip_id = ?", [tripId]);
+    for (const e of events) {
+      await db.run(
+        "INSERT INTO events (trip_id, name, label, date, time, address, type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [tripId, e.name || e.label || "Evento", e.label || null, e.date, e.time || null, e.address || null, e.type || null]
+      );
+    }
+  });
 }
 
 export async function getSavedTrips(): Promise<TripItem[]> {
@@ -357,9 +400,9 @@ export async function getSavedTrips(): Promise<TripItem[]> {
       return [...list].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     } catch { return []; }
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  const res = await db.query("SELECT id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt FROM trips ORDER BY date DESC");
-  await db.close();
+  const res = await runDb(async (db) => {
+    return await db.query("SELECT id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt FROM trips ORDER BY date DESC");
+  });
   const out: TripItem[] = [];
   const rows = (res?.values || []) as unknown[][];
   for (const r of rows) {
@@ -381,9 +424,9 @@ export async function getTripEvents(tripId: string): Promise<EventItem[]> {
       return evs;
     } catch { return []; }
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  const res = await db.query("SELECT name, label, date, time, address, type FROM events WHERE trip_id = ? ORDER BY date ASC, time ASC", [tripId]);
-  await db.close();
+  const res = await runDb(async (db) => {
+    return await db.query("SELECT name, label, date, time, address, type FROM events WHERE trip_id = ? ORDER BY date ASC, time ASC", [tripId]);
+  });
   const out: EventItem[] = [];
   const rows = (res?.values || []) as unknown[][];
   for (const r of rows) {
@@ -404,11 +447,11 @@ export async function removeTrip(id: string) {
     } catch {}
     return;
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  await db.run("DELETE FROM events WHERE trip_id = ?", [id]);
-  await db.run("DELETE FROM attachments WHERE trip_id = ?", [id]);
-  await db.run("DELETE FROM trips WHERE id = ?", [id]);
-  await db.close();
+  await runDb(async (db) => {
+    await db.run("DELETE FROM events WHERE trip_id = ?", [id]);
+    await db.run("DELETE FROM attachments WHERE trip_id = ?", [id]);
+    await db.run("DELETE FROM trips WHERE id = ?", [id]);
+  });
 }
 
 export async function saveTripAttachments(tripId: string, atts: Array<{ leg: "outbound" | "inbound"; name: string; type: string; size: number; id: string }>) {
@@ -426,15 +469,15 @@ export async function saveTripAttachments(tripId: string, atts: Array<{ leg: "ou
     } catch {}
     return;
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  await db.run("DELETE FROM attachments WHERE trip_id = ?", [tripId]);
-  for (const a of atts) {
-    await db.run(
-      "INSERT INTO attachments (trip_id, leg, name, type, size, file_id) VALUES (?, ?, ?, ?, ?, ?)",
-      [tripId, a.leg, a.name, a.type, a.size, a.id]
-    );
-  }
-  await db.close();
+  await runDb(async (db) => {
+    await db.run("DELETE FROM attachments WHERE trip_id = ?", [tripId]);
+    for (const a of atts) {
+      await db.run(
+        "INSERT INTO attachments (trip_id, leg, name, type, size, file_id) VALUES (?, ?, ?, ?, ?, ?)",
+        [tripId, a.leg, a.name, a.type, a.size, a.id]
+      );
+    }
+  });
 }
 
 export async function saveRefAttachments(tripId: string, category: string, ref: string, atts: Array<{ name: string; type: string; size: number; id: string }>) {
@@ -454,15 +497,15 @@ export async function saveRefAttachments(tripId: string, category: string, ref: 
     } catch {}
     return;
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  // Do not delete existing attachments for this trip/ref; append
-  for (const a of atts) {
-    await db.run(
-      "INSERT INTO attachments (trip_id, leg, name, type, size, file_id, category, ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [tripId, category, a.name, a.type, a.size, a.id, category, ref]
-    );
-  }
-  await db.close();
+  await runDb(async (db) => {
+    // Do not delete existing attachments for this trip/ref; append
+    for (const a of atts) {
+      await db.run(
+        "INSERT INTO attachments (trip_id, leg, name, type, size, file_id, category, ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [tripId, category, a.name, a.type, a.size, a.id, category, ref]
+      );
+    }
+  });
 }
 
 export async function getRefAttachments(tripId: string, category?: string, ref?: string): Promise<Array<{ name: string; type: string; size: number; id: string }>> {
@@ -477,13 +520,13 @@ export async function getRefAttachments(tripId: string, category?: string, ref?:
       return filtered.map((a) => ({ name: a.name, type: a.type, size: a.size, id: a.id || "" }));
     } catch { return []; }
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  let sql = "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ?";
-  const params: unknown[] = [tripId];
-  if (category) { sql += " AND category = ?"; params.push(category); }
-  if (ref) { sql += " AND ref = ?"; params.push(ref); }
-  const res = await db.query(sql, params);
-  await db.close();
+  const res = await runDb(async (db) => {
+    let sql = "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ?";
+    const params: unknown[] = [tripId];
+    if (category) { sql += " AND category = ?"; params.push(category); }
+    if (ref) { sql += " AND ref = ?"; params.push(ref); }
+    return await db.query(sql, params);
+  });
   const rows = (res?.values || []) as unknown[][];
   return rows.map((r) => {
     const [name, type, size, file_id] = r as [string, string, number, string];
@@ -502,10 +545,10 @@ export async function getTripAttachments(tripId: string, leg?: "outbound" | "inb
       return leg ? out.filter((a, idx) => ((raw[idx]?.leg) === leg)) : out;
     } catch { return []; }
   }
-  const db = await conn.open(_dbName, false, "no-encryption", 1);
-  const sql = leg ? "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ? AND leg = ?" : "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ?";
-  const res = await db.query(sql, leg ? [tripId, leg] : [tripId]);
-  await db.close();
+  const res = await runDb(async (db) => {
+    const sql = leg ? "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ? AND leg = ?" : "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ?";
+    return await db.query(sql, leg ? [tripId, leg] : [tripId]);
+  });
   const rows = (res?.values || []) as unknown[][];
   return rows.map((r) => {
     const [name, type, size, file_id] = r as [string, string, number, string];
