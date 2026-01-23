@@ -66,6 +66,8 @@ export default function AccommodationSearchPage() {
   }, []);
   const ceRef = useRef<HTMLDivElement | null>(null);
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [addressDraft, setAddressDraft] = useState<Record<number, string>>({});
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
@@ -419,6 +421,7 @@ export default function AccommodationSearchPage() {
       const payload = { cities };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
     } catch {}
+    if (isEditingAddress) return;
     try { if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current); } catch {}
     saveDebounceRef.current = (typeof window !== "undefined" ? window.setTimeout : setTimeout)(async () => {
       try { console.log("[ACCOM_DB] effect start", { citiesCount: cities.length }); } catch {}
@@ -486,7 +489,7 @@ export default function AccommodationSearchPage() {
       } catch {}
       try { console.log("[ACCOM_DB] effect end"); } catch {}
     }, 700);
-  }, [cities, t]);
+  }, [cities, t, isEditingAddress]);
 
   useEffect(() => {
     try {
@@ -925,6 +928,7 @@ export default function AccommodationSearchPage() {
                       style={{ touchAction: "manipulation", transform: "translateZ(0)", willChange: "transform" }}
                       onFocus={() => {
                         try {
+                          setIsEditingAddress(true);
                           const cur = cities[cityDetailIdx!]?.address || "";
                           if (ceRef.current && !ceRef.current.textContent) {
                             ceRef.current.textContent = cur;
@@ -932,9 +936,16 @@ export default function AccommodationSearchPage() {
                         } catch {}
                       }}
                       onInput={(e) => {
-                        const v = (e.currentTarget.textContent || "").trim();
-                        setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
-                        if (guideIdx === cityDetailIdx && v) setGuideStep("check");
+                        const v = (e.currentTarget.textContent || "");
+                        setAddressDraft((prev) => ({ ...prev, [cityDetailIdx!]: v }));
+                        if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
+                      }}
+                      onBlur={() => {
+                        try {
+                          const v = (ceRef.current?.textContent || "").trim();
+                          setIsEditingAddress(false);
+                          setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
+                        } catch {}
                       }}
                     />
                   ) : (
@@ -947,15 +958,22 @@ export default function AccommodationSearchPage() {
                       spellCheck={false}
                       style={{ touchAction: "manipulation", transform: "translateZ(0)", willChange: "transform" }}
                       placeholder={t("stayAddressPlaceholder")}
-                      defaultValue={cities[cityDetailIdx!]?.address || ""}
+                      value={addressDraft[cityDetailIdx!] ?? (cities[cityDetailIdx!]?.address || "")}
                       autoFocus
                       key={`addr-${cityDetailIdx}`}
                       className={(guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse " : "") + "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"}
-                      onFocus={() => { try { console.log("[ACCOM_FLOW] focus address input"); } catch {} }}
+                      onFocus={() => { try { console.log("[ACCOM_FLOW] focus address input"); setIsEditingAddress(true); } catch {} }}
                       onInput={(e) => {
                         const v = (e.target as HTMLInputElement).value;
-                        setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
+                        setAddressDraft((prev) => ({ ...prev, [cityDetailIdx!]: v }));
                         if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
+                      }}
+                      onBlur={(e) => {
+                        try {
+                          const v = e.currentTarget.value.trim();
+                          setIsEditingAddress(false);
+                          setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
+                        } catch {}
                       }}
                     />
                   )}
