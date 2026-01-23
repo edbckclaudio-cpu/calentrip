@@ -417,6 +417,8 @@ export default function AccommodationSearchPage() {
           }
         } catch {}
         if (!cur) return;
+        const ready = cities.some((c) => Boolean(c.address) || Boolean(c.checked) || Boolean(c.transportToNext));
+        if (!ready) return;
         const existing = await getTripEvents(cur.id);
         const keep = (existing || []).filter((e) => e.type !== "stay" && e.type !== "transport");
         const next = [...keep];
