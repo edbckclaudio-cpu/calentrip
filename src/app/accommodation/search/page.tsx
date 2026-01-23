@@ -62,7 +62,7 @@ export default function AccommodationSearchPage() {
   
   
   const isAndroidNative = useMemo(() => {
-    try { return Capacitor.isNativePlatform && Capacitor.getPlatform() === "android"; } catch { return false; }
+    try { return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"; } catch { return false; }
   }, []);
   
   const summaryComplete = useMemo(() => {
