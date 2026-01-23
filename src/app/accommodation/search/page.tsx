@@ -186,6 +186,21 @@ export default function AccommodationSearchPage() {
   })();
   
 
+  function handleSearch() {
+    try { console.log("[ACCOM_FLOW] handleSearch start", { city, initialCity, dates }); } catch {}
+    const chosen = city || initialCity;
+    if (!chosen) { showToast(t("defineCityError")); return; }
+    try {
+      setCityDetailIdx(0);
+      setGuideIdx(0);
+      setGuideStep("address");
+      setSameSearchHighlight(false);
+      showToast(t("selectAccommodation"));
+      console.log("[ACCOM_FLOW] dialog open cityDetailIdx=0");
+    } catch {}
+    setCities([{ name: chosen, checkin: dates.checkin || "", checkout: dates.checkout || "" }]);
+    try { console.log("[ACCOM_FLOW] handleSearch end"); } catch {}
+  }
   
 
 
@@ -398,6 +413,7 @@ export default function AccommodationSearchPage() {
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
     } catch {}
     (async () => {
+      try { console.log("[ACCOM_DB] effect start", { citiesCount: cities.length }); } catch {}
       try {
         if (!cities.length) return;
         const trips = await getSavedTrips();
@@ -453,12 +469,14 @@ export default function AccommodationSearchPage() {
           seen.add(key);
           return true;
         });
+        try { console.log("[ACCOM_DB] saving calendar events", { eventsCount: merged.length }); } catch {}
         await saveCalendarEvents(cur.id, merged);
         try {
           const payload = { name: cur.savedCalendarName || "", events: merged };
           if (typeof window !== "undefined") localStorage.setItem("calentrip:saved_calendar", JSON.stringify(payload));
         } catch {}
       } catch {}
+      try { console.log("[ACCOM_DB] effect end"); } catch {}
     })();
   }, [cities, t]);
 
@@ -545,14 +563,8 @@ export default function AccommodationSearchPage() {
                 />
                 <div>
                   <Button type="button" className={(sameSearchHighlight ? "ring-4 ring-amber-500 animate-pulse " : "") + "w-full sm:w-auto"} onClick={() => {
-                    const chosen = city || initialCity;
-                    if (!chosen) { showToast(t("defineCityError")); return; }
-                    setCities([{ name: chosen, checkin: dates.checkin || "", checkout: dates.checkout || "" }]);
-                    setCityDetailIdx(0);
-                    setGuideIdx(0);
-                    setGuideStep("address");
-                    setSameSearchHighlight(false);
-                    showToast(t("selectAccommodation"));
+                    try { console.log("[ACCOM_FLOW] click searchAccommodationButton", { city, initialCity, dates }); } catch {}
+                    setTimeout(() => { try { handleSearch(); } catch {} }, 0);
                   }}>{t("searchAccommodationButton")}</Button>
                 </div>
                 

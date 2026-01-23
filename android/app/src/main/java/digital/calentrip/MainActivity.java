@@ -3,6 +3,7 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.os.Build;
 import android.webkit.WebView;
+import android.util.Log;
 import com.getcapacitor.BridgeActivity;
 import com.codetrixstudio.capacitor.GoogleAuth.GoogleAuth;
 
@@ -12,6 +13,7 @@ public class MainActivity extends BridgeActivity {
     super.onCreate(savedInstanceState);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
       WebView.setWebContentsDebuggingEnabled(true);
+      Log.d("CalenTrip", "WebView debugging enabled (KITKAT+)");
     }
     try {
       registerPlugin(GoogleAuth.class);
