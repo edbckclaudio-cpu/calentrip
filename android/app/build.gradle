@@ -19,7 +19,7 @@ android {
         applicationId "digital.calentrip.android"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 212
+        versionCode 213
         versionName "1.3.28"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

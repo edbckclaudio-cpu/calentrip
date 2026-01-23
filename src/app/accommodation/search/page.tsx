@@ -69,6 +69,8 @@ export default function AccommodationSearchPage() {
   const [addressDraft, setAddressDraft] = useState<Record<number, string>>({});
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const mountedRef = useRef(false);
+  const addressInputRef = useRef<HTMLInputElement | null>(null);
+  const addressTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
@@ -160,6 +162,20 @@ export default function AccommodationSearchPage() {
 
   
 
+  useEffect(() => {
+    try {
+      if (cityDetailIdx === null) return;
+      const el = isAndroidNative ? addressTextareaRef.current : addressInputRef.current;
+      if (el) {
+        el.focus();
+        setTimeout(() => {
+          try {
+            el.focus();
+          } catch {}
+        }, 0);
+      }
+    } catch {}
+  }, [cityDetailIdx, isAndroidNative]);
   const arrivalDate = useMemo(() => {
     if (!tripSearch) return "";
     return tripSearch.mode === "same" ? (tripSearch.departDate ?? "") : (tripSearch.outbound.date ?? "");
@@ -921,9 +937,11 @@ export default function AccommodationSearchPage() {
                   <label className="mb-1 block text-sm">{t("stayAddressLabel")}</label>
                   {isAndroidNative ? (
                     <textarea
+                      ref={addressTextareaRef}
                       rows={1}
                       inputMode="text"
                       enterKeyHint="done"
+                      autoFocus
                       name="stay-address"
                       autoComplete="off"
                       data-1password-ignore="true"
@@ -950,6 +968,7 @@ export default function AccommodationSearchPage() {
                     />
                   ) : (
                     <input
+                      ref={addressInputRef}
                       type="text"
                       inputMode="text"
                       enterKeyHint="done"
