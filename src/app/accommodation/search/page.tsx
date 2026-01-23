@@ -908,13 +908,19 @@ export default function AccommodationSearchPage() {
                     enterKeyHint="done"
                     style={{ touchAction: "manipulation" }}
                     placeholder={t("stayAddressPlaceholder")}
-                    value={cities[cityDetailIdx!]?.address || ""}
+                    defaultValue={cities[cityDetailIdx!]?.address || ""}
+                    autoFocus
+                    key={`addr-${cityDetailIdx}-${cities[cityDetailIdx!]?.address || ""}`}
                     className={guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse" : undefined}
                     onFocus={() => { try { console.log("[ACCOM_FLOW] focus address input"); } catch {} }}
                     onChange={(e) => {
                       const v = e.target.value;
                       setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
                       if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
+                    }}
+                    onInput={(e) => {
+                      const v = (e.target as HTMLInputElement).value;
+                      setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
                     }}
                   />
                   <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-300 dark:bg-amber-900/20 dark:text-amber-200">
