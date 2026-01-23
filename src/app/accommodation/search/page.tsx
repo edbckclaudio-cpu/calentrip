@@ -902,25 +902,24 @@ export default function AccommodationSearchPage() {
                 </ul>
                 <div className="mt-3">
                   <label className="mb-1 block text-sm">{t("stayAddressLabel")}</label>
-                  <Input
+                  <input
                     type="text"
                     inputMode="text"
                     enterKeyHint="done"
+                    name="stay-address"
+                    autoComplete="street-address"
+                    spellCheck={false}
                     style={{ touchAction: "manipulation" }}
                     placeholder={t("stayAddressPlaceholder")}
                     defaultValue={cities[cityDetailIdx!]?.address || ""}
                     autoFocus
-                    key={`addr-${cityDetailIdx}-${cities[cityDetailIdx!]?.address || ""}`}
-                    className={guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse" : undefined}
+                    key={`addr-${cityDetailIdx}`}
+                    className={(guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse " : "") + "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"}
                     onFocus={() => { try { console.log("[ACCOM_FLOW] focus address input"); } catch {} }}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
-                      if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
-                    }}
                     onInput={(e) => {
                       const v = (e.target as HTMLInputElement).value;
                       setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
+                      if (guideIdx === cityDetailIdx && v.trim()) setGuideStep("check");
                     }}
                   />
                   <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-300 dark:bg-amber-900/20 dark:text-amber-200">
