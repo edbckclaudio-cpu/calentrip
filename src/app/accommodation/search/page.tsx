@@ -895,7 +895,7 @@ export default function AccommodationSearchPage() {
           </CardContent>
         </Card>
         {cityDetailIdx !== null && (
-          <Dialog open onOpenChange={() => setCityDetailIdx(null)}>
+          <Dialog open modal={false} onOpenChange={() => setCityDetailIdx(null)}>
             <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md rounded-l-lg bg-white p-4 shadow-lg dark:bg-black border border-zinc-200 dark:border-zinc-800">
               <DialogHeader>{t("accommodationDialogTitle")}</DialogHeader>
               <div className="p-1 space-y-2 text-sm">
@@ -925,6 +925,8 @@ export default function AccommodationSearchPage() {
                       inputMode="text"
                       enterKeyHint="done"
                       name="stay-address"
+                      autoComplete="off"
+                      data-1password-ignore="true"
                       autoCorrect="off"
                       autoCapitalize="none"
                       spellCheck={false}
@@ -952,7 +954,8 @@ export default function AccommodationSearchPage() {
                       inputMode="text"
                       enterKeyHint="done"
                       name="stay-address"
-                      autoComplete="street-address"
+                      autoComplete="off"
+                      data-1password-ignore="true"
                       spellCheck={false}
                       style={{ touchAction: "manipulation", transform: "translateZ(0)", willChange: "transform" }}
                       placeholder={t("stayAddressPlaceholder")}
