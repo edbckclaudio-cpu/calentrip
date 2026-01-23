@@ -64,6 +64,8 @@ export default function AccommodationSearchPage() {
   const isAndroidNative = useMemo(() => {
     try { return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"; } catch { return false; }
   }, []);
+  const ceRef = useRef<HTMLDivElement | null>(null);
+  const saveDebounceRef = useRef<number | null>(null);
   
   const summaryComplete = useMemo(() => {
     if (!cities.length) return false;
@@ -417,7 +419,8 @@ export default function AccommodationSearchPage() {
       const payload = { cities };
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(payload));
     } catch {}
-    (async () => {
+    try { if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current); } catch {}
+    saveDebounceRef.current = (typeof window !== "undefined" ? window.setTimeout : setTimeout)(async () => {
       try { console.log("[ACCOM_DB] effect start", { citiesCount: cities.length }); } catch {}
       try {
         if (!cities.length) return;
@@ -482,7 +485,7 @@ export default function AccommodationSearchPage() {
         } catch {}
       } catch {}
       try { console.log("[ACCOM_DB] effect end"); } catch {}
-    })();
+    }, 700);
   }, [cities, t]);
 
   useEffect(() => {
@@ -917,16 +920,23 @@ export default function AccommodationSearchPage() {
                       autoCapitalize="none"
                       spellCheck={false}
                       key={`addr-ce-${cityDetailIdx}`}
+                      ref={ceRef}
                       className={(guideIdx === cityDetailIdx && guideStep === "address" ? "ring-4 ring-amber-500 animate-pulse " : "") + "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"}
                       style={{ touchAction: "manipulation", transform: "translateZ(0)", willChange: "transform" }}
+                      onFocus={() => {
+                        try {
+                          const cur = cities[cityDetailIdx!]?.address || "";
+                          if (ceRef.current && !ceRef.current.textContent) {
+                            ceRef.current.textContent = cur;
+                          }
+                        } catch {}
+                      }}
                       onInput={(e) => {
                         const v = (e.currentTarget.textContent || "").trim();
                         setCities((prev) => prev.map((x, i) => (i === cityDetailIdx ? { ...x, address: v } : x)));
                         if (guideIdx === cityDetailIdx && v) setGuideStep("check");
                       }}
-                    >
-                      {cities[cityDetailIdx!]?.address || ""}
-                    </div>
+                    />
                   ) : (
                     <input
                       type="text"
