@@ -1050,6 +1050,7 @@ export default function FinalCalendarPage() {
               return true;
             });
           });
+          setLoadedFromSaved(true);
         }
         localStorage.removeItem("calentrip:auto_load_saved");
       }

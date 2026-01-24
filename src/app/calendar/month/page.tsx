@@ -784,6 +784,17 @@ export default function MonthCalendarPage() {
 
   useEffect(() => {
     try {
+      const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:inspiration_mode") : null;
+      if (flag === "1") {
+        setPremiumFlag(true);
+        setGating(null);
+        try { localStorage.removeItem("calentrip:inspiration_mode"); } catch {}
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
       const auto = typeof window !== "undefined" ? localStorage.getItem("calentrip:auto_load_saved") : null;
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendar") : null;
       if (auto === "1" && raw) {
