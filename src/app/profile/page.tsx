@@ -157,10 +157,10 @@ export default function ProfilePage() {
                   <div className="text-xs text-zinc-500 mb-3">{userEmail}</div>
                   
                   <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => router.push("/subscription/checkout/")}>
+                    <Button variant="outline" className="h-8 text-xs" onClick={() => router.push("/subscription/checkout/")}>
                       Pagamento
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-8 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={async () => {
+                    <Button variant="outline" className="h-8 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={async () => {
                       Capacitor.isNativePlatform() ? (await logout(), setGoogleLogged(false)) : await signOut();
                     }}>
                       Sair
@@ -270,7 +270,7 @@ export default function ProfilePage() {
           <CardHeader><CardTitle className="text-base text-red-800 dark:text-red-400">{t("deleteDataTitle")}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <p className="text-xs text-red-700/70 dark:text-red-400/60">{t("deleteDataDesc")}</p>
-            <Button size="sm" variant="destructive" className="rounded-lg h-8 text-xs" onClick={async () => {
+            <Button variant="outline" className="rounded-lg h-8 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={async () => {
               try {
                 Capacitor.isNativePlatform() ? (await logout(), setGoogleLogged(false)) : await signOut();
                 show(t("deleteSuccess"), { variant: "success" });
