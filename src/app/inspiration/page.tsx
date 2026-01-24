@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
+import { useRouter } from "next/navigation";
 
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: unknown };
 
@@ -148,6 +149,7 @@ function Carousel() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<"Itália" | "Brasil" | "Croácia" | null>(null);
+  const router = useRouter();
   const items = [
     { name: "Itália" },
     { name: "Brasil" },
@@ -176,7 +178,7 @@ function Carousel() {
           localStorage.setItem("calentrip:saved_calendars_list", JSON.stringify(next));
         } catch {}
       }
-      try { window.location.href = target === "final" ? "/calendar/final" : "/calendar/month"; } catch {}
+      try { router.push(target === "final" ? "/calendar/final" : "/calendar/month"); } catch {}
     } catch {}
   }
   return (

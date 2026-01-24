@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
 import { useNativeAuth } from "@/lib/native-auth";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -26,6 +27,7 @@ export default function ProfilePage() {
   const [priceLabel, setPriceLabel] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setTrips(getTrips());
@@ -66,7 +68,7 @@ export default function ProfilePage() {
         try { await loginWithGoogle(); setGoogleLogged(true); } catch (error) { try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {} }
       }
       if (!isNative) {
-        try { window.location.href = "/login?next=/profile"; } catch (error) { try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {} }
+        try { router.push("/login?next=/profile"); } catch (error) { try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {} }
       }
     } catch (error) {
       try { console.error("Erro no Login:", error); alert("Erro Google: " + JSON.stringify(error)); } catch {}
@@ -78,7 +80,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen px-4 py-6 space-y-6">
       <div className="container-page flex items-center gap-3">
-        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => { try { window.location.href = "/flights/search"; } catch {} }}>
+        <button type="button" className="rounded-md p-2 border border-zinc-200 dark:border-zinc-800" onClick={() => { try { router.push("/flights/search"); } catch {} }}>
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
         <div>
@@ -91,7 +93,7 @@ export default function ProfilePage() {
           type="button"
           className="h-12 w-64 bg-[var(--brand)] text-white font-semibold rounded-lg shadow-lg hover:brightness-95"
           onClick={() => {
-            try { console.log("CALENTRIP_DEBUG: Expulsando para a Home porque user é:", (Capacitor.isNativePlatform() ? nativeUser : session?.user), "e status é:", (Capacitor.isNativePlatform() ? nativeStatus : status)); window.location.href = "/"; } catch {}
+            try { console.log("CALENTRIP_DEBUG: Expulsando para a Home porque user é:", (Capacitor.isNativePlatform() ? nativeUser : session?.user), "e status é:", (Capacitor.isNativePlatform() ? nativeStatus : status)); router.push("/"); } catch {}
           }}
         >
           Ir para Tela Inicial
@@ -116,7 +118,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout/"; } catch {} }}>Pagamento</Button>
+                  <Button type="button" variant="outline" onClick={() => { try { router.push("/subscription/checkout/"); } catch {} }}>Pagamento</Button>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button type="button" variant="outline" onClick={async () => {
@@ -168,7 +170,7 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <div className="text-zinc-600">{t("subMonthlyText")}</div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => { try { window.location.href = "/subscription/checkout/"; } catch {} }}>
+                    <Button type="button" variant="outline" onClick={() => { try { router.push("/subscription/checkout/"); } catch {} }}>
                       Assinar agora
                     </Button>
                     <span className="text-xs text-zinc-500">Revisar benefícios e concluir compra</span>
@@ -184,7 +186,7 @@ export default function ProfilePage() {
                           const mod = await import("@/lib/billing");
                           const userId = session?.user?.email || session?.user?.name || undefined;
                           const r = await mod.completePurchaseForTrip("global", userId);
-                          if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); window.location.href = "/calendar/final"; }
+                          if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/calendar/final"); }
                           else {
                             const err = (r as { error?: string })?.error;
                             const msg = err === "billing"

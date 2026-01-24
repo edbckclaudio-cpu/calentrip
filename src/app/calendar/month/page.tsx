@@ -1021,9 +1021,9 @@ export default function MonthCalendarPage() {
             </div>
             <div className="flex gap-2 mt-2">
               {gating.reason === "anon" ? (
-                <button type="button" className="btn" onClick={() => { try { if (Capacitor.getPlatform() === "android") { loginWithGoogle(); } else { window.location.href = "/profile"; } } catch {} }}>Entrar com Google</button>
+                <button type="button" className="btn" onClick={() => { try { if (Capacitor.getPlatform() === "android") { loginWithGoogle(); } else { router.push("/profile"); } } catch {} }}>Entrar com Google</button>
               ) : (
-                <button type="button" className="btn" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("subscribeMonthlyButton")}</button>
+                <button type="button" className="btn" onClick={() => { try { router.push("/profile"); } catch {} }}>{t("subscribeMonthlyButton")}</button>
               )}
             </div>
           </div>
@@ -1059,7 +1059,7 @@ export default function MonthCalendarPage() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold">Entrar</div>
                     <div className="mt-2 flex items-center gap-2">
-                  <button type="button" className="text-xs" onClick={() => { try { if (Capacitor.getPlatform() === "android") { loginWithGoogle(); } else { window.location.href = "/profile"; } } catch {} }}>{t("signInWithGoogle")}</button>
+                  <button type="button" className="text-xs" onClick={() => { try { if (Capacitor.getPlatform() === "android") { loginWithGoogle(); } else { router.push("/profile"); } } catch {} }}>{t("signInWithGoogle")}</button>
                     </div>
                   </div>
                 ) : null}

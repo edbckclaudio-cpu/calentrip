@@ -117,7 +117,7 @@ function TripsMenu({ t }: { t: (k: string) => string }) {
               onClick={() => {
                 try {
                   if (Capacitor.getPlatform() === "android") { loginWithGoogle(); }
-                  else { show(t("googleLoginOpeningMsg")); window.location.href = "/profile"; }
+                  else { show(t("googleLoginOpeningMsg")); router.push("/profile"); }
                 } catch {}
               }}
             >
@@ -185,7 +185,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
                       onClick={() => {
                         try {
                           if (Capacitor.getPlatform() === "android") { loginWithGoogle(); }
-                          else { window.location.href = "/profile"; }
+                          else { router.push("/profile"); }
                         } catch {}
                       }}
                     >
@@ -362,7 +362,7 @@ function NavDrawer({ t, open, onOpenChange }: { t: (k: string) => string; open: 
             <span>{t("profileAccessText")}</span>
           </div>
           <div>
-            <button type="button" className="underline text-sm" onClick={() => { try { window.location.href = "/profile"; } catch {} }}>{t("openProfileButton")}</button>
+            <button type="button" className="underline text-sm" onClick={() => { try { router.push("/profile"); } catch {} }}>{t("openProfileButton")}</button>
           </div>
           <div className="mt-2 rounded-md border border-zinc-200 dark:border-zinc-800">
             <div className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300">Termos e Políticas</div>

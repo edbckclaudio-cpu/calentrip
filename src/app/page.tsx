@@ -1,18 +1,20 @@
 "use client";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 
 export default function Home() {
   const { t } = useI18n();
+  const router = useRouter();
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
         const target = localStorage.getItem("calentrip:targetRoute");
         if (target) {
           localStorage.removeItem("calentrip:targetRoute");
-          window.location.href = target;
+          router.push(target);
           return;
         }
         localStorage.removeItem("calentrip_trip_summary");
@@ -25,7 +27,7 @@ export default function Home() {
         localStorage.removeItem("calentrip:auto_load_saved");
       }
     } catch {}
-  }, []);
+  }, [router]);
   return (
     <div className="min-h-screen px-4 py-6">
       <div className="container-page max-w-xl">

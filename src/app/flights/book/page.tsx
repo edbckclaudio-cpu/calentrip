@@ -568,16 +568,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     show(t("notesSavedRedirecting"), { variant: "success" });
     try { onProceed?.(); } catch {}
     try { router.push("/accommodation/search"); } catch {}
-    try {
-      setTimeout(() => {
-        try {
-          if (typeof window !== "undefined") {
-            const same = (window.location.pathname || "").includes("/accommodation/search");
-            if (!same) window.location.href = "/accommodation/search";
-          }
-        } catch {}
-      }, 600);
-    } catch {}
+    try {} catch {}
   }
 
   return (

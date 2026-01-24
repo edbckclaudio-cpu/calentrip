@@ -386,16 +386,7 @@ export default function AccommodationSearchPage() {
       if (typeof window !== "undefined") localStorage.setItem("calentrip_trip_summary", JSON.stringify(summary));
     } catch {}
     try { router.push("/entertainment/reservations"); } catch {}
-    try {
-      setTimeout(() => {
-        try {
-          if (typeof window !== "undefined") {
-            const same = (window.location.pathname || "").includes("/entertainment/reservations");
-            if (!same) window.location.href = "/entertainment/reservations";
-          }
-        } catch {}
-      }, 600);
-    } catch {}
+    try {} catch {}
     (async () => {
       try {
         const modDb = await import("@/lib/trips-db");
