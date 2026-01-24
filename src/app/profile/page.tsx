@@ -10,7 +10,6 @@ import { useI18n } from "@/lib/i18n";
 import { Capacitor } from "@capacitor/core";
 import { useNativeAuth } from "@/lib/native-auth";
 import { useRouter } from "next/navigation";
-import { PremiumBadge } from "@/components/PremiumBadge";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -147,7 +146,9 @@ export default function ProfilePage() {
                     {userDisplayName.slice(0, 2).toUpperCase()}
                   </span>
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
-                    <PremiumBadge isPremium={isPremiumActive} />
+                    <div className={(isPremiumActive ? "bg-amber-500 text-white" : "bg-zinc-200 text-zinc-600") + " inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase shadow-sm"}>
+                      {isPremiumActive ? "Assinante Premium" : "Conta Gratuita"}
+                    </div>
                   </div>
                 </div>
                 
