@@ -52,6 +52,13 @@ async function ensureConfigured(appUserID?: string) {
     }
 
     try {
+        if (typeof window !== "undefined") {
+            localStorage.setItem(RC_PREF_KEY, key);
+        }
+        try {
+            await Preferences.set({ key: RC_PREF_KEY, value: key });
+        } catch {}
+
         // Ativa logs de debug para facilitar rastreio no Logcat/Trae
         try {
             await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" });
@@ -64,14 +71,6 @@ async function ensureConfigured(appUserID?: string) {
 
         await Purchases.configure({ apiKey: key, appUserID: uid });
         
-        // Sincroniza storage para persistência entre sessões
-        if (typeof window !== "undefined") {
-            localStorage.setItem(RC_PREF_KEY, key);
-        }
-        try {
-            await Preferences.set({ key: RC_PREF_KEY, value: key });
-        } catch {}
-
         configured = true;
         console.log("DIAGNÓSTICO: RevenueCat configurado com sucesso.");
         return true;
