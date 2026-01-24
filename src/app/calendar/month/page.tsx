@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useNativeAuth } from "@/lib/native-auth";
 import { isTripPremium } from "@/lib/premium";
@@ -21,6 +22,7 @@ type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
 
 export default function MonthCalendarPage() {
+  const router = useRouter();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [sideOpen, setSideOpen] = useState(false);
   const [dayOpen, setDayOpen] = useState<string | null>(null);
@@ -1064,7 +1066,7 @@ export default function MonthCalendarPage() {
               </div>
             )}
           </div>
-        <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>
+        <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { router.push("/calendar/final"); } catch {} }}>
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
             <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
           </span>
@@ -1093,7 +1095,7 @@ export default function MonthCalendarPage() {
 
   <div className="container-page">
         <div className="sticky top-0 z-30 -mt-4 mb-2 px-3 py-2 bg-white/80 dark:bg-black/60 backdrop-blur border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-end gap-2">
-          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.close(); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>
+          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { router.push("/calendar/final"); } catch {} }}>
             <span className="material-symbols-outlined text-[18px] mr-1">list_alt</span>
             {t("backToListButton")}
           </Button>
@@ -1236,7 +1238,7 @@ export default function MonthCalendarPage() {
                 <div className="text-zinc-600">Sem eventos neste dia.</div>
               )}
               <div className="mt-3 flex items-center justify-between">
-                <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { window.location.href = "/calendar/final"; } catch {} }}>Calendário em lista</Button>
+                <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md" onClick={() => { try { localStorage.setItem("calentrip:saved_calendar", JSON.stringify({ events })); localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {} try { router.push("/calendar/final"); } catch {} }}>Calendário em lista</Button>
                 <Button type="button" className="px-2 py-1 text-xs rounded-md" onClick={() => setDayOpen(null)}>{t("close")}</Button>
               </div>
             </div>
@@ -1355,7 +1357,7 @@ export default function MonthCalendarPage() {
                         setNameDrawerOpen(false);
                         show(`salvo com o nome ${name}`, { variant: "success", duration: 3000, sticky: false });
                         try { localStorage.setItem("calentrip:auto_load_saved", "1"); } catch {}
-                        try { window.location.href = "/calendar/final"; } catch {}
+                        try { router.push("/calendar/final"); } catch {}
                       } catch { show(t("saveErrorMsg"), { variant: "error" }); }
                     }}>{t("saveLabel")}</Button>
                   </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useNativeAuth } from "@/lib/native-auth";
 import Image from "next/image";
@@ -57,6 +58,7 @@ function buildRome2RioUrl(args: { originName: string; destName: string; originLa
 }
 
 export default function FinalCalendarPage() {
+  const router = useRouter();
   const { status: nativeStatus, loginWithGoogle, logout, user: nativeUser } = useNativeAuth();
   
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -2569,7 +2571,7 @@ export default function FinalCalendarPage() {
             </span>
             {sideOpen ? <span className="text-sm font-medium">Pesquisas salvas</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { window.location.href = "/calendar/final"; } catch {} }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { router.push("/calendar/final"); } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">list_alt</span>
             </span>
@@ -3214,7 +3216,7 @@ export default function FinalCalendarPage() {
                   localStorage.setItem("calentrip:auto_load_saved", "1");
                 }
               } catch {}
-              try { window.location.href = "/calendar/month"; } catch {}
+              try { router.push("/calendar/month"); } catch {}
             }}
           >
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
