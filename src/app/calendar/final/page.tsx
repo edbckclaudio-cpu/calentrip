@@ -2432,6 +2432,7 @@ export default function FinalCalendarPage() {
                         setPremiumFlag(true);
                         setGating(null);
                         show(t("purchaseSuccess"), { variant: "success" });
+                        try { router.push("/subscription/success"); } catch {}
                       } else {
                         const err = (r as { error?: string })?.error;
                         const msg = err === "billing"
@@ -2493,7 +2494,7 @@ export default function FinalCalendarPage() {
                             const userId = session?.user?.email || session?.user?.name || undefined;
                             const mod = await import("@/lib/billing");
                             const r = await mod.completePurchaseForTrip(currentTripId, userId);
-                            if (r?.ok) { setPremiumFlag(true); show(t("purchaseSuccess"), { variant: "success" }); }
+                            if (r?.ok) { setPremiumFlag(true); show(t("purchaseSuccess"), { variant: "success" }); try { router.push("/subscription/success"); } catch {} }
                             else { show(t("purchaseFail"), { variant: "error" }); }
                           } catch { show(t("purchaseError"), { variant: "error" }); }
                         }}>{t("activatePremiumButton")}</Button>

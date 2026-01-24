@@ -68,7 +68,7 @@ export default function SubscriptionCheckoutPage() {
       const mod = await import("@/lib/billing");
       const userId = nativeUser?.email || nativeUser?.name || session?.user?.email || session?.user?.name || undefined;
       const r = await mod.completePurchaseForTrip("global", userId);
-      if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/profile"); }
+      if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/subscription/success"); }
       else {
         const err = (r as { error?: string })?.error;
         const msg = err === "billing"
