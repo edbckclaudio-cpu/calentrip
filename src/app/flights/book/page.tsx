@@ -5,6 +5,7 @@ import type { TripSearchDifferent } from "@/lib/trip-context";
 import { getCountryByIata } from "@/lib/airports";
 import { useRouter } from "next/navigation";
 import { useMemo, useEffect, useState, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -575,7 +576,14 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
           try {
             const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
             const isAndroidWebView = /Android/.test(ua) && /wv|Version\/\d+\.\d+ Chrome\/\d+\.\d+/.test(ua);
-            if (!isAndroidWebView) window.location.assign("/accommodation/search");
+            const stillHere = !window.location.pathname.includes("/accommodation/search");
+            if (!stillHere) return;
+            if (!isAndroidWebView && !Capacitor.isNativePlatform()) {
+              window.location.assign("/accommodation/search");
+              return;
+            }
+            try { localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
+            router.push("/");
           } catch {}
         }, 80);
       }
