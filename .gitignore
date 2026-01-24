@@ -1,12 +1,27 @@
-.vercel
-.env*.local
-node_modules
-calentrip/.next
-next-env.d.ts
+# Dependencies
+node_modules/
+
+# Next.js
 .next/
 out/
+next-env.d.ts
 tsconfig.tsbuildinfo
+.vercel
+.netlify/
+
+# Environments
+.env*.local
+.env.production
+
+# Android / Capacitor
+android/app/build/
+android/.gradle/
+android/local.properties
 android/keystore/*.keystore
 android/keystore/*.pem
 android/keystore/*.jks
-.netlify/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

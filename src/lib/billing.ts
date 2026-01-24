@@ -64,10 +64,13 @@ async function ensureConfigured(appUserID?: string) {
 
         await Purchases.configure({ apiKey: key, appUserID: uid });
         
-        // Sincroniza o localstorage se a chave veio do Preferences ou Env
+        // Sincroniza storage para persistência entre sessões
         if (typeof window !== "undefined") {
             localStorage.setItem(RC_PREF_KEY, key);
         }
+        try {
+            await Preferences.set({ key: RC_PREF_KEY, value: key });
+        } catch {}
 
         configured = true;
         console.log("DIAGNÓSTICO: RevenueCat configurado com sucesso.");
@@ -167,12 +170,18 @@ export function getBillingEnvStatus() {
     const productId = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID;
     
     let lsKey: string | null = null;
+    let prefKey: string | null = null;
     if (typeof window !== "undefined") {
         lsKey = localStorage.getItem(RC_PREF_KEY);
     }
+    try {
+        // Best-effort: Preferences.get não é sync; tentamos ler do localStorage como espelho.
+        // A origem reportada privilegia env > preferences > localStorage.
+        prefKey = lsKey;
+    } catch {}
 
-    const key = envKey || lsKey || "";
-    const source = envKey ? "env" : (lsKey ? "localStorage" : "none");
+    const key = envKey || prefKey || lsKey || "";
+    const source = envKey ? "env" : (prefKey ? "preferences" : (lsKey ? "localStorage" : "none"));
     const maskedKey = key ? `${key.slice(0, 8)}…${key.slice(-4)}` : "ausente";
 
     return { source, keyPresent: !!key, maskedKey, productId };
