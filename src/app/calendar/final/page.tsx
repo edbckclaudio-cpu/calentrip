@@ -103,7 +103,6 @@ export default function FinalCalendarPage() {
   const [sideOpen, setSideOpen] = useState(false);
   const [calendarHelpOpen, setCalendarHelpOpen] = useState(false);
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
-  const [savedTripsList, setSavedTripsList] = useState<TripItemStore[]>([]);
   const [savedCalendarsList, setSavedCalendarsList] = useState<Array<{ name: string; events: EventItem[]; savedAt?: string }>>([]);
   const [filesDrawerOpen, setFilesDrawerOpen] = useState(false);
   const [filesList, setFilesList] = useState<Array<{ name: string; size?: number; modified?: number }>>([]);
@@ -1015,14 +1014,6 @@ export default function FinalCalendarPage() {
       const flag = typeof window !== "undefined" ? localStorage.getItem("calentrip:open_saved_drawer") : null;
       if (flag === "1") {
         localStorage.removeItem("calentrip:open_saved_drawer");
-        (async () => {
-          try {
-            await initDatabaseDb();
-            try { await migrateFromLocalStorageDb(); } catch {}
-            const trips = await getSavedTripsDb();
-            setSavedTripsList(trips);
-          } catch { setSavedTripsList([]); }
-        })();
         try {
           const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
           const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
@@ -2557,10 +2548,6 @@ export default function FinalCalendarPage() {
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
             try {
-              const trips = getTrips();
-              setSavedTripsList(trips);
-            } catch { setSavedTripsList([]); }
-            try {
               const rawList = typeof window !== "undefined" ? localStorage.getItem("calentrip:saved_calendars_list") : null;
               const list = rawList ? (JSON.parse(rawList) as Array<{ name: string; events: EventItem[]; savedAt?: string }>) : [];
               setSavedCalendarsList(list);
@@ -2570,7 +2557,7 @@ export default function FinalCalendarPage() {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">lists</span>
             </span>
-            {sideOpen ? <span className="text-sm font-medium">Pesquisas salvas</span> : null}
+            {sideOpen ? <span className="text-sm font-medium">Calendários salvos</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { try { router.push("/calendar/final"); } catch {} }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -3586,7 +3573,7 @@ export default function FinalCalendarPage() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={() => setSavedDrawerOpen(false)} />
       <div className="absolute bottom-0 left-0 right-0 z-10 w-full rounded-t-2xl border border-zinc-200 bg-white p-5 md:p-6 shadow-xl dark:border-zinc-800 dark:bg-black">
-        <DialogHeader>Pesquisas e calendários salvos</DialogHeader>
+        <DialogHeader>Calendários salvos</DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="rounded border p-3">
             <div className="font-semibold mb-1">{t("savedCalendarsTitle")}</div>
@@ -3597,7 +3584,7 @@ export default function FinalCalendarPage() {
                     <div>
                       <div className="font-medium flex items-center gap-2">
                         <span>{c.name}</span>
-                        {((((savedTripsList.find((t) => t.id === currentTripId)?.savedCalendarName) || currentSavedName) || "") === (c.name || "")) ? (
+                        {(currentSavedName === (c.name || "")) ? (
                           <span className="ml-1 rounded px-2 py-0.5 text-[11px] bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/30">Atual</span>
                         ) : null}
                       </div>
@@ -3645,40 +3632,7 @@ export default function FinalCalendarPage() {
               <div className="text-zinc-600">{t("noSavedCalendarsLabel")}</div>
             )}
           </div>
-          <div className="rounded border p-3">
-            <div className="font-semibold mb-1">{t("savedSearchesTitle")}</div>
-            {savedTripsList.length ? (
-              <ul className="space-y-2">
-                {savedTripsList.map((trip) => (
-                  <li key={trip.id} className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-medium flex items-center gap-2">
-                        <span>{trip.title}</span>
-                        {trip.id === currentTripId ? (
-                          <span className="ml-1 rounded px-2 py-0.5 text-[11px] bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/30">Atual</span>
-                        ) : null}
-                      </div>
-                      <div className="text-xs text-zinc-600">
-                        {trip.date} • {trip.passengers} pax{trip.savedCalendarName ? ` • ${trip.savedCalendarName}` : ""}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" onClick={() => {
-                        const legs = (trip.flightNotes || []).map((n) => `${n.leg === "outbound" ? "Ida" : "Volta"}: ${n.origin} → ${n.destination} • ${n.date} ${n.departureTime || ""}`);
-                        alert(legs.join("\n"));
-                      }}>{t("viewLabel")}</Button>
-                      <Button type="button" variant="outline" onClick={async () => {
-                        const ok = await loadTripEventsFromDbById(trip.id);
-                        if (ok) setSavedDrawerOpen(false);
-                      }}>{t("loadLabel")}</Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-zinc-600">{t("noSavedSearchesLabel")}</div>
-            )}
-          </div>
+          
           <div className="mt-3 flex justify-end">
             <Button type="button" className="h-10 rounded-lg font-semibold tracking-wide" onClick={() => setSavedDrawerOpen(false)}>{t("close")}</Button>
           </div>

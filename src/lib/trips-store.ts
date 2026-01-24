@@ -50,17 +50,15 @@ export function getTrips(): TripItem[] {
 }
 
 export function addTrip(t: TripItem) {
-  const list = getTrips();
-  const next = [t, ...list].slice(0, 20);
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    // disabled: do not persist saved searches to localStorage
+    void t;
   } catch {}
 }
 
 export function removeTrip(id: string) {
-  const list = getTrips();
-  const next = list.filter((x) => x.id !== id);
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    // disabled: do not persist saved searches to localStorage
+    void id;
   } catch {}
 }
