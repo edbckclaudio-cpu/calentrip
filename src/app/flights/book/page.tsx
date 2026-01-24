@@ -456,6 +456,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
       return { maxH: 240, transition: "opacity 250ms ease-out, max-height 250ms ease-out" };
     }
   });
+  const [attachLeg, setAttachLeg] = useState<0 | 1 | null>(null);
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
@@ -564,10 +565,21 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         try { sessionStorage.setItem("calentrip:tripSearch", s); } catch {}
       }
     } catch {}
-    try { if (typeof window !== "undefined") localStorage.setItem("calentrip_backup_route", "/accommodation/search"); } catch {}
+    try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
     show(t("notesSavedRedirecting"), { variant: "success" });
     try { onProceed?.(); } catch {}
     try { router.push("/accommodation/search"); } catch {}
+    try {
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          try {
+            const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+            const isAndroidWebView = /Android/.test(ua) && /wv|Version\/\d+\.\d+ Chrome\/\d+\.\d+/.test(ua);
+            if (!isAndroidWebView) window.location.assign("/accommodation/search");
+          } catch {}
+        }, 80);
+      }
+    } catch {}
     try {} catch {}
   }
 
@@ -689,9 +701,9 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
           </div>
           <div className="mt-3">
             <input
-              id={`file-${i}`}
+              id={`file-photo-${i}`}
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*"
               capture="environment"
               multiple
               className="hidden"
@@ -704,14 +716,66 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
                   setFiles((prev) => prev.map((arr, idx) => (idx === i ? items : arr)));
                 });
               }}
-                onFocus={() => {
-                  setActiveLeg(i as 0 | 1);
-                  setProceedPulse(i === 1);
-                  if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
-                }}
-              />
+              onFocus={() => {
+                setActiveLeg(i as 0 | 1);
+                setProceedPulse(i === 1);
+                if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
+              }}
+            />
+            <input
+              id={`file-gallery-${i}`}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const list = Array.from(e.target.files ?? []);
+                Promise.all(list.map(async (f) => {
+                  const saved = await saveFromFile(f);
+                  return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                })).then((items) => {
+                  setFiles((prev) => prev.map((arr, idx) => (idx === i ? items : arr)));
+                });
+              }}
+              onFocus={() => {
+                setActiveLeg(i as 0 | 1);
+                setProceedPulse(i === 1);
+                if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
+              }}
+            />
+            <input
+              id={`file-doc-${i}`}
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const list = Array.from(e.target.files ?? []);
+                Promise.all(list.map(async (f) => {
+                  const saved = await saveFromFile(f);
+                  return { name: saved.name, type: saved.type, size: saved.size, id: saved.id };
+                })).then((items) => {
+                  setFiles((prev) => prev.map((arr, idx) => (idx === i ? items : arr)));
+                });
+              }}
+              onFocus={() => {
+                setActiveLeg(i as 0 | 1);
+                setProceedPulse(i === 1);
+                if (!infoShown) { const id = show(t("enterFlightTimesHint"), { duration: 15000 }); setHintId(id); setInfoShown(true); }
+              }}
+            />
             <div className="flex items-center gap-2">
-              <Button type="button" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => document.getElementById(`file-${i}`)?.click()}>
+              <Button
+                type="button"
+                className="px-2 py-1 text-xs rounded-md gap-1"
+                onClick={() => {
+                  try {
+                    setActiveLeg(i as 0 | 1);
+                    setProceedPulse(i === 1);
+                    setAttachLeg(i as 0 | 1);
+                  } catch {}
+                }}
+              >
                 <span className="material-symbols-outlined text-[16px]">attach_file</span>
                 <span>{t("attachProofButton")}</span>
               </Button>
@@ -756,6 +820,19 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={closeLocatorInfo}>{t("close")}</Button>
+        </DialogFooter>
+      </Dialog>
+      <Dialog open={attachLeg != null} onOpenChange={(o) => { if (!o) setAttachLeg(null); }} placement="bottom">
+        <DialogHeader>{t("attachProofButton")}</DialogHeader>
+        <div className="space-y-2 text-sm">
+          <div className="flex flex-col gap-2">
+            <Button type="button" variant="outline" className="justify-start" onClick={() => { try { const id = attachLeg as 0 | 1; setAttachLeg(null); document.getElementById(`file-photo-${id}`)?.click(); } catch {} }}>Câmera</Button>
+            <Button type="button" variant="outline" className="justify-start" onClick={() => { try { const id = attachLeg as 0 | 1; setAttachLeg(null); document.getElementById(`file-gallery-${id}`)?.click(); } catch {} }}>Fotos/Galeria</Button>
+            <Button type="button" variant="outline" className="justify-start" onClick={() => { try { const id = attachLeg as 0 | 1; setAttachLeg(null); document.getElementById(`file-doc-${id}`)?.click(); } catch {} }}>Documento (PDF)</Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setAttachLeg(null)}>{t("close")}</Button>
         </DialogFooter>
       </Dialog>
     </div>
