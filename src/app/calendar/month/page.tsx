@@ -9,14 +9,29 @@ import { useI18n } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { TripItem, FlightNote, getSavedTrips, getTripEvents, updateTrip, migrateFromLocalStorage } from "@/lib/trips-db";
 import { alarmForEvent } from "@/lib/ics";
 import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
 import { Capacitor } from "@capacitor/core";
-
+      {premiumGateOpen && (
+        <Dialog open={premiumGateOpen} onOpenChange={setPremiumGateOpen} placement="center" disableBackdropClose>
+          <div className="max-w-md w-full bg-white dark:bg-black rounded-xl p-5 space-y-3">
+            <DialogHeader>Recurso exclusivo para assinantes</DialogHeader>
+            <div className="text-sm text-zinc-700 dark:text-zinc-300">
+              Para salvar, enviar por e-mail ou exportar o calendário (.ics), é necessário ter uma assinatura ativa.
+              Entre na sua conta e ative a assinatura mensal para liberar estes recursos.
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Button type="button" onClick={() => { try { setPremiumGateOpen(false); router.push("/profile"); } catch {} }}>Entrar e assinar</Button>
+              <Button type="button" variant="outline" onClick={() => { try { setPremiumGateOpen(false); router.push("/subscription/checkout"); } catch {} }}>Ver planos</Button>
+              <Button type="button" variant="outline" onClick={() => setPremiumGateOpen(false)}>Mais tarde</Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
@@ -42,6 +57,7 @@ export default function MonthCalendarPage() {
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerData, setDrawerData] = useState<{ originIata: string; departureDate: string; departureTime: string } | null>(null);
+  const [premiumGateOpen, setPremiumGateOpen] = useState(false);
   const [transportInfo, setTransportInfo] = useState<{ distanceKm?: number; durationMin?: number; durationWithTrafficMin?: number; gmapsUrl?: string; r2rUrl?: string; uberUrl?: string; airportName?: string; arrivalByTime?: string; callTime?: string; notifyAt?: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [stayDrawerOpen, setStayDrawerOpen] = useState(false);
@@ -83,6 +99,19 @@ export default function MonthCalendarPage() {
       return false;
     }
   }, []);
+
+  useEffect(() => {
+    if (gating?.show) setPremiumGateOpen(true);
+  }, [gating]);
+
+  function ensureSubscriber(): boolean {
+    const ok = (status === "authenticated") && premiumFlag;
+    if (!ok) {
+      setPremiumGateOpen(true);
+      try { showOnce("Recurso exclusivo para assinantes", { variant: "info" }); } catch {}
+    }
+    return ok;
+  }
 
   function openExternal(url: string | undefined, type: "maps" | "uber") {
     if (!url) return;
@@ -649,6 +678,7 @@ export default function MonthCalendarPage() {
     }
   }
   async function exportICS() {
+    if (!ensureSubscriber()) return;
     function fmtUTC(d: Date) {
       const y = String(d.getUTCFullYear());
       const m = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -777,6 +807,23 @@ export default function MonthCalendarPage() {
     URL.revokeObjectURL(url);
     show(t("icsDownloadedMsg"), { variant: "info" });
   }
+
+  {premiumGateOpen && (
+    <Dialog open={premiumGateOpen} onOpenChange={setPremiumGateOpen} placement="center" disableBackdropClose>
+      <div className="max-w-md w-full bg-white dark:bg-black rounded-xl p-5 space-y-3">
+        <DialogHeader>Recurso exclusivo para assinantes</DialogHeader>
+        <div className="text-sm text-zinc-700 dark:text-zinc-300">
+          Para salvar, enviar por e-mail ou exportar o calendário (.ics), é necessário ter uma assinatura ativa.
+          Entre na sua conta e ative a assinatura mensal para liberar estes recursos.
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Button type="button" onClick={() => { try { setPremiumGateOpen(false); router.push("/profile"); } catch {} }}>Entrar e assinar</Button>
+          <Button type="button" variant="outline" onClick={() => { try { setPremiumGateOpen(false); router.push("/subscription/checkout"); } catch {} }}>Ver planos</Button>
+          <Button type="button" variant="outline" onClick={() => setPremiumGateOpen(false)}>Mais tarde</Button>
+        </div>
+      </div>
+    </Dialog>
+  )}
 
   useEffect(() => {
     (async () => { try { await migrateFromLocalStorage(); } catch {} })();
@@ -1019,27 +1066,7 @@ export default function MonthCalendarPage() {
 
   return (
     <div className="min-h-screen pl-14 pr-4 py-6 space-y-6">
-      {gating?.show ? (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="max-w-md w-full bg-white rounded-xl p-5 space-y-3">
-            <div className="text-lg font-semibold">{gating.reason === "anon" ? t("loginUnlockTitle") : t("subscriptionNeededTitle")}</div>
-            <div className="text-sm text-zinc-700">
-              {gating.reason === "anon" ? (
-                <div>{t("loginUnlockText")}</div>
-              ) : (
-                <div>{t("subMonthlyText")}</div>
-              )}
-            </div>
-            <div className="flex gap-2 mt-2">
-              {gating.reason === "anon" ? (
-                <button type="button" className="btn" onClick={() => { try { if (Capacitor.getPlatform() === "android") { loginWithGoogle(); } else { router.push("/profile"); } } catch {} }}>Entrar com Google</button>
-              ) : (
-                <button type="button" className="btn" onClick={() => { try { router.push("/profile"); } catch {} }}>{t("subscribeMonthlyButton")}</button>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      
       <div className={sideOpen ? "fixed left-0 top-0 bottom-0 z-40 w-56 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all" : "fixed left-0 top-0 bottom-0 z-40 w-14 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black transition-all"}>
         <div className="h-14 flex items-center justify-center border-b border-zinc-200 dark:border-zinc-800">
           <button type="button" className="rounded-md p-2" onClick={() => setSideOpen((v) => !v)}>
@@ -1092,8 +1119,7 @@ export default function MonthCalendarPage() {
         <button
           type="button"
           className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-          onClick={() => { setNameInput(""); setNameDrawerOpen(true); }}
-          disabled={!premiumFlag}
+          onClick={() => { if (!ensureSubscriber()) return; setNameInput(""); setNameDrawerOpen(true); }}
         >
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
             <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
@@ -1221,7 +1247,7 @@ export default function MonthCalendarPage() {
                                   ) : null}
                                   {isRec ? (
                                     <>
-                                      <Button type="button" variant="outline" disabled={!premiumFlag} className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { setEditIdx(idxE); setEditDate(e.date); setEditTime(e.time || ""); setEditOpen(true); }}>
+                                      <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => { if (!ensureSubscriber()) return; setEditIdx(idxE); setEditDate(e.date); setEditTime(e.time || ""); setEditOpen(true); }}>
                                         <span className="material-symbols-outlined text-[16px]">edit</span>
                                         <span>{t("editLabel")}</span>
                                       </Button>

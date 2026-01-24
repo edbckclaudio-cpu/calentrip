@@ -2625,6 +2625,7 @@ export default function FinalCalendarPage() {
           </button>)}
           
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+            if (!ensureSubscriber()) return;
             function fmt(d: Date) {
               const y = String(d.getFullYear());
               const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -3385,7 +3386,8 @@ export default function FinalCalendarPage() {
                         
                         {(ev.type === "activity" || ev.type === "restaurant") ? (
                           <>
-                          <Button type="button" variant="outline" disabled={!premiumFlag} className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
+                            if (!ensureSubscriber()) return;
                             setEditIdx(idx);
                             setEditDate(ev.date);
                             setEditTime(ev.time || "");
