@@ -113,6 +113,7 @@ export default function FinalCalendarPage() {
   const [premiumFlag, setPremiumFlag] = useState<boolean>(false);
   const [premiumUntil, setPremiumUntil] = useState<string>("");
   const [currentSavedName, setCurrentSavedName] = useState<string>("");
+  const [premiumGateOpen, setPremiumGateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editDate, setEditDate] = useState<string>("");
@@ -143,6 +144,15 @@ export default function FinalCalendarPage() {
     } catch {
       try { window.open(url, "_blank", "noopener,noreferrer"); } catch {}
     }
+  }
+
+  function ensureSubscriber(): boolean {
+    const ok = (status === "authenticated") && premiumFlag;
+    if (!ok) {
+      setPremiumGateOpen(true);
+      showOnce("Recurso exclusivo para assinantes", { variant: "info" });
+    }
+    return ok;
   }
 
   function readTripSearch(): TripSearchPersist | null {
@@ -653,6 +663,7 @@ export default function FinalCalendarPage() {
   }
 
   async function saveOnDeviceAndInsertCalendar(fixedName?: string) {
+    if (!ensureSubscriber()) return;
     try { await saveCalendarFull(fixedName); } catch {}
     try {
       if (!isCapAndroid()) return;
@@ -1360,6 +1371,7 @@ export default function FinalCalendarPage() {
   }
 
   async function saveCalendarFull(fixedName?: string) {
+    if (!ensureSubscriber()) return;
     try { saveCalendarNamed(true, fixedName); } catch {}
     const uaHeader = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
     const isAndroidHeader = /Android/.test(uaHeader);
@@ -2566,13 +2578,17 @@ export default function FinalCalendarPage() {
             {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
           </button>
           
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => { setNameInput(""); setNameDrawerOpen(true); }}>
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+            if (!ensureSubscriber()) return;
+            setNameInput(""); setNameDrawerOpen(true);
+          }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
               <span className="material-symbols-outlined text-[22px] text-[#007AFF]">bookmark_add</span>
             </span>
           {sideOpen ? <span className="text-sm font-medium">{t("saveCalendarButton")}</span> : null}
           </button>
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
+            if (!ensureSubscriber()) return;
             const subject = encodeURIComponent("Calendário da viagem");
             const body = encodeURIComponent(events.map((e) => `${e.date} ${e.time || ""} • ${e.label}`).join("\n"));
             const a = document.createElement("a");
@@ -3465,6 +3481,22 @@ export default function FinalCalendarPage() {
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setNameDrawerOpen(false)}>{t("close")}</Button>
         </DialogFooter>
+      </Dialog>
+    )}
+    {premiumGateOpen && (
+      <Dialog open={premiumGateOpen} onOpenChange={setPremiumGateOpen} placement="center" disableBackdropClose>
+        <div className="max-w-md w-full bg-white dark:bg-black rounded-xl p-5 space-y-3">
+          <DialogHeader>Recurso exclusivo para assinantes</DialogHeader>
+          <div className="text-sm text-zinc-700 dark:text-zinc-300">
+            Para salvar, enviar por e-mail ou exportar o calendário (.ics), é necessário ter uma assinatura ativa.
+            Entre na sua conta e ative a assinatura mensal para liberar estes recursos.
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button type="button" onClick={() => { try { setPremiumGateOpen(false); router.push("/profile"); } catch {} }}>Entrar e assinar</Button>
+            <Button type="button" variant="outline" onClick={() => { try { setPremiumGateOpen(false); router.push("/subscription/checkout"); } catch {} }}>Ver planos</Button>
+            <Button type="button" variant="outline" onClick={() => setPremiumGateOpen(false)}>Mais tarde</Button>
+          </div>
+        </div>
       </Dialog>
     )}
  
