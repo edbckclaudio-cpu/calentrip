@@ -16,22 +16,6 @@ import { TripItem, FlightNote, getSavedTrips, getTripEvents, updateTrip, migrate
 import { alarmForEvent } from "@/lib/ics";
 import { findAirportByIata, searchAirportsAsync } from "@/lib/airports";
 import { Capacitor } from "@capacitor/core";
-      {premiumGateOpen && (
-        <Dialog open={premiumGateOpen} onOpenChange={setPremiumGateOpen} placement="center" disableBackdropClose>
-          <div className="max-w-md w-full bg-white dark:bg-black rounded-xl p-5 space-y-3">
-            <DialogHeader>Recurso exclusivo para assinantes</DialogHeader>
-            <div className="text-sm text-zinc-700 dark:text-zinc-300">
-              Para salvar, enviar por e-mail ou exportar o calendário (.ics), é necessário ter uma assinatura ativa.
-              Entre na sua conta e ative a assinatura mensal para liberar estes recursos.
-            </div>
-            <div className="flex gap-2 mt-2">
-              <Button type="button" onClick={() => { try { setPremiumGateOpen(false); router.push("/profile"); } catch {} }}>Entrar e assinar</Button>
-              <Button type="button" variant="outline" onClick={() => { try { setPremiumGateOpen(false); router.push("/subscription/checkout"); } catch {} }}>Ver planos</Button>
-              <Button type="button" variant="outline" onClick={() => setPremiumGateOpen(false)}>Mais tarde</Button>
-            </div>
-          </div>
-        </Dialog>
-      )}
 type RecordItem = { kind: "activity" | "restaurant"; cityIdx: number; cityName: string; date: string; time?: string; title: string; address?: string; files?: Array<{ name: string; type: string; size: number; dataUrl?: string }> };
 type TransportSegmentMeta = { mode: "air" | "train" | "bus" | "car"; dep: string; arr: string; depTime?: string; arrTime?: string; originAddress?: string; originCity?: string };
 type EventItem = { type: "flight" | "activity" | "restaurant" | "transport" | "stay"; label: string; date: string; time?: string; meta?: FlightNote | RecordItem | TransportSegmentMeta | { city?: string; address?: string; kind: "checkin" | "checkout" } };
@@ -42,7 +26,7 @@ export default function MonthCalendarPage() {
   const [sideOpen, setSideOpen] = useState(false);
   const [dayOpen, setDayOpen] = useState<string | null>(null);
   const { data: session, status } = useSession();
-  const { loginWithGoogle } = useNativeAuth();
+  const { status: nativeStatus, loginWithGoogle } = useNativeAuth();
   const { lang, t } = useI18n();
   const [gating, setGating] = useState<{ show: boolean; reason: "anon" | "noPremium" } | null>(null);
   const { show } = useToast();
@@ -105,7 +89,9 @@ export default function MonthCalendarPage() {
   }, [gating]);
 
   function ensureSubscriber(): boolean {
-    const ok = (status === "authenticated") && premiumFlag;
+    const isAndroid = Capacitor.getPlatform() === "android";
+    const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
+    const ok = isAuth || premiumFlag;
     if (!ok) {
       setPremiumGateOpen(true);
       try { showOnce("Recurso exclusivo para assinantes", { variant: "info" }); } catch {}
@@ -897,8 +883,10 @@ export default function MonthCalendarPage() {
             const rec = listP.find((r) => r.tripId === "global" && r.expiresAt > Date.now());
             if (rec) { const d = new Date(rec.expiresAt); const dd = String(d.getDate()).padStart(2, "0"); const mm = String(d.getMonth() + 1).padStart(2, "0"); setPremiumUntil(`${dd}/${mm}`); } else setPremiumUntil("");
           } catch { setPremiumUntil(""); }
-          if (status !== "authenticated") setGating({ show: true, reason: "anon" });
-          else if (!premium) setGating({ show: true, reason: "noPremium" });
+          const isAndroid = Capacitor.getPlatform() === "android";
+          const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
+          if (!isAuth && !premium) setGating({ show: true, reason: "anon" });
+          else if (isAuth && !premium) setGating({ show: true, reason: "noPremium" });
           else setGating(null);
         }
         const dbEvents = target ? await getTripEvents(target.id) : [];
@@ -1638,6 +1626,22 @@ export default function MonthCalendarPage() {
           ) : null}
         </div>
       </div>
+      {premiumGateOpen && (
+        <Dialog open={premiumGateOpen} onOpenChange={setPremiumGateOpen} placement="center" disableBackdropClose>
+          <div className="max-w-md w-full bg-white dark:bg-black rounded-xl p-5 space-y-3">
+            <DialogHeader>Recurso exclusivo para assinantes</DialogHeader>
+            <div className="text-sm text-zinc-700 dark:text-zinc-300">
+              Para salvar, enviar por e-mail ou exportar o calendário (.ics), é necessário ter uma assinatura ativa.
+              Entre na sua conta e ative a assinatura mensal para liberar estes recursos.
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Button type="button" onClick={() => { try { setPremiumGateOpen(false); router.push("/profile"); } catch {} }}>Entrar e assinar</Button>
+              <Button type="button" variant="outline" onClick={() => { try { setPremiumGateOpen(false); router.push("/subscription/checkout"); } catch {} }}>Ver planos</Button>
+              <Button type="button" variant="outline" onClick={() => setPremiumGateOpen(false)}>Mais tarde</Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }

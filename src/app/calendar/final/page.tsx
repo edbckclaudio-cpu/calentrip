@@ -147,7 +147,9 @@ export default function FinalCalendarPage() {
   }
 
   function ensureSubscriber(): boolean {
-    const ok = (status === "authenticated") && premiumFlag;
+    const isAndroid = Capacitor.getPlatform() === "android";
+    const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
+    const ok = isAuth || premiumFlag;
     if (!ok) {
       setPremiumGateOpen(true);
       showOnce("Recurso exclusivo para assinantes", { variant: "info" });
@@ -1314,8 +1316,10 @@ export default function FinalCalendarPage() {
             setPremiumUntil(`${dd}/${mm}`);
           } else setPremiumUntil("");
         } catch { setPremiumUntil(""); }
-        if (status !== "authenticated") setGating({ show: true, reason: "anon", tripId: current.id });
-        else if (!premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
+        const isAndroid = Capacitor.getPlatform() === "android";
+        const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
+        if (!isAuth && !premium) setGating({ show: true, reason: "anon", tripId: current.id });
+        else if (isAuth && !premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
         else setGating(null);
       } catch {}
     })();
