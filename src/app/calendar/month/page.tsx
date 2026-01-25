@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useNativeAuth } from "@/lib/native-auth";
-import { isTripPremium } from "@/lib/premium";
+import { isTripPremium, isGlobalPremium } from "@/lib/premium";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -85,13 +85,16 @@ export default function MonthCalendarPage() {
   }, []);
 
   useEffect(() => {
-    if (gating?.show) setPremiumGateOpen(true);
+    if (gating?.show) {
+      if (isGlobalPremium()) setPremiumGateOpen(false);
+      else setPremiumGateOpen(true);
+    }
   }, [gating]);
 
   function ensureSubscriber(): boolean {
     const isAndroid = Capacitor.getPlatform() === "android";
     const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
-    const ok = isAuth || premiumFlag;
+    const ok = isAuth || premiumFlag || isGlobalPremium();
     if (!ok) {
       setPremiumGateOpen(true);
       try { showOnce("Recurso exclusivo para assinantes", { variant: "info" }); } catch {}
