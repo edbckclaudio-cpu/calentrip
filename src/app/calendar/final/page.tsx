@@ -146,13 +146,19 @@ export default function FinalCalendarPage() {
     }
   }
 
-  function ensureSubscriber(): boolean {
+  async function ensureSubscriberAsync(): Promise<boolean> {
     const isAndroid = Capacitor.getPlatform() === "android";
     const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
-    const ok = isAuth || premiumFlag || isGlobalPremium();
+    let rcActive = false;
+    try {
+      const mod = await import("@/lib/billing");
+      try { await mod.refreshPremiumActive(); } catch {}
+      rcActive = await mod.getCachedPremiumActive();
+    } catch { rcActive = false; }
+    const ok = isAndroid ? (isAuth && rcActive) : (isAuth && (premiumFlag || isGlobalPremium()));
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
-      console.log("DIAGNÓSTICO: ensureSubscriber", { isAuth, premiumFlag, isGlobal: isGlobalPremium(), raw });
+      console.log("DIAGNÓSTICO: ensureSubscriberAsync", { isAuth, rcActive, premiumFlag, isGlobal: isGlobalPremium(), raw });
     } catch {}
     if (!ok) {
       setPremiumGateOpen(true);
@@ -669,7 +675,7 @@ export default function FinalCalendarPage() {
   }
 
   async function saveOnDeviceAndInsertCalendar(fixedName?: string) {
-    if (!ensureSubscriber()) return;
+    if (!(await ensureSubscriberAsync())) return;
     try { await saveCalendarFull(fixedName); } catch {}
     try {
       if (!isCapAndroid()) return;
@@ -1394,7 +1400,7 @@ export default function FinalCalendarPage() {
   }
 
   async function saveCalendarFull(fixedName?: string) {
-    if (!ensureSubscriber()) return;
+    if (!(await ensureSubscriberAsync())) return;
     try { saveCalendarNamed(true, fixedName); } catch {}
     const uaHeader = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
     const isAndroidHeader = /Android/.test(uaHeader);
@@ -2601,8 +2607,8 @@ export default function FinalCalendarPage() {
             {sideOpen ? <span className="text-sm font-medium">Calendário em lista</span> : null}
           </button>
           
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
-            if (!ensureSubscriber()) return;
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+            if (!(await ensureSubscriberAsync())) return;
             setNameInput(""); setNameDrawerOpen(true);
           }}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -2610,8 +2616,8 @@ export default function FinalCalendarPage() {
             </span>
           {sideOpen ? <span className="text-sm font-medium">{t("saveCalendarButton")}</span> : null}
           </button>
-          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={() => {
-            if (!ensureSubscriber()) return;
+          <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
+            if (!(await ensureSubscriberAsync())) return;
             const subject = encodeURIComponent("Calendário da viagem");
             const body = encodeURIComponent(events.map((e) => `${e.date} ${e.time || ""} • ${e.label}`).join("\n"));
             const a = document.createElement("a");
@@ -2648,7 +2654,7 @@ export default function FinalCalendarPage() {
           </button>)}
           
           <button type="button" className="flex w-full items-center gap-3 rounded-md px-3 h-10 hover:bg-zinc-50 dark:hover:bg-zinc-900" onClick={async () => {
-            if (!ensureSubscriber()) return;
+            if (!(await ensureSubscriberAsync())) return;
             function fmt(d: Date) {
               const y = String(d.getFullYear());
               const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -3409,8 +3415,8 @@ export default function FinalCalendarPage() {
                         
                         {(ev.type === "activity" || ev.type === "restaurant") ? (
                           <>
-                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={() => {
-                            if (!ensureSubscriber()) return;
+                          <Button type="button" variant="outline" className="px-2 py-1 text-xs rounded-md gap-1" onClick={async () => {
+                            if (!(await ensureSubscriberAsync())) return;
                             setEditIdx(idx);
                             setEditDate(ev.date);
                             setEditTime(ev.time || "");

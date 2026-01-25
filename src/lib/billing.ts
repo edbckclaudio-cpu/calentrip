@@ -5,6 +5,8 @@ import { Preferences } from "@capacitor/preferences";
 
 type ProductInfo = { title?: string; price?: string };
 const RC_PREF_KEY = "calentrip:rc_api_key";
+const RC_ACTIVE_KEY = "calentrip:rc_premium_active";
+const RC_UNTIL_KEY = "calentrip:rc_premium_until";
 
 try { console.log("PLATFORM:", Capacitor.getPlatform()); } catch { }
 
@@ -206,6 +208,61 @@ export async function setRevenueCatApiKey(k: string) {
         return await ensureConfigured();
     } catch (e) {
         console.error("Erro ao salvar API Key:", e);
+        return false;
+    }
+}
+
+export async function refreshPremiumActive(entitlementId?: string) {
+    try {
+        if (Capacitor.getPlatform() !== "android") return false;
+        const ok = await ensureConfigured();
+        if (!ok) return false;
+        const info = await (Purchases as unknown as { getCustomerInfo: () => Promise<{ entitlements?: { all?: Record<string, { isActive?: boolean; expirationDate?: string | null }> } }> }).getCustomerInfo();
+        const all = info?.entitlements?.all || {};
+        let active = false;
+        let until: string | null = null;
+        if (entitlementId && all[entitlementId]?.isActive) {
+            active = true;
+            until = all[entitlementId]?.expirationDate || null;
+        } else {
+            for (const k of Object.keys(all)) {
+                if (all[k]?.isActive) {
+                    active = true;
+                    until = all[k]?.expirationDate || null;
+                    break;
+                }
+            }
+        }
+        await Preferences.set({ key: RC_ACTIVE_KEY, value: active ? "1" : "0" });
+        await Preferences.set({ key: RC_UNTIL_KEY, value: until || "" });
+        if (typeof window !== "undefined") {
+            localStorage.setItem(RC_ACTIVE_KEY, active ? "1" : "0");
+            if (until) localStorage.setItem(RC_UNTIL_KEY, until); else localStorage.removeItem(RC_UNTIL_KEY);
+        }
+        console.log("DIAGNÓSTICO: RC premium ativo?", active, "até:", until);
+        return active;
+    } catch (e) {
+        setLastError(e);
+        try {
+            await Preferences.set({ key: RC_ACTIVE_KEY, value: "0" });
+            if (typeof window !== "undefined") localStorage.setItem(RC_ACTIVE_KEY, "0");
+        } catch {}
+        return false;
+    }
+}
+
+export async function getCachedPremiumActive() {
+    try {
+        const isAndroid = Capacitor.getPlatform() === "android";
+        if (isAndroid) {
+            const { value } = await Preferences.get({ key: RC_ACTIVE_KEY });
+            if (value === "1") return true;
+            if (typeof window !== "undefined") return localStorage.getItem(RC_ACTIVE_KEY) === "1";
+            return false;
+        }
+        if (typeof window !== "undefined") return localStorage.getItem(RC_ACTIVE_KEY) === "1";
+        return false;
+    } catch {
         return false;
     }
 }

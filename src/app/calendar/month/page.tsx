@@ -890,7 +890,14 @@ export default function MonthCalendarPage() {
           target = actives.length ? actives[actives.length - 1] : (trips.length ? trips[0] : null);
         }
         if (target) {
-          const premium = isTripPremium(target.id);
+          let premium = isTripPremium(target.id);
+          try {
+            const mod = await import("@/lib/billing");
+            try { await mod.refreshPremiumActive(); } catch {}
+            const rcActive = await mod.getCachedPremiumActive();
+            const isAndroid = Capacitor.getPlatform() === "android";
+            if (isAndroid) premium = rcActive;
+          } catch {}
           setPremiumFlag(premium);
           setCurrentTripId(target.id);
           try {
