@@ -572,12 +572,27 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     try {
       router.push("/accommodation/search");
       if (typeof window !== "undefined") {
-        const attempts = [150, 500, 1200];
+        const attempts = [120, 300, 900, 1500];
         attempts.forEach((ms) => {
           setTimeout(() => {
             try {
               const stillHere = !window.location.pathname.includes("/accommodation/search");
-              if (stillHere) router.replace("/accommodation/search");
+              if (stillHere) {
+                router.replace("/accommodation/search");
+                try {
+                  const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+                  if (isNative) {
+                    router.push("/");
+                    setTimeout(() => { try { router.replace("/accommodation/search"); } catch {} }, 200);
+                  } else {
+                    const ua = typeof navigator !== "undefined" ? (navigator.userAgent || "") : "";
+                    const isAndroidWebView = /Android/.test(ua) && /wv|Version\/\d+\.\d+ Chrome\/\d+\.\d+/.test(ua);
+                    if (!isAndroidWebView) {
+                      window.location.assign("/accommodation/search");
+                    }
+                  }
+                } catch {}
+              }
             } catch {}
           }, ms);
         });
