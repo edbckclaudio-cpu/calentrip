@@ -536,9 +536,39 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
       arrivalNextDay: nextDay[i as 0 | 1] || undefined,
     }));
     const attachments = legs.flatMap((l, i) => (files[i] || []).map((f) => ({ leg: (i === 0 ? "outbound" : "inbound") as "outbound" | "inbound", name: f.name, type: f.type, size: f.size, id: f.id, dataUrl: f.dataUrl })));
-    try { await addTrip({ id, title, date, passengers, flightNotes }); } catch {}
-    try { saveTripAttachments(id, attachments.map((a) => ({ leg: a.leg, name: a.name, type: a.type, size: a.size, id: a.id || "" }))).catch(() => {}); } catch {}
-    try { await updateTrip(id, { reachedFinalCalendar: true }); } catch {}
+    // Navegar primeiro; persistir em background para evitar travas do WebView
+    show(t("notesSavedRedirecting"), { variant: "success" });
+    try { onProceed?.(); } catch {}
+    try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
+    try {
+      router.push("/accommodation/search");
+      if (typeof window !== "undefined") {
+        const attempts = [100, 240, 600, 1200, 2000];
+        attempts.forEach((ms) => {
+          setTimeout(() => {
+            try {
+              const stillHere = !window.location.pathname.includes("/accommodation/search");
+              if (stillHere) {
+                router.replace("/accommodation/search");
+                try {
+                  const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+                  if (isNative) {
+                    router.push("/");
+                    setTimeout(() => { try { router.replace("/accommodation/search"); } catch {} }, 180);
+                  }
+                } catch {}
+              }
+            } catch {}
+          }, ms);
+        });
+      }
+    } catch {}
+    // Persistência em segundo plano
+    setTimeout(() => {
+      try { addTrip({ id, title, date, passengers, flightNotes }).catch(() => {}); } catch {}
+      try { saveTripAttachments(id, attachments.map((a) => ({ leg: a.leg, name: a.name, type: a.type, size: a.size, id: a.id || "" }))).catch(() => {}); } catch {}
+      try { updateTrip(id, { reachedFinalCalendar: true }).catch(() => {}); } catch {}
+    }, 0);
     try {
       const isSame = (tripSearch.mode === "same");
       const dest = isSame ? tripSearch.destination : (tripSearch.inbound?.destination || tripSearch.outbound?.destination || "");
@@ -567,38 +597,6 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
       }
     } catch {}
     try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
-    show(t("notesSavedRedirecting"), { variant: "success" });
-    try { onProceed?.(); } catch {}
-    try {
-      router.push("/accommodation/search");
-      if (typeof window !== "undefined") {
-        const attempts = [120, 300, 900, 1500];
-        attempts.forEach((ms) => {
-          setTimeout(() => {
-            try {
-              const stillHere = !window.location.pathname.includes("/accommodation/search");
-              if (stillHere) {
-                router.replace("/accommodation/search");
-                try {
-                  const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform();
-                  if (isNative) {
-                    router.push("/");
-                    setTimeout(() => { try { router.replace("/accommodation/search"); } catch {} }, 200);
-                  } else {
-                    const ua = typeof navigator !== "undefined" ? (navigator.userAgent || "") : "";
-                    const isAndroidWebView = /Android/.test(ua) && /wv|Version\/\d+\.\d+ Chrome\/\d+\.\d+/.test(ua);
-                    if (!isAndroidWebView) {
-                      window.location.assign("/accommodation/search");
-                    }
-                  }
-                } catch {}
-              }
-            } catch {}
-          }, ms);
-        });
-        try { localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
-      }
-    } catch {}
     try {} catch {}
   }
 

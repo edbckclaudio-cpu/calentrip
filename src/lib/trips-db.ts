@@ -90,6 +90,12 @@ async function getDbHandle() {
 
     console.log("DIAGN: Iniciando abertura de conexão...");
     
+    if (!_CapacitorSQLite?.retrieveConnection || !_CapacitorSQLite?.createConnection) {
+      console.warn("DIAGN: Métodos de conexão SQLite ausentes, ativando fallback");
+      _useFallback = true;
+      return null;
+    }
+
     // Tenta recuperar conexão existente ou criar nova
     try {
       _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
