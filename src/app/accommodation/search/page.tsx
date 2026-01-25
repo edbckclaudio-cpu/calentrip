@@ -1153,8 +1153,8 @@ export default function AccommodationSearchPage() {
                               let dbList: Array<{ name: string; size: number }> = [];
                               if (cur) {
                                 const ref = `${c.name || ""}->${cities[i + 1]?.name || ""}`;
-                                const more = await getRefAttachments(cur.id, "transport", ref);
-                                dbList = more.map((m) => ({ name: m.name, size: Number(m.size || 0) }));
+                                const more = await getRefAttachments(cur.id, "transport", ref) as Array<{ name: string; type: string; size: number; id: string }>;
+                                dbList = more.map((m: { name: string; size: number }) => ({ name: m.name, size: Number(m.size || 0) }));
                               }
                               setTransportDocsList((prev) => ({ ...prev, [i]: [...local, ...dbList] }));
                             } catch {}

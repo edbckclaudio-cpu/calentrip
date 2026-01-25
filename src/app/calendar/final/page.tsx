@@ -150,6 +150,10 @@ export default function FinalCalendarPage() {
     const isAndroid = Capacitor.getPlatform() === "android";
     const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
     const ok = isAuth || premiumFlag || isGlobalPremium();
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
+      console.log("DIAGNÓSTICO: ensureSubscriber", { isAuth, premiumFlag, isGlobal: isGlobalPremium(), raw });
+    } catch {}
     if (!ok) {
       setPremiumGateOpen(true);
       showOnce("Recurso exclusivo para assinantes", { variant: "info" });
@@ -1295,16 +1299,30 @@ export default function FinalCalendarPage() {
   useEffect(() => {
     (async () => {
       try {
+        try {
+          const mod = await import("@capacitor/preferences");
+          const Pref = (mod as unknown as { Preferences?: { get: (o: { key: string }) => Promise<{ value?: string | null }> } }).Preferences ?? (mod as unknown as { get: (o: { key: string }) => Promise<{ value?: string | null }> });
+          const r = await Pref.get({ key: "calentrip:premium" } as unknown as { key: string });
+          if (r?.value) {
+            const raw = typeof r.value === "string" ? r.value : null;
+            if (raw && typeof window !== "undefined") {
+              const cur = localStorage.getItem("calentrip:premium");
+              if (!cur) localStorage.setItem("calentrip:premium", raw);
+              try { console.log("DIAGNÓSTICO: Preferências -> localStorage premium espelhado"); } catch {}
+            }
+          }
+        } catch {}
         await initDatabaseDb();
         try { await migrateFromLocalStorageDb(); } catch {}
         const trips: TripItemDb[] = await getSavedTripsDb();
         const current = trips.length ? trips[0] : null;
         if (!current) return;
         const isDemo = (session?.user?.email || "").toLowerCase() === "demo@calentrip.com";
-        const premium = isTripPremium(current.id) || isDemo;
+        const premium = isTripPremium(current.id) || isGlobalPremium() || isDemo;
         setCurrentTripId(current.id);
         setCurrentSavedName(current.savedCalendarName || "");
         setPremiumFlag(premium);
+        try { console.log("DIAGNÓSTICO: premium flags", { isTripPremium: isTripPremium(current.id), isGlobal: isGlobalPremium(), isDemo }); } catch {}
         try {
           const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
           const list: Array<{ tripId: string; expiresAt: number }> = raw ? JSON.parse(raw) : [];
@@ -1318,6 +1336,7 @@ export default function FinalCalendarPage() {
         } catch { setPremiumUntil(""); }
         const isAndroid = Capacitor.getPlatform() === "android";
         const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
+        try { console.log("DIAGNÓSTICO: gating decision", { isAuth, premium }); } catch {}
         if (!isAuth && !premium) setGating({ show: true, reason: "anon", tripId: current.id });
         else if (isAuth && !premium) setGating({ show: true, reason: "noPremium", tripId: current.id });
         else setGating(null);

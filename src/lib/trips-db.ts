@@ -1,14 +1,14 @@
 "use client";
+import { Capacitor } from "@capacitor/core";
+
 type PreferencesAdapter = { get: (opts: { key: string }) => Promise<{ value?: string }>; set: (opts: { key: string; value: string }) => Promise<void> };
 type CapacitorSQLiteAdapter = {
-  createConnection?: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<unknown>;
-  open: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<{
-    execute: (sql: string) => Promise<void>;
-    run: (sql: string, params?: unknown[]) => Promise<void>;
-    query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
-    close: () => Promise<void>;
-  }>;
+  createConnection?: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<any>;
+  retrieveConnection?: (opts: { database: string }) => Promise<any>;
+  isDBOpen?: (opts: { database: string }) => Promise<{ result: boolean }>;
+  open: (opts: { database: string; version?: number; encrypted?: boolean; mode?: string }) => Promise<any>;
 };
+
 let _Preferences: PreferencesAdapter | null = null;
 let _CapacitorSQLite: CapacitorSQLiteAdapter | null = null;
 
@@ -43,21 +43,11 @@ export type EventItem = {
   type?: string;
 };
 
-type Conn = {
-  open: (db: string, encrypted?: boolean, mode?: string, version?: number) => Promise<{
-    execute: (sql: string) => Promise<void>;
-    run: (sql: string, params?: unknown[]) => Promise<void>;
-    query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
-    close: () => Promise<void>;
-  }>;
-};
-
 const _dbName = "calentrip_db";
-let _conn: Conn | null = null;
 let _ready = false;
 let _useFallback = false;
-const _timeoutMs = 3000;
-let _connCreated = false;
+const _timeoutMs = 5000;
+let _dbHandle: any = null; // Singleton da conexão
 let _dbQueue: Promise<unknown> = Promise.resolve();
 
 function _withTimeout<T>(p: Promise<T>, ms = _timeoutMs): Promise<T> {
@@ -67,317 +57,215 @@ function _withTimeout<T>(p: Promise<T>, ms = _timeoutMs): Promise<T> {
   ]);
 }
 
-async function ensureNativeConnection() {
-  try {
-    if (_connCreated) return;
-    if (!_CapacitorSQLite) {
-      try {
-        const mod = await import("@capacitor-community/sqlite");
-        const candidate = (mod as unknown as { CapacitorSQLite?: CapacitorSQLiteAdapter }).CapacitorSQLite ?? (mod as unknown as CapacitorSQLiteAdapter);
-        _CapacitorSQLite = candidate;
-      } catch {}
+// Inicializa os plugins Capacitor
+async function _loadPlugins() {
+  if (!_CapacitorSQLite && Capacitor.isNativePlatform()) {
+    try {
+      const mod = await import("@capacitor-community/sqlite");
+      _CapacitorSQLite = (mod as any).CapacitorSQLite ?? mod;
+      console.log("DIAGN: Plugin SQLite carregado");
+    } catch (e) {
+      console.warn("DIAGN: Falha ao carregar SQLite, usando fallback", e);
+      _useFallback = true;
     }
-    const anySql = _CapacitorSQLite as CapacitorSQLiteAdapter | null;
-    if (anySql && typeof anySql.createConnection === "function") {
-      try {
-        await _withTimeout(anySql.createConnection!({ database: _dbName, version: 1, encrypted: false, mode: "no-encryption" }));
-        _connCreated = true;
-      } catch {
-        _connCreated = false;
-      }
-    }
-  } catch {
-    _connCreated = false;
+  }
+  if (!_Preferences) {
+    try {
+      const mod = await import("@capacitor/preferences");
+      _Preferences = (mod as any).Preferences ?? mod;
+    } catch {}
   }
 }
 
-async function runDb<T>(fn: (db: { execute: (sql: string) => Promise<void>; run: (sql: string, params?: unknown[]) => Promise<void>; query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>; close: () => Promise<void> }) => Promise<T>): Promise<T> {
-  const task = _dbQueue.then(async () => {
-    const conn = await getConnection();
-    const db = await conn!.open(_dbName, false, "no-encryption", 1);
-    try {
-      return await fn(db);
-    } finally {
-      try { await db.close(); } catch {}
+// Garante que a conexão exista e esteja aberta (Singleton)
+async function getDbHandle() {
+  await _loadPlugins();
+  if (_useFallback || !Capacitor.isNativePlatform()) return null;
+
+  try {
+    if (_dbHandle) {
+      const isOpen = await _CapacitorSQLite!.isDBOpen!({ database: _dbName });
+      if (isOpen.result) return _dbHandle;
     }
+
+    console.log("DIAGN: Iniciando abertura de conexão...");
+    
+    // Tenta recuperar conexão existente ou criar nova
+    try {
+      _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
+    } catch {
+      _dbHandle = await _CapacitorSQLite!.createConnection!({
+        database: _dbName,
+        version: 1,
+        encrypted: false,
+        mode: "no-encryption"
+      });
+    }
+
+    const checkOpen = await _CapacitorSQLite!.isDBOpen!({ database: _dbName });
+    if (!checkOpen.result) {
+      await _withTimeout(_dbHandle.open());
+      console.log("DIAGN: Banco de dados aberto com sucesso");
+    }
+    
+    return _dbHandle;
+  } catch (e) {
+    console.error("DIAGN: Erro ao obter handle do banco", e);
+    _useFallback = true;
+    return null;
+  }
+}
+
+// Fila de execução para evitar Race Conditions
+async function runDb<T>(fn: (db: any) => Promise<T>): Promise<T> {
+  const task = _dbQueue.then(async () => {
+    const db = await getDbHandle();
+    if (!db) throw new Error("Fallback mode");
+    return await fn(db);
   });
+  
   _dbQueue = task.then(() => undefined, () => undefined);
   return await task as T;
 }
 
-function makeMockPlugin(): CapacitorSQLiteAdapter {
-  try { console.warn("⚠️ MODO RECAPE: Rodando sem SQLite nativo"); } catch {}
-  return {
-    async createConnection() { return undefined; },
-    async open() {
-      return {
-        execute: async () => {},
-        run: async () => {},
-        query: async () => undefined,
-        close: async () => {},
-      };
-    },
-  };
-}
-
-async function getConnection(): Promise<Conn | null> {
-  if (_conn) return _conn;
-  try {
-    try {
-      if (typeof window !== "undefined" && (window as unknown as { db_disabled?: boolean }).db_disabled) {
-        _useFallback = true;
-        _CapacitorSQLite = makeMockPlugin();
-      }
-    } catch {}
-    if (!_CapacitorSQLite) {
-      try {
-        const mod = await import("@capacitor-community/sqlite");
-        const candidate = (mod as unknown as { CapacitorSQLite?: CapacitorSQLiteAdapter }).CapacitorSQLite ?? (mod as unknown as CapacitorSQLiteAdapter);
-        _CapacitorSQLite = candidate;
-      } catch {
-        _useFallback = true;
-        try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).offline = true; } catch {}
-        try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).db_fallback = true; } catch {}
-        _CapacitorSQLite = makeMockPlugin();
-      }
-    }
-    const anySql = _CapacitorSQLite as CapacitorSQLiteAdapter;
-    const adapter: Conn = {
-      open: async (db, encrypted = false, mode = "no-encryption", version = 1) => {
-        try {
-          await ensureNativeConnection();
-          const handle = await _withTimeout(anySql.open({ database: db, version, encrypted, mode }));
-          return handle as unknown as {
-            execute: (sql: string) => Promise<void>;
-            run: (sql: string, params?: unknown[]) => Promise<void>;
-            query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] } | undefined>;
-            close: () => Promise<void>;
-          };
-        } catch (e) {
-          try { console.warn("⚠️ MODO RECAPE: Rodando sem SQLite nativo"); } catch {}
-          _useFallback = true;
-          try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).offline = true; } catch {}
-          try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).db_fallback = true; } catch {}
-          return {
-            execute: async () => {},
-            run: async () => {},
-            query: async () => undefined,
-            close: async () => {},
-          };
-        }
-      },
-    };
-    _conn = adapter;
-    return _conn;
-  } catch {
-    _useFallback = true;
-    try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).offline = true; } catch {}
-    try { if (typeof window !== "undefined") (window as unknown as { offline?: boolean; db_fallback?: boolean }).db_fallback = true; } catch {}
-    _CapacitorSQLite = makeMockPlugin();
-    const adapter: Conn = {
-      open: async () => ({
-        execute: async () => {},
-        run: async () => {},
-        query: async () => undefined,
-        close: async () => {},
-      }),
-    };
-    _conn = adapter;
-    return _conn;
-  }
-}
-
 export async function initDatabase() {
   if (_ready) return;
+  await _loadPlugins();
+
+  if (!Capacitor.isNativePlatform()) {
+    _useFallback = true;
+    _ready = true;
+    return;
+  }
+
   try {
-    try {
-      if (typeof window !== "undefined" && (window as unknown as { db_disabled?: boolean }).db_disabled) { _ready = true; return; }
-    } catch {}
-    const conn = await getConnection();
-    if (!conn) { _ready = true; return; }
     await runDb(async (db) => {
       await db.execute(`
-    CREATE TABLE IF NOT EXISTS trips (
-      id TEXT PRIMARY KEY NOT NULL,
-      title TEXT NOT NULL,
-      date TEXT NOT NULL,
-      passengers INTEGER,
-      flightNotes TEXT,
-      reachedFinalCalendar INTEGER DEFAULT 0,
-      savedCalendarName TEXT,
-      savedAt INTEGER
-    );
-  `);
+        CREATE TABLE IF NOT EXISTS trips (
+          id TEXT PRIMARY KEY NOT NULL,
+          title TEXT NOT NULL,
+          date TEXT NOT NULL,
+          passengers INTEGER,
+          flightNotes TEXT,
+          reachedFinalCalendar INTEGER DEFAULT 0,
+          savedCalendarName TEXT,
+          savedAt INTEGER
+        );
+      `);
       await db.execute(`
-    CREATE TABLE IF NOT EXISTS events (
-      event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trip_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      label TEXT,
-      date TEXT NOT NULL,
-      time TEXT,
-      address TEXT,
-      type TEXT,
-      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-    );
-  `);
+        CREATE TABLE IF NOT EXISTS events (
+          event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          trip_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          label TEXT,
+          date TEXT NOT NULL,
+          time TEXT,
+          address TEXT,
+          type TEXT,
+          FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+        );
+      `);
       await db.execute(`
-    CREATE TABLE IF NOT EXISTS attachments (
-      att_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trip_id TEXT NOT NULL,
-      leg TEXT NOT NULL,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL,
-      size INTEGER NOT NULL,
-      file_id TEXT NOT NULL,
-      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-    );
-  `);
-      try { await db.execute(`ALTER TABLE attachments ADD COLUMN category TEXT`); } catch {}
-      try { await db.execute(`ALTER TABLE attachments ADD COLUMN ref TEXT`); } catch {}
-      return;
+        CREATE TABLE IF NOT EXISTS attachments (
+          att_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          trip_id TEXT NOT NULL,
+          leg TEXT NOT NULL,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          size INTEGER NOT NULL,
+          file_id TEXT NOT NULL,
+          category TEXT,
+          ref TEXT,
+          FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+        );
+      `);
+      console.log("DIAGN: Tabelas verificadas/criadas");
     });
     _ready = true;
   } catch (e) {
-    try { console.error("SQLite init failed", e); } catch {}
+    _useFallback = true;
     _ready = true;
   }
 }
 
+// --- MÉTODOS DE DADOS ---
+
 export async function migrateFromLocalStorage() {
   try {
-    if (!_Preferences) {
-      try {
-        const mod = await import("@capacitor/preferences");
-        const candidate = (mod as unknown as { Preferences?: PreferencesAdapter }).Preferences ?? (mod as unknown as PreferencesAdapter);
-        _Preferences = candidate;
-      } catch {}
-    }
-    const flag = _Preferences ? await _Preferences.get({ key: "migration_complete" }) : undefined;
-    if ((flag?.value || "") === "true") return;
-  } catch {}
-  try {
+    await _loadPlugins();
+    const flag = _Preferences ? await _Preferences.get({ key: "migration_complete" }) : null;
+    if (flag?.value === "true") return;
+
     const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:trips") : null;
     const arr: TripItem[] = raw ? JSON.parse(raw) : [];
-    if (!arr.length) {
-      if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
-      return;
-    }
-    const conn = await getConnection();
-    if (!conn) {
-      if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
-      return;
-    }
-    await runDb(async (db) => {
-      for (const t of arr) {
-        const flightNotes = JSON.stringify(t.flightNotes || []);
-        const reached = t.reachedFinalCalendar ? 1 : 0;
-        const savedAt = t.savedAt ?? Date.now();
-        await db.run(
-          "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-          [t.id, t.title, t.date, t.passengers, flightNotes, reached, t.savedCalendarName || null, savedAt]
-        );
-        const evs = (t as unknown as { savedEvents?: EventItem[] }).savedEvents || [];
-        if (Array.isArray(evs) && evs.length) {
-          await db.run("DELETE FROM events WHERE trip_id = ?", [t.id]);
-          for (const e of evs) {
-            await db.run(
-              "INSERT INTO events (trip_id, name, label, date, time, address, type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-              [t.id, e.name || e.label || "Evento", e.label || null, e.date, e.time || null, e.address || null, e.type || null]
-            );
-          }
+    
+    if (arr.length > 0 && Capacitor.isNativePlatform()) {
+      await runDb(async (db) => {
+        for (const t of arr) {
+          await db.run(
+            "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [t.id, t.title, t.date, t.passengers, JSON.stringify(t.flightNotes || []), t.reachedFinalCalendar ? 1 : 0, t.savedCalendarName || null, t.savedAt || Date.now()]
+          );
         }
-        const atts = (t as unknown as { attachments?: Array<{ leg: "outbound" | "inbound"; name: string; type: string; size: number; id?: string }> }).attachments || [];
-        if (Array.isArray(atts) && atts.length) {
-          await db.run("DELETE FROM attachments WHERE trip_id = ?", [t.id]);
-          for (const a of atts) {
-            await db.run(
-              "INSERT INTO attachments (trip_id, leg, name, type, size, file_id) VALUES (?, ?, ?, ?, ?, ?)",
-              [t.id, a.leg, a.name, a.type, a.size, a.id || ""]
-            );
-          }
-        }
-      }
-      return;
-    });
+      });
+      console.log("DIAGN: Migração concluída");
+    }
+    
     if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" });
-  } catch {
-    try { if (_Preferences) await _Preferences.set({ key: "migration_complete", value: "true" }); } catch {}
+  } catch (e) {
+    console.error("DIAGN: Erro na migração", e);
   }
 }
 
 export async function addTrip(trip: TripItem) {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const next = [trip, ...list].slice(0, 20);
-      if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-    } catch {}
+  if (_useFallback) {
+    const list = JSON.parse(localStorage.getItem("calentrip:trips") || "[]");
+    localStorage.setItem("calentrip:trips", JSON.stringify([trip, ...list].slice(0, 50)));
     return;
   }
-  try {
-    await runDb(async (db) => {
-      await db.run(
-        "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [trip.id, trip.title, trip.date, trip.passengers, JSON.stringify(trip.flightNotes || []), trip.reachedFinalCalendar ? 1 : 0, trip.savedCalendarName || null, Date.now()]
-      );
-    });
-  } catch {
-    _useFallback = true;
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const next = [trip, ...list].slice(0, 20);
-      if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-    } catch {}
-  }
+  await runDb(async (db) => {
+    await db.run(
+      "INSERT OR REPLACE INTO trips (id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [trip.id, trip.title, trip.date, trip.passengers, JSON.stringify(trip.flightNotes || []), trip.reachedFinalCalendar ? 1 : 0, trip.savedCalendarName || null, Date.now()]
+    );
+  });
 }
 
 export async function updateTrip(id: string, data: Partial<TripItem>) {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const idx = list.findIndex((t) => t.id === id);
-      if (idx >= 0) {
-        const next = [...list];
-        next[idx] = { ...next[idx], ...data };
-        if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-      }
-    } catch {}
+  if (_useFallback) {
+    const list: TripItem[] = JSON.parse(localStorage.getItem("calentrip:trips") || "[]");
+    const idx = list.findIndex(t => t.id === id);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...data };
+      localStorage.setItem("calentrip:trips", JSON.stringify(list));
+    }
     return;
   }
   const fields: string[] = [];
-  const values: unknown[] = [];
-  if (data.title !== undefined) { fields.push("title = ?"); values.push(data.title); }
-  if (data.date !== undefined) { fields.push("date = ?"); values.push(data.date); }
-  if (data.passengers !== undefined) { fields.push("passengers = ?"); values.push(data.passengers); }
-  if (data.flightNotes !== undefined) { fields.push("flightNotes = ?"); values.push(JSON.stringify(data.flightNotes || [])); }
-  if (data.reachedFinalCalendar !== undefined) { fields.push("reachedFinalCalendar = ?"); values.push(data.reachedFinalCalendar ? 1 : 0); }
-  if (data.savedCalendarName !== undefined) { fields.push("savedCalendarName = ?"); values.push(data.savedCalendarName || null); }
-  if (data.savedAt !== undefined) { fields.push("savedAt = ?"); values.push(data.savedAt); }
+  const values: any[] = [];
+  Object.entries(data).forEach(([key, val]) => {
+    if (val === undefined) return;
+    if (key === "flightNotes") { fields.push(`${key} = ?`); values.push(JSON.stringify(val)); }
+    else if (key === "reachedFinalCalendar") { fields.push(`${key} = ?`); values.push(val ? 1 : 0); }
+    else { fields.push(`${key} = ?`); values.push(val); }
+  });
   if (!fields.length) return;
-  const sql = `UPDATE trips SET ${fields.join(", ")} WHERE id = ?`;
   await runDb(async (db) => {
-    await db.run(sql, [...values, id]);
+    await db.run(`UPDATE trips SET ${fields.join(", ")} WHERE id = ?`, [...values, id]);
   });
 }
 
 export async function saveCalendarEvents(tripId: string, events: EventItem[]) {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const idx = list.findIndex((t) => t.id === tripId);
-      if (idx >= 0) {
-        const next = [...list];
-        (next[idx] as unknown as { savedEvents?: EventItem[] }).savedEvents = events;
-        if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-      }
-    } catch {}
+  if (_useFallback) {
+    const list = JSON.parse(localStorage.getItem("calentrip:trips") || "[]");
+    const idx = list.findIndex((t: any) => t.id === tripId);
+    if (idx >= 0) {
+      list[idx].savedEvents = events;
+      localStorage.setItem("calentrip:trips", JSON.stringify(list));
+    }
     return;
   }
   await runDb(async (db) => {
@@ -385,7 +273,7 @@ export async function saveCalendarEvents(tripId: string, events: EventItem[]) {
     for (const e of events) {
       await db.run(
         "INSERT INTO events (trip_id, name, label, date, time, address, type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [tripId, e.name || e.label || "Evento", e.label || null, e.date, e.time || null, e.address || null, e.type || null]
+        [tripId, e.name || "Evento", e.label || null, e.date, e.time || null, e.address || null, e.type || null]
       );
     }
   });
@@ -393,84 +281,48 @@ export async function saveCalendarEvents(tripId: string, events: EventItem[]) {
 
 export async function getSavedTrips(): Promise<TripItem[]> {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      return [...list].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-    } catch { return []; }
+  if (_useFallback) {
+    return JSON.parse(localStorage.getItem("calentrip:trips") || "[]");
   }
-  const res = await runDb(async (db) => {
-    return await db.query("SELECT id, title, date, passengers, flightNotes, reachedFinalCalendar, savedCalendarName, savedAt FROM trips ORDER BY date DESC");
+  return await runDb(async (db) => {
+    const res = await db.query("SELECT * FROM trips ORDER BY date DESC");
+    return (res?.values || []).map((r: any) => ({
+      ...r,
+      flightNotes: JSON.parse(r.flightNotes || "[]"),
+      reachedFinalCalendar: !!r.reachedFinalCalendar
+    }));
   });
-  const out: TripItem[] = [];
-  const rows = (res?.values || []) as unknown[][];
-  for (const r of rows) {
-    const [id, title, date, passengers, flightNotesJson, reached, savedCalendarName, savedAt] = r as [string, string, string, number, string, number, string | null, number | null];
-    const notes = (() => { try { return JSON.parse(String(flightNotesJson || "[]")); } catch { return []; } })();
-    out.push({ id, title, date, passengers: Number(passengers || 0), flightNotes: notes, reachedFinalCalendar: Boolean(reached), savedCalendarName: savedCalendarName || undefined, savedAt: savedAt || undefined });
-  }
-  return out;
 }
 
 export async function getTripEvents(tripId: string): Promise<EventItem[]> {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const it = list.find((t) => t.id === tripId);
-      const evs = (it as unknown as { savedEvents?: EventItem[] })?.savedEvents || [];
-      return evs;
-    } catch { return []; }
+  if (_useFallback) {
+    const list = JSON.parse(localStorage.getItem("calentrip:trips") || "[]");
+    return list.find((t: any) => t.id === tripId)?.savedEvents || [];
   }
-  const res = await runDb(async (db) => {
-    return await db.query("SELECT name, label, date, time, address, type FROM events WHERE trip_id = ? ORDER BY date ASC, time ASC", [tripId]);
+  return await runDb(async (db) => {
+    const res = await db.query("SELECT * FROM events WHERE trip_id = ? ORDER BY date ASC, time ASC", [tripId]);
+    return res?.values || [];
   });
-  const out: EventItem[] = [];
-  const rows = (res?.values || []) as unknown[][];
-  for (const r of rows) {
-    const [name, label, date, time, address, type] = r as [string, string | null, string, string | null, string | null, string | null];
-    out.push({ name, label: label || undefined, date, time: time || undefined, address: address || undefined, type: type || undefined });
-  }
-  return out;
 }
 
 export async function removeTrip(id: string) {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const next = list.filter((t) => t.id !== id);
-      if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-    } catch {}
+  if (_useFallback) {
+    const list = JSON.parse(localStorage.getItem("calentrip:trips") || "[]");
+    localStorage.setItem("calentrip:trips", JSON.stringify(list.filter((t: any) => t.id !== id)));
     return;
   }
   await runDb(async (db) => {
-    await db.run("DELETE FROM events WHERE trip_id = ?", [id]);
-    await db.run("DELETE FROM attachments WHERE trip_id = ?", [id]);
     await db.run("DELETE FROM trips WHERE id = ?", [id]);
   });
 }
 
-export async function saveTripAttachments(tripId: string, atts: Array<{ leg: "outbound" | "inbound"; name: string; type: string; size: number; id: string }>) {
+export async function saveTripAttachments(tripId: string, atts: any[]) {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const idx = list.findIndex((t) => t.id === tripId);
-      if (idx >= 0) {
-        const next = [...list];
-        (next[idx] as unknown as { attachments?: Array<{ leg: "outbound" | "inbound"; name: string; type: string; size: number; id?: string }> }).attachments = atts;
-        if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-      }
-    } catch {}
-    return;
-  }
+  if (_useFallback) return;
   await runDb(async (db) => {
-    await db.run("DELETE FROM attachments WHERE trip_id = ?", [tripId]);
+    await db.run("DELETE FROM attachments WHERE trip_id = ? AND category IS NULL", [tripId]);
     for (const a of atts) {
       await db.run(
         "INSERT INTO attachments (trip_id, leg, name, type, size, file_id) VALUES (?, ?, ?, ?, ?, ?)",
@@ -480,25 +332,22 @@ export async function saveTripAttachments(tripId: string, atts: Array<{ leg: "ou
   });
 }
 
-export async function saveRefAttachments(tripId: string, category: string, ref: string, atts: Array<{ name: string; type: string; size: number; id: string }>) {
+export async function getTripAttachments(tripId: string, leg?: string) {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const idx = list.findIndex((t) => t.id === tripId);
-      if (idx >= 0) {
-        const next = [...list];
-        const cur = (next[idx] as unknown as { attachments?: Array<{ leg?: string; category?: string; ref?: string; name: string; type: string; size: number; id?: string }> }).attachments || [];
-        const merged = cur.concat(atts.map((a) => ({ category, ref, name: a.name, type: a.type, size: a.size, id: a.id })));
-        (next[idx] as unknown as { attachments?: Array<{ leg?: string; category?: string; ref?: string; name: string; type: string; size: number; id?: string }> }).attachments = merged;
-        if (typeof window !== "undefined") localStorage.setItem("calentrip:trips", JSON.stringify(next));
-      }
-    } catch {}
-    return;
-  }
+  if (_useFallback) return [];
+  return await runDb(async (db) => {
+    let sql = "SELECT name, type, size, file_id as id, leg FROM attachments WHERE trip_id = ?";
+    const params = [tripId];
+    if (leg) { sql += " AND leg = ?"; params.push(leg); }
+    const res = await db.query(sql, params);
+    return res?.values || [];
+  });
+}
+
+export async function saveRefAttachments(tripId: string, category: string, ref: string, atts: any[]) {
+  await initDatabase();
+  if (_useFallback) return;
   await runDb(async (db) => {
-    // Do not delete existing attachments for this trip/ref; append
     for (const a of atts) {
       await db.run(
         "INSERT INTO attachments (trip_id, leg, name, type, size, file_id, category, ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -508,50 +357,15 @@ export async function saveRefAttachments(tripId: string, category: string, ref: 
   });
 }
 
-export async function getRefAttachments(tripId: string, category?: string, ref?: string): Promise<Array<{ name: string; type: string; size: number; id: string }>> {
+export async function getRefAttachments(tripId: string, category?: string, ref?: string) {
   await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const it = list.find((t) => t.id === tripId);
-      const raw = (it as unknown as { attachments?: Array<{ leg?: string; category?: string; ref?: string; name: string; type: string; size: number; id?: string }> })?.attachments || [];
-      const filtered = raw.filter((a) => (category ? (a.category === category || a.leg === category) : true) && (ref ? a.ref === ref : true));
-      return filtered.map((a) => ({ name: a.name, type: a.type, size: a.size, id: a.id || "" }));
-    } catch { return []; }
-  }
-  const res = await runDb(async (db) => {
-    let sql = "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ?";
-    const params: unknown[] = [tripId];
+  if (_useFallback) return [];
+  return await runDb(async (db) => {
+    let sql = "SELECT name, type, size, file_id as id FROM attachments WHERE trip_id = ?";
+    const params: any[] = [tripId];
     if (category) { sql += " AND category = ?"; params.push(category); }
     if (ref) { sql += " AND ref = ?"; params.push(ref); }
-    return await db.query(sql, params);
-  });
-  const rows = (res?.values || []) as unknown[][];
-  return rows.map((r) => {
-    const [name, type, size, file_id] = r as [string, string, number, string];
-    return { name, type, size: Number(size || 0), id: file_id };
-  });
-}
-export async function getTripAttachments(tripId: string, leg?: "outbound" | "inbound"): Promise<Array<{ name: string; type: string; size: number; id: string }>> {
-  await initDatabase();
-  const conn = await getConnection();
-  if (!conn || _useFallback) {
-    try {
-      const list: TripItem[] = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("calentrip:trips") || "[]") : [];
-      const it = list.find((t) => t.id === tripId);
-      const raw = (it as unknown as { attachments?: Array<{ leg: "outbound" | "inbound"; name: string; type: string; size: number; id?: string }> })?.attachments || [];
-      const out = raw.map((a) => ({ name: a.name, type: a.type, size: a.size, id: a.id || "" }));
-      return leg ? out.filter((a, idx) => ((raw[idx]?.leg) === leg)) : out;
-    } catch { return []; }
-  }
-  const res = await runDb(async (db) => {
-    const sql = leg ? "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ? AND leg = ?" : "SELECT name, type, size, file_id FROM attachments WHERE trip_id = ?";
-    return await db.query(sql, leg ? [tripId, leg] : [tripId]);
-  });
-  const rows = (res?.values || []) as unknown[][];
-  return rows.map((r) => {
-    const [name, type, size, file_id] = r as [string, string, number, string];
-    return { name, type, size: Number(size || 0), id: file_id };
+    const res = await db.query(sql, params);
+    return res?.values || [];
   });
 }

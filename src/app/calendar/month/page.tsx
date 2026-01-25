@@ -856,6 +856,19 @@ export default function MonthCalendarPage() {
   useEffect(() => {
     (async () => {
       try {
+        try {
+          const mod = await import("@capacitor/preferences");
+          const Pref = (mod as unknown as { Preferences?: { get: (o: { key: string }) => Promise<{ value?: string | null }> } }).Preferences ?? (mod as unknown as { get: (o: { key: string }) => Promise<{ value?: string | null }> });
+          const r = await Pref.get({ key: "calentrip:premium" } as unknown as { key: string });
+          if (r?.value) {
+            const raw = typeof r.value === "string" ? r.value : null;
+            if (raw && typeof window !== "undefined") {
+              const cur = localStorage.getItem("calentrip:premium");
+              if (!cur) localStorage.setItem("calentrip:premium", raw);
+              try { console.log("DIAGNÓSTICO: Preferências -> localStorage premium espelhado (month)"); } catch {}
+            }
+          }
+        } catch {}
         if (loadedFromSaved) return;
         const trips: TripItem[] = await getSavedTrips();
         let target: TripItem | null = null;
