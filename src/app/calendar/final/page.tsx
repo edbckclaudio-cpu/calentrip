@@ -3233,7 +3233,11 @@ export default function FinalCalendarPage() {
             type="button"
             variant="outline"
             className="px-2 py-1 text-xs rounded-md gap-1"
-            onClick={() => { setNameInput(""); setNameDrawerOpen(true); }}
+            onClick={async () => {
+              if (!(await ensureSubscriberAsync())) return;
+              setNameInput("");
+              setNameDrawerOpen(true);
+            }}
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
             <span className="hidden sm:inline">{t("saveLabel")}</span>
