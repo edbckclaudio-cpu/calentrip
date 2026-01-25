@@ -22,6 +22,7 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "@next/next/no-page-custom-font": "off",
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ]);
