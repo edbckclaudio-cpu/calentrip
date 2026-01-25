@@ -569,23 +569,19 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
     show(t("notesSavedRedirecting"), { variant: "success" });
     try { onProceed?.(); } catch {}
-    try { router.push("/accommodation/search"); } catch {}
     try {
+      router.push("/accommodation/search");
       if (typeof window !== "undefined") {
-        setTimeout(() => {
-          try {
-            const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-            const isAndroidWebView = /Android/.test(ua) && /wv|Version\/\d+\.\d+ Chrome\/\d+\.\d+/.test(ua);
-            const stillHere = !window.location.pathname.includes("/accommodation/search");
-            if (!stillHere) return;
-            if (!isAndroidWebView && !Capacitor.isNativePlatform()) {
-              window.location.assign("/accommodation/search");
-              return;
-            }
-            try { localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
-            router.push("/");
-          } catch {}
-        }, 80);
+        const attempts = [150, 500, 1200];
+        attempts.forEach((ms) => {
+          setTimeout(() => {
+            try {
+              const stillHere = !window.location.pathname.includes("/accommodation/search");
+              if (stillHere) router.replace("/accommodation/search");
+            } catch {}
+          }, ms);
+        });
+        try { localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
       }
     } catch {}
     try {} catch {}
