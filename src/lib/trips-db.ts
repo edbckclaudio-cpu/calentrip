@@ -94,18 +94,20 @@ async function getDbHandle() {
     try {
       _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
     } catch {
-      _dbHandle = await _CapacitorSQLite!.createConnection!({
+      await _CapacitorSQLite!.createConnection!({
         database: _dbName,
         version: 1,
         encrypted: false,
         mode: "no-encryption"
       });
+      _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
     }
 
     const checkOpen = await _CapacitorSQLite!.isDBOpen!({ database: _dbName });
     if (!checkOpen.result) {
-      await _withTimeout(_dbHandle.open());
+      await _withTimeout(_CapacitorSQLite!.open({ database: _dbName, version: 1, encrypted: false, mode: "no-encryption" }));
       console.log("DIAGN: Banco de dados aberto com sucesso");
+      _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
     }
     
     return _dbHandle;
