@@ -551,16 +551,32 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
               if (stillHere) {
                 router.replace("/accommodation/search");
                 try {
-                  const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform();
-                  if (isNative) {
-                    router.push("/");
-                    setTimeout(() => { try { router.replace("/accommodation/search"); } catch {} }, 180);
-                  }
+                  router.push("/");
+                  setTimeout(() => { try { router.replace("/accommodation/search"); } catch {} }, 180);
                 } catch {}
               }
             } catch {}
           }, ms);
         });
+        setTimeout(() => {
+          try {
+            const stillHere = !window.location.pathname.includes("/accommodation/search");
+            const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+            if (stillHere && isNative) {
+              const url = `${window.location.protocol}//${window.location.host}/accommodation/search`;
+              window.location.assign(url);
+            }
+          } catch {}
+        }, 2800);
+        setTimeout(() => {
+          try {
+            const stillHere = !window.location.pathname.includes("/accommodation/search");
+            const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+            if (stillHere && !isNative) {
+              window.location.assign("/accommodation/search");
+            }
+          } catch {}
+        }, 3600);
       }
     } catch {}
     // Persistência em segundo plano
