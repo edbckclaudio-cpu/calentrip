@@ -11,6 +11,7 @@ type CapacitorSQLiteAdapter = {
 
 let _Preferences: PreferencesAdapter | null = null;
 let _CapacitorSQLite: CapacitorSQLiteAdapter | null = null;
+let _SQLiteConnection: any = null;
 
 export type FlightNote = {
   leg: "outbound" | "inbound";
@@ -46,23 +47,16 @@ export type EventItem = {
 const _dbName = "calentrip_db";
 let _ready = false;
 let _useFallback = false;
-const _timeoutMs = 5000;
 let _dbHandle: any = null; // Singleton da conexão
 let _dbQueue: Promise<unknown> = Promise.resolve();
-
-function _withTimeout<T>(p: Promise<T>, ms = _timeoutMs): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
-  ]);
-}
 
 // Inicializa os plugins Capacitor
 async function _loadPlugins() {
   if (!_CapacitorSQLite && Capacitor.isNativePlatform()) {
     try {
       const mod = await import("@capacitor-community/sqlite");
-      _CapacitorSQLite = (mod as any).CapacitorSQLite ?? mod;
+      _CapacitorSQLite = (mod as any).CapacitorSQLite ?? mod.CapacitorSQLite ?? null;
+      _SQLiteConnection = (mod as any).SQLiteConnection ?? null;
       console.log("DIAGN: Plugin SQLite carregado");
     } catch (e) {
       console.warn("DIAGN: Falha ao carregar SQLite, usando fallback", e);
@@ -83,38 +77,24 @@ async function getDbHandle() {
   if (_useFallback || !Capacitor.isNativePlatform()) return null;
 
   try {
-    if (_dbHandle) {
-      const isOpen = await _CapacitorSQLite!.isDBOpen!({ database: _dbName });
-      if (isOpen.result) return _dbHandle;
-    }
+    if (_dbHandle) return _dbHandle;
 
     console.log("DIAGN: Iniciando abertura de conexão...");
     
-    if (!_CapacitorSQLite?.retrieveConnection || !_CapacitorSQLite?.createConnection) {
-      console.warn("DIAGN: Métodos de conexão SQLite ausentes, ativando fallback");
+    if (!_CapacitorSQLite || !_SQLiteConnection) {
+      console.warn("DIAGN: Wrapper SQLiteConnection ausente, ativando fallback");
       _useFallback = true;
       return null;
     }
 
-    // Tenta recuperar conexão existente ou criar nova
-    try {
-      _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
-    } catch {
-      await _CapacitorSQLite!.createConnection!({
-        database: _dbName,
-        version: 1,
-        encrypted: false,
-        mode: "no-encryption"
-      });
-      _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
-    }
-
-    const checkOpen = await _CapacitorSQLite!.isDBOpen!({ database: _dbName });
-    if (!checkOpen.result) {
-      await _withTimeout(_CapacitorSQLite!.open({ database: _dbName, version: 1, encrypted: false, mode: "no-encryption" }));
-      console.log("DIAGN: Banco de dados aberto com sucesso");
-      _dbHandle = await _CapacitorSQLite!.retrieveConnection!({ database: _dbName });
-    }
+    const sqlite = new _SQLiteConnection(_CapacitorSQLite);
+    const ret = await sqlite.checkConnectionsConsistency();
+    const isConn = (await sqlite.isConnection(_dbName)).result;
+    _dbHandle = (ret.result && isConn)
+      ? await sqlite.retrieveConnection(_dbName)
+      : await sqlite.createConnection(_dbName, false, "no-encryption", 1);
+    await _dbHandle.open();
+    console.log("DIAGN: Banco de dados aberto com sucesso");
     
     return _dbHandle;
   } catch (e) {
@@ -190,7 +170,7 @@ export async function initDatabase() {
       console.log("DIAGN: Tabelas verificadas/criadas");
     });
     _ready = true;
-  } catch (e) {
+  } catch {
     _useFallback = true;
     _ready = true;
   }
