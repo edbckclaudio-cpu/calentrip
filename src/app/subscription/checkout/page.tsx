@@ -65,7 +65,8 @@ export default function SubscriptionCheckoutPage() {
         try { alert("Disponível no app Android. Instale via Google Play."); } catch {}
         return;
       }
-      const mod = await import("@/lib/billing");
+      const { getBillingService } = await import("@/lib/billing/service");
+      const mod = getBillingService();
       const userId = nativeUser?.email || nativeUser?.name || session?.user?.email || session?.user?.name || undefined;
       const r = await mod.completePurchaseForTrip("global", userId);
       if (r?.ok) { show(t("purchaseSuccess"), { variant: "success" }); router.push("/subscription/success"); }
@@ -90,8 +91,9 @@ export default function SubscriptionCheckoutPage() {
   useEffect(() => {
     (async () => {
       try {
-        const mod = await import("@/lib/billing");
-        const info = await mod.ensureProduct(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01");
+        const { getBillingService } = await import("@/lib/billing/service");
+        const billing = getBillingService();
+        const info = await billing.getProductInfo(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01");
         if (info?.price) setPrice(info.price);
       } catch {}
     })();
@@ -99,11 +101,12 @@ export default function SubscriptionCheckoutPage() {
   useEffect(() => {
     const verifyBillingConnectivity = async () => {
       try {
-        const mod = await import("@/lib/billing");
+        const { getBillingService } = await import("@/lib/billing/service");
+        const billing = getBillingService();
         const { Purchases } = await import("@revenuecat/purchases-capacitor");
         try { await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" }); } catch {}
         console.log("🔍 DIAGNÓSTICO: Iniciando teste de conexão com Google Play...");
-        const ready = await mod.isBillingReady();
+        const ready = await billing.isReady();
         if (!ready) {
           console.warn("⚠️ DIAGNÓSTICO: Billing não pronto. Verifique API key e produto.");
           return;
@@ -237,14 +240,15 @@ export default function SubscriptionCheckoutPage() {
                         console.warn("🔬 DIAGNÓSTICO: disponível apenas no app Android.");
                         return;
                       }
-                      const mod = await import("@/lib/billing");
+                      const { getBillingService } = await import("@/lib/billing/service");
+                      const mod = getBillingService();
                       const pid = process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "premium_subscription_01";
-                      const env = mod.getBillingEnvStatus();
+                      const env = mod.getEnvStatus();
                       console.log("🔬 DIAGNÓSTICO: env.source =", env.source);
                       console.log("🔬 DIAGNÓSTICO: env.keyPresent =", env.keyPresent);
                       if (env.maskedKey) console.log("🔬 DIAGNÓSTICO: env.maskedKey =", env.maskedKey);
                       if (env.productId) console.log("🔬 DIAGNÓSTICO: env.productId =", env.productId);
-                      const diag = await mod.getBillingDiagnostics(pid);
+                      const diag = await mod.getDiagnostics(pid);
                       console.log("🔬 DIAGNÓSTICO: configured =", diag.configured);
                       console.log("🔬 DIAGNÓSTICO: products length =", diag.products.length);
                       console.table((diag.products || []).map((p) => ({ Identifier: p.identifier, Title: p.title, Price: p.price })));
@@ -274,13 +278,14 @@ export default function SubscriptionCheckoutPage() {
                     onClick={async () => {
                       try {
                         if (!Capacitor.isNativePlatform()) return;
-                        const mod = await import("@/lib/billing");
-                        const ok = await mod.setRevenueCatApiKey(rcKey.trim());
+                        const { getBillingService } = await import("@/lib/billing/service");
+                        const mod = getBillingService();
+                        const ok = await mod.setApiKey(rcKey.trim());
                         if (ok) {
                           show("API Key salva. Reiniciando diagnóstico…", { variant: "success" });
                           const { Purchases } = await import("@revenuecat/purchases-capacitor");
                           try { await (Purchases as unknown as { setLogLevel: (opts: { logLevel: "debug" | "info" | "warn" | "error" }) => Promise<void> }).setLogLevel({ logLevel: "debug" }); } catch {}
-                          const ready = await mod.isBillingReady();
+                          const ready = await mod.isReady();
                           console.log("🔬 DIAGNÓSTICO: ready after set =", ready);
                         } else {
                           show("Falha ao salvar API Key", { variant: "error" });

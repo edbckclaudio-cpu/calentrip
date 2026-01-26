@@ -892,7 +892,8 @@ export default function MonthCalendarPage() {
         if (target) {
           let premium = isTripPremium(target.id);
           try {
-            const mod = await import("@/lib/billing");
+            const { getBillingService } = await import("@/lib/billing/service");
+            const mod = getBillingService();
             try { await mod.refreshPremiumActive(); } catch {}
             const rcActive = await mod.getCachedPremiumActive();
             const isAndroid = Capacitor.getPlatform() === "android";

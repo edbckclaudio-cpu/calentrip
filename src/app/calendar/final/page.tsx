@@ -151,7 +151,8 @@ export default function FinalCalendarPage() {
     const isAuth = isAndroid ? (nativeStatus === "authenticated") : (status === "authenticated");
     let rcActive = false;
     try {
-      const mod = await import("@/lib/billing");
+      const { getBillingService } = await import("@/lib/billing/service");
+      const mod = getBillingService();
       try { await mod.refreshPremiumActive(); } catch {}
       rcActive = await mod.getCachedPremiumActive();
     } catch { rcActive = false; }

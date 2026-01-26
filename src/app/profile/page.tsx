@@ -74,8 +74,8 @@ export default function ProfilePage() {
         } else {
           setGoogleLogged(status === "authenticated");
         }
-        const mod = await import("@/lib/billing");
-        const info = await mod.ensureProduct(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "trip_premium");
+        const { getBillingService } = await import("@/lib/billing/service");
+        const info = await getBillingService().getProductInfo(process.env.NEXT_PUBLIC_GOOGLE_PLAY_PRODUCT_ID || "trip_premium");
         if (info?.price) setPriceLabel(info.price);
       } catch {}
     })();
