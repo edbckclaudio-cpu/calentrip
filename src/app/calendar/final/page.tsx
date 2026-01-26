@@ -155,7 +155,7 @@ export default function FinalCalendarPage() {
       try { await mod.refreshPremiumActive(); } catch {}
       rcActive = await mod.getCachedPremiumActive();
     } catch { rcActive = false; }
-    const ok = isAndroid ? (isAuth && rcActive) : (isAuth && (premiumFlag || isGlobalPremium()));
+    const ok = isAuth && (rcActive || premiumFlag || isGlobalPremium());
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("calentrip:premium") : null;
       console.log("DIAGNÓSTICO: ensureSubscriberAsync", { isAuth, rcActive, premiumFlag, isGlobal: isGlobalPremium(), raw });
