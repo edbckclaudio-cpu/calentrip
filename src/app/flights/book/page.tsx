@@ -539,20 +539,22 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
     // Navegar primeiro; persistir em background para evitar travas do WebView
     show(t("notesSavedRedirecting"), { variant: "success" });
     try { onProceed?.(); } catch {}
-    try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
+    try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search/"); } catch {}
     try {
-      router.push("/accommodation/search");
+      console.log("DIAGN: nav push to /accommodation/search/");
+      router.push("/accommodation/search/");
       if (typeof window !== "undefined") {
         const attempts = [100, 240, 600, 1200, 2000];
         attempts.forEach((ms) => {
           setTimeout(() => {
             try {
-              const stillHere = !window.location.pathname.includes("/accommodation/search");
+              const stillHere = !window.location.pathname.includes("/accommodation/search/");
+              console.log("DIAGN: nav attempt", ms, "stillHere=", stillHere, "pathname=", window.location.pathname);
               if (stillHere) {
-                router.replace("/accommodation/search");
+                router.replace("/accommodation/search/");
                 try {
                   router.push("/");
-                  setTimeout(() => { try { router.replace("/accommodation/search"); } catch {} }, 180);
+                  setTimeout(() => { try { router.replace("/accommodation/search/"); } catch {} }, 180);
                 } catch {}
               }
             } catch {}
@@ -560,20 +562,42 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         });
         setTimeout(() => {
           try {
-            const stillHere = !window.location.pathname.includes("/accommodation/search");
+            const stillHere = !window.location.pathname.includes("/accommodation/search/");
+            if (stillHere) {
+              try { localStorage.setItem("calentrip:targetRoute", "/accommodation/search/"); } catch {}
+              console.log("DIAGN: early HOME assign fallback");
+              window.location.assign("/");
+            }
+          } catch {}
+        }, 400);
+        setTimeout(() => {
+          try {
+            const stillHere = !window.location.pathname.includes("/accommodation/search/");
             const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
             if (stillHere && isNative) {
-              const url = `${window.location.protocol}//${window.location.host}/accommodation/search`;
+              const url = `${window.location.protocol}//${window.location.host}/accommodation/search/`;
+              console.log("DIAGN: nav assign ABS", url);
               window.location.assign(url);
             }
           } catch {}
         }, 2800);
         setTimeout(() => {
           try {
-            const stillHere = !window.location.pathname.includes("/accommodation/search");
+            const stillHere = !window.location.pathname.includes("/accommodation/search/");
+            console.log("DIAGN: nav assign HOME", stillHere);
+            if (stillHere) {
+              try { localStorage.setItem("calentrip:targetRoute", "/accommodation/search/"); } catch {}
+              window.location.assign("/");
+            }
+          } catch {}
+        }, 3000);
+        setTimeout(() => {
+          try {
+            const stillHere = !window.location.pathname.includes("/accommodation/search/");
             const isNative = Capacitor.isNativePlatform && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
             if (stillHere && !isNative) {
-              window.location.assign("/accommodation/search");
+              console.log("DIAGN: nav assign REL /accommodation/search/");
+              window.location.assign("/accommodation/search/");
             }
           } catch {}
         }, 3600);
@@ -612,7 +636,7 @@ function FlightNotesForm({ onProceed }: { onProceed?: () => void }) {
         try { sessionStorage.setItem("calentrip:tripSearch", s); } catch {}
       }
     } catch {}
-    try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search"); } catch {}
+    try { if (typeof window !== "undefined") localStorage.setItem("calentrip:targetRoute", "/accommodation/search/"); } catch {}
     try {} catch {}
   }
 
