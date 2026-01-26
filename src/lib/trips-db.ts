@@ -88,6 +88,11 @@ async function getDbHandle() {
     }
 
     const sqlite = new _SQLiteConnection(_CapacitorSQLite);
+    if (!sqlite?.retrieveConnection || !sqlite?.createConnection) {
+      console.warn("DIAGN: Métodos retrieve/create ausentes no SQLiteConnection, ativando fallback");
+      _useFallback = true;
+      return null;
+    }
     const ret = await sqlite.checkConnectionsConsistency();
     const isConn = (await sqlite.isConnection(_dbName)).result;
     _dbHandle = (ret.result && isConn)
