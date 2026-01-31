@@ -156,7 +156,7 @@ class BillingService {
     const ready = await this.isReady();
     if (!ready) {
       if ((userId || "").toLowerCase().includes("demo")) {
-        const expiry = Date.now() + 24 * 60 * 60 * 1000;
+        const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
         return { ok: true, expiry };
       }
       return { ok: false };
